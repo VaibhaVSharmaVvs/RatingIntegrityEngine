@@ -1,0 +1,39 @@
+# Secrets
+.env
+.env.*
+!.env.example
+
+# Data (raw reviews contain PII; never commit)
+data/*
+!data/.gitkeep
+*.duckdb
+*.duckdb.wal
+*.parquet
+*.jsonl.gz
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+.ipynb_checkpoints/
+
+# Node
+node_modules/
+dist/
+*.tsbuildinfo
+
+# Model caches
+.cache/
+hf_cache/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+.claude/settings.local.json
