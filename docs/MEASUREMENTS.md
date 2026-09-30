@@ -239,3 +239,92 @@ Recall saturates at 0.4 with 128 permutations. **Default is now 0.4** (+7 pairs,
 ### M6c. Duplicates: DOWNWEIGHT and judge every review
 
 Later copies default to **DOWNWEIGHT** and are **judged by System One** like every other review; the copy rule is a floor. Only byte-identical model inputs (same text *and* verdict) share one call. On the HD2 window, 49,497 reviews → 44,291 distinct inputs: **5,206 reused (10.5% fewer Jev calls)**, with no accuracy risk if Jev is deterministic for identical input (**verify in Phase 3**). Bootstrap resamples default 1,000 → 2,000.
+
+---
+
+## M7. Jev behaviour for the S2 client (2026-09-30)
+
+### M7a. Determinism
+
+`tools/jev_probe.py --n 30`: 60 real review states (30 HD2 + 30 Gollum), each sent twice, question set v1, pack=1. **Only 1/60 states returned identical answers**; max |Δ| over numeric fields 0.22. **Jev is not deterministic.** The docs don't mention determinism (docs.typesafe.ai/confidence.md). Cost $0.005.
+
+### M7b. Token model for the pre-flight estimate (same 60 states)
+
+Least squares: **input_tokens ≈ 893.1 + 0.2445 × len(state JSON)**. Residual SD 42.9 tokens, max |residual| 267. State length 96–3,078 chars; tokens 910–1,630; mean 984 per review. The intercept (~893) is the six v1 questions' own text, which dominates short reviews. Implemented in `app/systemone/preflight.py`.
+
+### M7c. Test-retest noise and k-averaging
+
+`tools/jev_noise.py --n 30 --repeats 6`: the same 60 states × 6 repeats = 360 calls, $0.015. A first run was **discarded**: its decision-stability numbers came from a biased sampler (the first 20 `itertools.permutations`). Its per-question numbers agreed with the valid run below.
+
+| Question | Test-retest SD (mean over states) | Max SD |
+|---|---|---|
+| informativeness (0–3) | 0.020 (0.7% of range) | 0.080 |
+| rating_support (0–3) | 0.020 (0.7%) | 0.094 |
+| topic (choice) | same top choice in all 6 repeats for 100% of states | |
+| spam_promo | 0.002 (0.2%) | 0.010 |
+| templated | 0.010 (1.0%) | 0.029 |
+| campaign_language | 0.004 (0.4%) | 0.027 |
+
+Decision stability (policy v1 thresholds, 50 random disjoint pairs per state):
+
+| Answers per review | Action differs between two independent estimates | |integrity Δ| mean / p95 |
+|---|---|---|
+| k = 1 | **2.6%** | 0.005 / 0.015 |
+| k = 2 (mean) | **1.0%** | 0.003 / 0.011 |
+| k = 3 (mean) | 1.4% | 0.003 / 0.008 |
+
+Noise is small per answer. It matters only for reviews close to a threshold, and there it flips about 2.6% of decisions. k = 3 not beating k = 2 is within sampling noise at 60 states.
+
+**Consequences:**
+- **Reuse is now off by default** (`reuse_identical_inputs=false`). Sharing one draw across identical copies makes a borderline answer flip *all* copies together (e.g. 997 × "Just doing my part"). Independent calls split them in proportion to the probability. Cost: +10.5% calls on HD2 (M6c). **This corrects M6c**, which claimed reuse had "no accuracy risk"; that assumed determinism, which is false.
+- **`samples_per_review` (k)** is available and defaults to 1. k = 2 halves decision flips for 2× cost. **Owner's call.**
+
+---
+
+## M8. Phase 3: dev set, packing, question set v2, first live run (2026-09-30)
+
+### M8a. Dev set v1 (tuning only, never report metrics on it)
+
+`tools/make_devset.py`, seed 2024: **200 reviews**. HD2 strata: short (≤ 3 tokens) 15, long (≥ 150) 15, links/promo 10, later copy 10, pre-bomb (Apr 1–May 2) 35, bomb (May 3–6 12:00) 45, counter-wave (May 6 12:00–10) 35, later (May 11+) 15. Gollum control: 20. 67% positive. The manifest (review ids + stratum) is in `data/devsets/dev_v1.json`, gitignored. **Phase 7 must exclude these ids from every metric set.**
+
+### M8b. Packing on 200 real reviews (v1), agreement with pack=1
+
+| Comparison | Decision agreement | Spearman informativeness / rating_support | Spearman spam / templated / campaign | Tokens |
+|---|---|---|---|---|
+| pack=1 vs pack=1 (**noise floor**) | 0.965 | 0.998 / 0.998 | 0.975 / 0.998 / 0.991 | 203,629 (identical both runs) |
+| pack=5 | 0.875 | 0.965 / 0.942 | 0.822 / 0.922 / 0.922 | 168,589 (−17%) |
+| pack=10 | 0.830 | 0.913 / 0.873 | 0.745 / 0.847 / 0.870 | 163,309 (−20%) |
+
+**Packing rejected**: far below the ≥ 0.98 bar on every question, and it saves only 17–20% of tokens (question text is copied per item). This supersedes the 5-review M4b estimate of −41%. Cost of M8b: $0.031.
+
+### M8c. v1 answers reviewed, and question set v2
+
+42 dev reviews read against their v1 answers. This is **Claude's own judgement, not human labels**; Phase 7's 2-rater labels are the real test. Problems found:
+1. `templated` tracked shortness: "good game" 0.88, "Pretty basic" 0.72; hd2_short stratum mean 0.68. **108/200 reviews carried both LOW_INFO and TEMPLATED** (double penalty).
+2. `informativeness` asked for information "about the game", so specific platform-policy complaints scored lower, double-counting `topic`.
+3. FLAG = 10/200 (5%), all from confidence < 0.5 on score questions. Left unchanged for now (FLAG counts as KEEP in the rating); revisit with Phase 7 labels.
+
+v2 (`app/systemone/questions_v2.py`): specificity-based `informativeness` with `{what, examples}` levels; `templated` = copied/reusable text, with short own-words opinions explicitly excluded; `rating_support` notes that mixed reviews can support a verdict. Other questions unchanged.
+
+| | v1 | v2 |
+|---|---|---|
+| Self-agreement (decisions, two runs) | 0.965 | **0.985** |
+| Reviews with both LOW_INFO + TEMPLATED | 108 | **38** |
+| Actions KEEP / DOWNWEIGHT / FLAG | 118 / 72 / 10 | 121 / 70 / 9 |
+| Tokens per review (same 200 states) | 1,018 | 1,264 (+24%) |
+
+Targeted checks (v1 → v2): short own-words opinions, `templated` "good game" 0.88→0.03, "Pretty basic" 0.72→0.04, "10/10 made me fall in love…" 0.40→0.16. Copypasta/slogans stay high: Cyberpunk quote 0.87→0.93, "FOR DEMOCRACY" 0.85→0.84, "MAJOR ORDER COMPLETE…" 0.76→0.70. Specific PSN complaints, `informativeness`: 2.52→2.85, 2.35→2.96, 2.87→3.00, 2.07→2.04 (unchanged). No-content texts stay ~0. One regression: ":fire:" DOWNWEIGHT→FLAG. **v2 is the default.** 1 of ≤ 3 tuning iterations used. Cost of v2 runs: $0.021.
+
+### M8d. Pre-flight on the real headline datasets (`ds_a29ec91842df` 50K, `ds_9ce1a2947cbe` 5K; day-stratified from the full 366,270-review HD2 pull)
+
+| Dataset | v1 k=1 | **v2 k=1 (default)** | v2 k=2 |
+|---|---|---|---|
+| 50K | $2.03, 20.8 min | **$2.55, 20.8 min** | $5.09, 41.7 min (needs confirm at the $4 limit) |
+| 5K | $0.20, 2.1 min | $0.25, 2.1 min | $0.51, 4.2 min |
+
+### M8e. First live Jev run through the full pipeline (HD2 5K live subset, v2, k=1, concurrency 32)
+
+- **Pre-flight accuracy:** estimated $0.2545 / 6,060,568 tokens; **actual $0.2543 / 6,055,191 tokens (−0.1%)**.
+- Jev: **4,999/4,999 HTTP 200, 0 retries, 0 throttling**. Model `jev-1.13.0`.
+- Result: KEEP 3,076 · DOWNWEIGHT 1,623 · FLAG 300 · EXCLUDE 0. **Raw 76.4% → adjusted 73.2% positive (95% CI 71.8–74.5%)**, n_eff 4,113. Steam label "Mostly Positive" both. There is no burst/cluster logic yet (Phase 4). The drop comes from the positive counter-wave slogans being downweighted, while specific negative PSN complaints stay KEEP.
+- **Throughput 18.3 reviews/s** (S2 267 s), against 64/s in the M4c benchmark. Requests per minute went 1,438 → 711 → 642 → 53 → 1,145 → 972. The trough coincides with MiniLM loading in the S1 background thread while the Laya dev-set benchmark saturated the CPU. Since Jev never throttled, the bottleneck is **client-side CPU contention** (the asyncio loop starved by torch + laya-serve), not the API. S1 embeddings took 350 s for 5K (normally about 50 s), for the same reason. To be re-measured with the CPU otherwise idle.

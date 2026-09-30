@@ -18,6 +18,7 @@ import logging
 import time
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import numpy as np
 import polars as pl
@@ -52,15 +53,27 @@ from app.models import (
     RunSummary,
     StageEvent,
 )
+from app.systemone import questions as question_sets
 from app.systemone.mock import MockBackend
-from app.systemone.questions_v1 import QUESTIONS, build_state
+from app.systemone.questions_v1 import build_state, verdict_words
+
+if TYPE_CHECKING:
+    from app.systemone.backend import SystemOneBackend
 
 log = logging.getLogger("pipeline")
 
 BATCH_SIZE = 50
 EMIT_EVERY_N = 250
 EMIT_EVERY_S = 0.2
-SCORE_LEVELS = {q: len(s["criteria"]) for q, s in QUESTIONS.items() if s["type"] == "score"}
+# A run is stopped if actual spend exceeds the approved amount by this factor
+# (token model residual SD is ~4%, so 1.25 only trips on a real mis-estimate).
+COST_CAP_SLACK = 1.25
+
+
+class SpendLimitExceeded(RuntimeError):
+    pass
+
+
 ACTION_NAMES = {c: c.name for c in ActionCode if c is not ActionCode.PENDING}
 FEATURE_COLUMNS = [
     "review_id",
@@ -98,6 +111,7 @@ class Pipeline:
         *,
         cache_dir: Path,
         embedder: Embedder | None = None,
+        backend: "SystemOneBackend | None" = None,
     ) -> None:
         self.db = db
         self.run_id = run_id
@@ -108,28 +122,41 @@ class Pipeline:
         self.embedder = embedder or SentenceTransformerEmbedder(
             fc.embedding_model, fc.embedding_max_seq_len
         )
-        self.backend = self._make_backend()
+        self.backend = backend or self._make_backend()
         self.features_frame = pl.DataFrame()
         self.semantic: SemanticResult | None = None
         self._semantic_task: asyncio.Task | None = None
         self.timings: dict[str, float] = {}
         self.later_copy: set[int] = set()
+        self.questions = question_sets.get(config.question_set)
+        self.score_levels = question_sets.score_levels(config.question_set)
+        self.cost_cap_usd: float | None = None  # set by the API from the pre-flight
         self.reused_judgments = 0
         self.grid = np.zeros(0, dtype=np.uint8)
         self.reviews = pl.DataFrame()
         self.dataset: dict = {}
         self.decisions: dict[int, Decision] = {}
         self.answers: dict[int, dict] = {}
-        self.cost_usd = 0.0
-        self.tokens_in = 0
         self._t0 = 0.0
+
+    @property
+    def cost_usd(self) -> float:
+        return float(getattr(self.backend, "cost_usd", 0.0))
+
+    @property
+    def tokens_in(self) -> int:
+        return int(getattr(self.backend, "tokens_in", 0))
 
     def _make_backend(self) -> MockBackend | HeuristicBackend:
         if self.config.backend == "mock":
-            return MockBackend(seed=self.config.seed, latency_ms=self.config.mock_latency_ms)
+            return MockBackend(
+                seed=self.config.seed,
+                latency_ms=self.config.mock_latency_ms,
+                questions=question_sets.get(self.config.question_set),
+            )
         if self.config.backend == "heuristic":
             return HeuristicBackend()
-        raise ValueError(f"backend '{self.config.backend}' is not implemented yet (Phase 3)")
+        raise ValueError(f"backend '{self.config.backend}' must be passed in (it needs settings)")
 
     # --- lifecycle ------------------------------------------------------------------
 
@@ -163,6 +190,9 @@ class Pipeline:
             self._set_run(status="failed", error=str(exc), finished_at=datetime.now(UTC))
             self.bus.publish(ErrorEvent(message=str(exc), retryable=False))
         finally:
+            closer = getattr(self.backend, "aclose", None)
+            if closer is not None:
+                await closer()
             task = self._semantic_task
             if task is not None and not task.done():
                 # A thread can't be cancelled; let it finish and drop its result.
@@ -183,14 +213,17 @@ class Pipeline:
         self.bus.publish(StageEvent(name="ingest", status="started"))
         with self.db.cursor() as cur:
             row = cur.execute(
-                "SELECT name, source, rating_scale FROM datasets WHERE id = ?",
+                "SELECT name, source, rating_scale, source_params FROM datasets WHERE id = ?",
                 [self.config.dataset_id],
             ).fetchone()
             if row is None:
                 raise ValueError(f"dataset {self.config.dataset_id} not found")
-            self.dataset = dict(zip(("name", "source", "rating_scale"), row, strict=True))
+            self.dataset = dict(
+                zip(("name", "source", "rating_scale", "source_params"), row, strict=True)
+            )
+            self.dataset["source_params"] = json.loads(self.dataset["source_params"] or "{}")
             self.reviews = cur.execute(
-                "SELECT id, text, rating_norm, created_at, meta FROM reviews "
+                "SELECT id, text, rating_raw, rating_norm, created_at, meta FROM reviews "
                 "WHERE dataset_id = ? ORDER BY id",
                 [self.config.dataset_id],
             ).pl()
@@ -247,15 +280,23 @@ class Pipeline:
         promo = self.features_frame["has_promo"].to_list()
         texts = self.reviews["text"].to_list()
         verdicts = self.reviews["rating_norm"].to_list()
-        game = self.dataset["name"]
+        raw_ratings = self.reviews["rating_raw"].to_list()
+        metas = self.reviews["meta"].to_list()
+        default_subject = self.dataset["source_params"].get("subject") or self.dataset["name"]
+        scale, source = self.dataset["rating_scale"], self.dataset["source"]
 
-        # Judge each distinct model input once. Only byte-identical states share an
-        # answer (same text *and* verdict), so reuse cannot change any judgment.
+        # By default every review gets its own call: Jev is not deterministic, and
+        # sharing one draw across identical copies would flip them all together near
+        # a threshold (MEASUREMENTS M7). `reuse_identical_inputs` trades that for cost.
         states: dict[str, dict] = {}
         members: dict[str, list[int]] = {}
         for rid in self.reviews["id"].to_list():
-            state = build_state(game, (verdicts[rid] or 0) >= 0.5, texts[rid])
+            subject = json.loads(metas[rid] or "{}").get("subject") or default_subject
+            verdict = verdict_words(raw_ratings[rid], verdicts[rid], scale)
+            state = build_state(subject, source, verdict, texts[rid])
             key = json.dumps(state, sort_keys=True, ensure_ascii=False)
+            if not self.config.reuse_identical_inputs:
+                key = f"{key}#{rid}"  # every review gets its own, independent call
             states.setdefault(key, state)
             members.setdefault(key, []).append(rid)
         self.reused_judgments = self.reviews.height - len(states)
@@ -275,10 +316,20 @@ class Pipeline:
         tasks = [asyncio.create_task(judge(b)) for b in batches]
         for fut in asyncio.as_completed(tasks):
             batch_keys, answers = await fut
+            if self.cost_cap_usd is not None and self.cost_usd > self.cost_cap_usd:
+                for t in tasks:
+                    t.cancel()
+                raise SpendLimitExceeded(
+                    f"stopped: spent ${self.cost_usd:.4f}, over the cap of "
+                    f"${self.cost_cap_usd:.4f} (estimate x {COST_CAP_SLACK})"
+                )
             for key, ans in zip(batch_keys, answers, strict=True):
                 for rid in members[key]:
                     d = decide(
-                        ans, self.config.thresholds, score_levels=SCORE_LEVELS, has_promo=promo[rid]
+                        ans,
+                        self.config.thresholds,
+                        score_levels=self.score_levels,
+                        has_promo=promo[rid],
                     )
                     d = self._with_copy_rule(rid, d)
                     self.answers[rid] = ans
@@ -483,10 +534,23 @@ class Pipeline:
             model_version=self.backend.model_version,
             timings_s=dict(self.timings),
             reused_judgments=self.reused_judgments,
+            **self._client_stats(),
             embedding_cache_hit=self.semantic.cache_hit if self.semantic else None,
         )
         self.bus.publish(StageEvent(name="decide", status="done"))
         return summary
+
+    def _client_stats(self) -> dict:
+        client = getattr(self.backend, "client", None)
+        if client is None:
+            return {}
+        lat = np.asarray(client.usage.latency_ms)
+        return {
+            "requests": client.usage.requests,
+            "retries": client.usage.retries,
+            "latency_p50_ms": round(float(np.percentile(lat, 50)), 1) if lat.size else None,
+            "latency_p95_ms": round(float(np.percentile(lat, 95)), 1) if lat.size else None,
+        }
 
     def _store_decisions(self) -> None:
         weights = self.config.weights.model_dump()

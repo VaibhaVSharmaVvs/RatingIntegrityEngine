@@ -2,6 +2,7 @@ import logging
 from collections.abc import Callable
 from contextlib import asynccontextmanager
 
+import httpx
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -17,6 +18,7 @@ from app.models import FeatureConfig
 def create_app(
     config: Settings = settings,
     embedder_factory: Callable[[FeatureConfig], Embedder] | None = None,
+    systemone_transport: httpx.AsyncBaseTransport | None = None,
 ) -> FastAPI:
     @asynccontextmanager
     async def lifespan(app: FastAPI):
@@ -26,6 +28,7 @@ def create_app(
             db=db,
             events=EventRegistry(config.replays_dir),
             embedder_factory=embedder_factory,
+            systemone_transport=systemone_transport,
         )
         yield
         for task in list(app.state.rie.tasks):

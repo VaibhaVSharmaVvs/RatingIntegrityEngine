@@ -9,16 +9,78 @@ from sse_starlette.sse import EventSourceResponse
 from app.api.datasets import fetch_dataset
 from app.api.deps import AppState, get_state
 from app.ingest.store import new_id
-from app.models import ActionCode, RunCreate, RunOut, RunSummary
-from app.pipeline import Pipeline
+from app.models import ActionCode, PreflightOut, RunCreate, RunOut, RunSummary
+from app.pipeline import COST_CAP_SLACK, Pipeline
+from app.systemone import preflight
+from app.systemone import questions as question_sets
+from app.systemone.backend import SystemOneBackend, backend_spec
+from app.systemone.client import SystemOneClient
+from app.systemone.questions_v1 import build_state, verdict_words
 
 router = APIRouter(prefix="/runs", tags=["runs"])
 
-IMPLEMENTED_BACKENDS = {"mock", "heuristic"}
+IMPLEMENTED_BACKENDS = {"mock", "heuristic", "jev", "laya"}
 _COLUMNS = (
     "id, dataset_id, backend, model_version, status, error, config, started_at, finished_at, "
     "stats, cost_usd, tokens_in"
 )
+
+
+def make_systemone_backend(req: RunCreate, state: AppState) -> SystemOneBackend:
+    spec = backend_spec(req.backend, state.settings, req.model, req.concurrency)
+    transport = state.systemone_transport  # tests inject a fake server here
+    return SystemOneBackend(
+        SystemOneClient(spec, transport=transport),
+        pack_size=req.pack_size,
+        samples_per_review=req.samples_per_review,
+        questions=question_sets.get(req.question_set),
+    )
+
+
+def run_preflight(req: RunCreate, state: AppState) -> preflight.Preflight:
+    with state.db.cursor() as cur:
+        ds = cur.execute(
+            "SELECT name, source, rating_scale, source_params FROM datasets WHERE id = ?",
+            [req.dataset_id],
+        ).fetchone()
+        rows = cur.execute(
+            "SELECT text, rating_raw, rating_norm, meta FROM reviews WHERE dataset_id = ?",
+            [req.dataset_id],
+        ).fetchall()
+    name, source, scale, params = ds
+    default_subject = json.loads(params or "{}").get("subject") or name
+    states = [
+        build_state(
+            json.loads(meta or "{}").get("subject") or default_subject,
+            source,
+            verdict_words(raw, norm, scale),
+            text,
+        )
+        for text, raw, norm, meta in rows
+    ]
+    distinct = len({json.dumps(s, sort_keys=True, ensure_ascii=False) for s in states})
+    s = state.settings
+    price = 0.0
+    rps = s.jev_requests_per_second
+    if req.backend == "jev":
+        from app.systemone.backend import JEV_PRICE_PER_MTOK
+
+        price = JEV_PRICE_PER_MTOK
+    return preflight.estimate(
+        states,
+        req,
+        price_per_mtok=price,
+        requests_per_second=rps,
+        limit_usd=s.max_run_cost_usd,
+        distinct_inputs=distinct,
+    )
+
+
+@router.post("/preflight", response_model=PreflightOut)
+def preflight_run(req: RunCreate, state: AppState = Depends(get_state)) -> PreflightOut:
+    """Cost / token / ETA estimate for a run, without starting it."""
+    fetch_dataset(state, req.dataset_id)
+    return PreflightOut(**run_preflight(req, state).as_dict())
 
 
 def _fetch_run(state: AppState, run_id: str) -> RunOut:
@@ -41,6 +103,18 @@ async def create_run(req: RunCreate, state: AppState = Depends(get_state)) -> Ru
         raise HTTPException(409, f"dataset is {ds.status}, not ready")
     if req.backend not in IMPLEMENTED_BACKENDS:
         raise HTTPException(422, f"backend '{req.backend}' is not implemented yet")
+    pf = run_preflight(req, state)
+    if pf.needs_confirmation and not req.confirm_cost:
+        raise HTTPException(
+            402,
+            {
+                "message": (
+                    f"estimated ${pf.est_cost_usd:.2f} exceeds MAX_RUN_COST_USD "
+                    f"${pf.limit_usd:.2f}; resend with confirm_cost=true to proceed"
+                ),
+                "preflight": pf.as_dict(),
+            },
+        )
     run_id = new_id("run")
     with state.db.cursor() as cur:
         cur.execute(
@@ -49,6 +123,12 @@ async def create_run(req: RunCreate, state: AppState = Depends(get_state)) -> Ru
         )
     bus = state.events.create(run_id)
     embedder = state.embedder_factory(req.features) if state.embedder_factory else None
+    backend = None
+    if req.backend in ("jev", "laya"):
+        try:
+            backend = make_systemone_backend(req, state)
+        except ValueError as exc:
+            raise HTTPException(422, str(exc)) from exc
     pipeline = Pipeline(
         state.db,
         run_id,
@@ -56,7 +136,11 @@ async def create_run(req: RunCreate, state: AppState = Depends(get_state)) -> Ru
         bus,
         cache_dir=state.settings.embeddings_cache_dir,
         embedder=embedder,
+        backend=backend,
     )
+    if req.backend in ("jev", "laya"):
+        approved = max(pf.est_cost_usd, 0.0) if req.confirm_cost else pf.limit_usd
+        pipeline.cost_cap_usd = max(approved, pf.est_cost_usd) * COST_CAP_SLACK
     state.pipelines[run_id] = pipeline
 
     async def run() -> None:

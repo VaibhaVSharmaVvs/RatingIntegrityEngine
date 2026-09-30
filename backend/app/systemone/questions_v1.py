@@ -19,9 +19,24 @@ TOPICS = {
 }
 
 
-def build_state(game: str, verdict_recommended: bool, text: str) -> dict:
-    verdict = "Recommended" if verdict_recommended else "Not recommended"
-    return {"context": f"Steam review of '{game}'.", "verdict": verdict, "review": text}
+_STAR_WORDS = ["very negative", "negative", "mixed", "positive", "very positive"]
+
+
+def verdict_words(rating_raw: float | None, rating_norm: float | None, scale: str) -> str:
+    """The rating in words: Jev reasons poorly about bare numbers (MVP_SPEC §2)."""
+    if rating_norm is None:
+        return "No rating given"
+    if scale == "binary":
+        return "Recommended" if rating_norm >= 0.5 else "Not recommended"
+    band = _STAR_WORDS[min(4, int(rating_norm * 5))]
+    top = 5 if scale == "1-5" else 10
+    stars = f"{rating_raw:g}" if rating_raw is not None else "?"
+    return f"{band.capitalize()} ({stars} of {top} stars)"
+
+
+def build_state(subject: str, source: str, verdict: str, text: str) -> dict:
+    platform = "Steam review" if source == "steam" else "Review"
+    return {"context": f"{platform} of '{subject}'.", "verdict": verdict, "review": text}
 
 
 QUESTIONS: dict[str, dict] = {
