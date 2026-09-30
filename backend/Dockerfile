@@ -5,4 +5,4 @@ ARG EXTRAS=""
 COPY pyproject.toml uv.lock ./
 RUN uv sync --frozen --no-dev $EXTRAS
 COPY app ./app
-ENV DATA_DIR=/app/data DUCKDB_PATH=/app/data/rie.duckdb
+ENV DATA_DIR=/app/data
