@@ -62,6 +62,17 @@ def test_thresholds_come_from_config() -> None:
     assert decide(answers(inf=2.5), strict, score_levels=LEVELS).action is ActionCode.DOWNWEIGHT
 
 
+def test_duplicate_rule_keeps_first_exempts_short_and_is_configurable() -> None:
+    from app.decide.policy import duplicate_exclusion
+
+    assert duplicate_exclusion(5, 5, 1.0, 20, 8) is None  # the first copy is kept
+    assert duplicate_exclusion(6, -1, 0.0, 20, 8) is None  # not a duplicate
+    assert duplicate_exclusion(6, 5, 1.0, 3, 8) is None  # "good game": too short
+    assert duplicate_exclusion(6, 5, 0.9, 20, 8).action is ActionCode.EXCLUDE
+    soft = duplicate_exclusion(6, 5, 0.9, 20, 8, action="DOWNWEIGHT")
+    assert soft.action is ActionCode.DOWNWEIGHT and soft.reasons == ["NEAR_DUPLICATE"]
+
+
 def test_weighted_rating_and_n_eff() -> None:
     r = np.array([1.0, 0.0, 1.0, 0.0])
     w = np.array([1.0, 1.0, 1.0, 0.0])

@@ -334,6 +334,146 @@
       "title": "ErrorEvent",
       "type": "object"
     },
+    "FeatureConfig-Input": {
+      "description": "S1 deterministic features (MVP_SPEC \u00a76.2).",
+      "properties": {
+        "shingle_unit": {
+          "default": "char",
+          "enum": [
+            "char",
+            "word"
+          ],
+          "type": "string"
+        },
+        "shingle_size": {
+          "default": 5,
+          "maximum": 12,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "minhash_perm": {
+          "default": 128,
+          "maximum": 512,
+          "minimum": 16,
+          "type": "integer"
+        },
+        "near_dup_jaccard": {
+          "default": 0.7,
+          "maximum": 1.0,
+          "minimum": 0.3,
+          "type": "number"
+        },
+        "lsh_candidate_jaccard": {
+          "default": 0.5,
+          "maximum": 1.0,
+          "minimum": 0.2,
+          "type": "number"
+        },
+        "dup_min_tokens": {
+          "default": 8,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "low_info_max_tokens": {
+          "default": 3,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "embedding_model": {
+          "default": "sentence-transformers/all-MiniLM-L6-v2",
+          "type": "string"
+        },
+        "embedding_max_seq_len": {
+          "default": 128,
+          "maximum": 512,
+          "minimum": 16,
+          "type": "integer"
+        },
+        "low_playtime_minutes": {
+          "default": 120,
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "title": "FeatureConfig",
+      "type": "object"
+    },
+    "FeatureConfig-Output": {
+      "description": "S1 deterministic features (MVP_SPEC \u00a76.2).",
+      "properties": {
+        "shingle_unit": {
+          "default": "char",
+          "enum": [
+            "char",
+            "word"
+          ],
+          "type": "string"
+        },
+        "shingle_size": {
+          "default": 5,
+          "maximum": 12,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "minhash_perm": {
+          "default": 128,
+          "maximum": 512,
+          "minimum": 16,
+          "type": "integer"
+        },
+        "near_dup_jaccard": {
+          "default": 0.7,
+          "maximum": 1.0,
+          "minimum": 0.3,
+          "type": "number"
+        },
+        "lsh_candidate_jaccard": {
+          "default": 0.5,
+          "maximum": 1.0,
+          "minimum": 0.2,
+          "type": "number"
+        },
+        "dup_min_tokens": {
+          "default": 8,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "low_info_max_tokens": {
+          "default": 3,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "embedding_model": {
+          "default": "sentence-transformers/all-MiniLM-L6-v2",
+          "type": "string"
+        },
+        "embedding_max_seq_len": {
+          "default": 128,
+          "maximum": 512,
+          "minimum": 16,
+          "type": "integer"
+        },
+        "low_playtime_minutes": {
+          "default": 120,
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "shingle_unit",
+        "shingle_size",
+        "minhash_perm",
+        "near_dup_jaccard",
+        "lsh_candidate_jaccard",
+        "dup_min_tokens",
+        "low_info_max_tokens",
+        "embedding_model",
+        "embedding_max_seq_len",
+        "low_playtime_minutes"
+      ],
+      "title": "FeatureConfig",
+      "type": "object"
+    },
     "FeaturesDoneEvent": {
       "properties": {
         "type": {
@@ -346,11 +486,19 @@
             "type": "integer"
           },
           "type": "object"
+        },
+        "timings_s": {
+          "additionalProperties": {
+            "type": "number"
+          },
+          "default": {},
+          "type": "object"
         }
       },
       "required": [
         "type",
-        "counts"
+        "counts",
+        "timings_s"
       ],
       "title": "FeaturesDoneEvent",
       "type": "object"
@@ -436,6 +584,14 @@
         "reason_min_contribution": {
           "default": 0.05,
           "type": "number"
+        },
+        "duplicate_action": {
+          "default": "EXCLUDE",
+          "enum": [
+            "EXCLUDE",
+            "DOWNWEIGHT"
+          ],
+          "type": "string"
         }
       },
       "title": "PolicyThresholds",
@@ -483,6 +639,14 @@
         "reason_min_contribution": {
           "default": 0.05,
           "type": "number"
+        },
+        "duplicate_action": {
+          "default": "EXCLUDE",
+          "enum": [
+            "EXCLUDE",
+            "DOWNWEIGHT"
+          ],
+          "type": "string"
         }
       },
       "required": [
@@ -495,7 +659,8 @@
         "w_spam",
         "w_templated",
         "w_offtopic",
-        "reason_min_contribution"
+        "reason_min_contribution",
+        "duplicate_action"
       ],
       "title": "PolicyThresholds",
       "type": "object"
@@ -673,7 +838,23 @@
             "w_spam": 0.2,
             "w_templated": 0.15,
             "w_offtopic": 0.1,
-            "reason_min_contribution": 0.05
+            "reason_min_contribution": 0.05,
+            "duplicate_action": "EXCLUDE"
+          }
+        },
+        "features": {
+          "$ref": "#/$defs/FeatureConfig-Input",
+          "default": {
+            "shingle_unit": "char",
+            "shingle_size": 5,
+            "minhash_perm": 128,
+            "near_dup_jaccard": 0.7,
+            "lsh_candidate_jaccard": 0.5,
+            "dup_min_tokens": 8,
+            "low_info_max_tokens": 3,
+            "embedding_model": "sentence-transformers/all-MiniLM-L6-v2",
+            "embedding_max_seq_len": 128,
+            "low_playtime_minutes": 120
           }
         },
         "bootstrap_resamples": {
@@ -765,7 +946,23 @@
             "w_spam": 0.2,
             "w_templated": 0.15,
             "w_offtopic": 0.1,
-            "reason_min_contribution": 0.05
+            "reason_min_contribution": 0.05,
+            "duplicate_action": "EXCLUDE"
+          }
+        },
+        "features": {
+          "$ref": "#/$defs/FeatureConfig-Output",
+          "default": {
+            "shingle_unit": "char",
+            "shingle_size": 5,
+            "minhash_perm": 128,
+            "near_dup_jaccard": 0.7,
+            "lsh_candidate_jaccard": 0.5,
+            "dup_min_tokens": 8,
+            "low_info_max_tokens": 3,
+            "embedding_model": "sentence-transformers/all-MiniLM-L6-v2",
+            "embedding_max_seq_len": 128,
+            "low_playtime_minutes": 120
           }
         },
         "bootstrap_resamples": {
@@ -795,6 +992,7 @@
         "concurrency",
         "weights",
         "thresholds",
+        "features",
         "bootstrap_resamples",
         "seed",
         "mock_latency_ms"
@@ -983,6 +1181,24 @@
             }
           ],
           "default": null
+        },
+        "timings_s": {
+          "additionalProperties": {
+            "type": "number"
+          },
+          "default": {},
+          "type": "object"
+        },
+        "embedding_cache_hit": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
         }
       },
       "required": [
@@ -999,7 +1215,9 @@
         "tokens_in",
         "elapsed_s",
         "reviews_per_s",
-        "model_version"
+        "model_version",
+        "timings_s",
+        "embedding_cache_hit"
       ],
       "title": "RunSummary",
       "type": "object"
@@ -1147,6 +1365,12 @@
     },
     "ErrorEvent": {
       "$ref": "#/$defs/ErrorEvent"
+    },
+    "FeatureConfig-Input": {
+      "$ref": "#/$defs/FeatureConfig-Input"
+    },
+    "FeatureConfig-Output": {
+      "$ref": "#/$defs/FeatureConfig-Output"
     },
     "FeaturesDoneEvent": {
       "$ref": "#/$defs/FeaturesDoneEvent"

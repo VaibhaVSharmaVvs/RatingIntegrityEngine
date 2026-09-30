@@ -14,7 +14,7 @@ from app.pipeline import Pipeline
 
 router = APIRouter(prefix="/runs", tags=["runs"])
 
-IMPLEMENTED_BACKENDS = {"mock"}
+IMPLEMENTED_BACKENDS = {"mock", "heuristic"}
 _COLUMNS = (
     "id, dataset_id, backend, model_version, status, error, config, started_at, finished_at, "
     "stats, cost_usd, tokens_in"
@@ -48,7 +48,15 @@ async def create_run(req: RunCreate, state: AppState = Depends(get_state)) -> Ru
             [run_id, req.dataset_id, req.backend, req.model_dump_json()],
         )
     bus = state.events.create(run_id)
-    pipeline = Pipeline(state.db, run_id, req, bus)
+    embedder = state.embedder_factory(req.features) if state.embedder_factory else None
+    pipeline = Pipeline(
+        state.db,
+        run_id,
+        req,
+        bus,
+        cache_dir=state.settings.embeddings_cache_dir,
+        embedder=embedder,
+    )
     state.pipelines[run_id] = pipeline
 
     async def run() -> None:

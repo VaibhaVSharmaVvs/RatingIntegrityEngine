@@ -18,6 +18,8 @@ export interface RIEAPI {
   DatasetOut?: DatasetOut;
   DoneEvent?: DoneEvent;
   ErrorEvent?: ErrorEvent;
+  "FeatureConfig-Input"?: FeatureConfig;
+  "FeatureConfig-Output"?: FeatureConfig1;
   FeaturesDoneEvent?: FeaturesDoneEvent;
   HistogramBin?: HistogramBin;
   JudgedEvent?: JudgedEvent;
@@ -182,6 +184,10 @@ export interface RunSummary {
   elapsed_s: number;
   reviews_per_s: number;
   model_version: string | null;
+  timings_s: {
+    [k: string]: number;
+  };
+  embedding_cache_hit: boolean | null;
 }
 /**
  * This interface was referenced by `RIEAPI`'s JSON-Schema
@@ -193,12 +199,51 @@ export interface ErrorEvent {
   retryable: boolean;
 }
 /**
+ * S1 deterministic features (MVP_SPEC §6.2).
+ *
+ * This interface was referenced by `RIEAPI`'s JSON-Schema
+ * via the `definition` "FeatureConfig-Input".
+ */
+export interface FeatureConfig {
+  shingle_unit?: "char" | "word";
+  shingle_size?: number;
+  minhash_perm?: number;
+  near_dup_jaccard?: number;
+  lsh_candidate_jaccard?: number;
+  dup_min_tokens?: number;
+  low_info_max_tokens?: number;
+  embedding_model?: string;
+  embedding_max_seq_len?: number;
+  low_playtime_minutes?: number;
+}
+/**
+ * S1 deterministic features (MVP_SPEC §6.2).
+ *
+ * This interface was referenced by `RIEAPI`'s JSON-Schema
+ * via the `definition` "FeatureConfig-Output".
+ */
+export interface FeatureConfig1 {
+  shingle_unit: "char" | "word";
+  shingle_size: number;
+  minhash_perm: number;
+  near_dup_jaccard: number;
+  lsh_candidate_jaccard: number;
+  dup_min_tokens: number;
+  low_info_max_tokens: number;
+  embedding_model: string;
+  embedding_max_seq_len: number;
+  low_playtime_minutes: number;
+}
+/**
  * This interface was referenced by `RIEAPI`'s JSON-Schema
  * via the `definition` "FeaturesDoneEvent".
  */
 export interface FeaturesDoneEvent {
   type: "features_done";
   counts: {
+    [k: string]: number;
+  };
+  timings_s: {
     [k: string]: number;
   };
 }
@@ -231,6 +276,7 @@ export interface PolicyThresholds {
   w_templated?: number;
   w_offtopic?: number;
   reason_min_contribution?: number;
+  duplicate_action?: "EXCLUDE" | "DOWNWEIGHT";
 }
 /**
  * Every number the decision policy uses (MVP_SPEC §6.5). Nothing is hard-coded.
@@ -249,6 +295,7 @@ export interface PolicyThresholds1 {
   w_templated: number;
   w_offtopic: number;
   reason_min_contribution: number;
+  duplicate_action: "EXCLUDE" | "DOWNWEIGHT";
 }
 /**
  * This interface was referenced by `RIEAPI`'s JSON-Schema
@@ -295,6 +342,7 @@ export interface RunCreate {
   concurrency?: number;
   weights?: ActionWeights2;
   thresholds?: PolicyThresholds2;
+  features?: FeatureConfig2;
   bootstrap_resamples?: number;
   seed?: number;
   /**
@@ -322,6 +370,22 @@ export interface PolicyThresholds2 {
   w_templated?: number;
   w_offtopic?: number;
   reason_min_contribution?: number;
+  duplicate_action?: "EXCLUDE" | "DOWNWEIGHT";
+}
+/**
+ * S1 deterministic features (MVP_SPEC §6.2).
+ */
+export interface FeatureConfig2 {
+  shingle_unit?: "char" | "word";
+  shingle_size?: number;
+  minhash_perm?: number;
+  near_dup_jaccard?: number;
+  lsh_candidate_jaccard?: number;
+  dup_min_tokens?: number;
+  low_info_max_tokens?: number;
+  embedding_model?: string;
+  embedding_max_seq_len?: number;
+  low_playtime_minutes?: number;
 }
 /**
  * This interface was referenced by `RIEAPI`'s JSON-Schema
@@ -336,6 +400,7 @@ export interface RunCreate1 {
   concurrency: number;
   weights: ActionWeights3;
   thresholds: PolicyThresholds3;
+  features: FeatureConfig3;
   bootstrap_resamples: number;
   seed: number;
   /**
@@ -363,6 +428,22 @@ export interface PolicyThresholds3 {
   w_templated: number;
   w_offtopic: number;
   reason_min_contribution: number;
+  duplicate_action: "EXCLUDE" | "DOWNWEIGHT";
+}
+/**
+ * S1 deterministic features (MVP_SPEC §6.2).
+ */
+export interface FeatureConfig3 {
+  shingle_unit: "char" | "word";
+  shingle_size: number;
+  minhash_perm: number;
+  near_dup_jaccard: number;
+  lsh_candidate_jaccard: number;
+  dup_min_tokens: number;
+  low_info_max_tokens: number;
+  embedding_model: string;
+  embedding_max_seq_len: number;
+  low_playtime_minutes: number;
 }
 /**
  * This interface was referenced by `RIEAPI`'s JSON-Schema

@@ -31,6 +31,10 @@ class Settings(BaseSettings):
         return self.data_dir / "replays"
 
     @property
+    def embeddings_cache_dir(self) -> Path:
+        return self.data_dir / "cache" / "embeddings"
+
+    @property
     def steam_pulls_dir(self) -> Path:
         return self.data_dir / "raw" / "steam"
 

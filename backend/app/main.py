@@ -1,4 +1,5 @@
 import logging
+from collections.abc import Callable
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -9,13 +10,23 @@ from app.api.deps import AppState
 from app.core.config import Settings, settings
 from app.core.db import Database
 from app.core.events import EventRegistry
+from app.features.embeddings import Embedder
+from app.models import FeatureConfig
 
 
-def create_app(config: Settings = settings) -> FastAPI:
+def create_app(
+    config: Settings = settings,
+    embedder_factory: Callable[[FeatureConfig], Embedder] | None = None,
+) -> FastAPI:
     @asynccontextmanager
     async def lifespan(app: FastAPI):
         db = Database(config.db_path)
-        app.state.rie = AppState(settings=config, db=db, events=EventRegistry(config.replays_dir))
+        app.state.rie = AppState(
+            settings=config,
+            db=db,
+            events=EventRegistry(config.replays_dir),
+            embedder_factory=embedder_factory,
+        )
         yield
         for task in list(app.state.rie.tasks):
             task.cancel()

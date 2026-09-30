@@ -53,6 +53,32 @@ class PolicyThresholds(Contract):
     w_templated: float = 0.15
     w_offtopic: float = 0.10
     reason_min_contribution: float = 0.05
+    # Later copies of an earlier review. EXCLUDE per the spec; DOWNWEIGHT is the
+    # conservative option (independent reviewers do repeat generic sentences).
+    duplicate_action: Literal["EXCLUDE", "DOWNWEIGHT"] = "EXCLUDE"
+
+
+class FeatureConfig(Contract):
+    """S1 deterministic features (MVP_SPEC §6.2)."""
+
+    # Character 5-shingles, not word 3-shingles: two small edits to a 27-word review
+    # drop word-3 Jaccard to ~0.69 (below the bar), char-5 stays ~0.84. Measured on
+    # injected near-copies vs all real Gollum review pairs (MEASUREMENTS M5).
+    shingle_unit: Literal["char", "word"] = "char"
+    shingle_size: int = Field(5, ge=1, le=12)
+    minhash_perm: int = Field(128, ge=16, le=512)
+    near_dup_jaccard: float = Field(0.7, ge=0.3, le=1.0)
+    # LSH only proposes candidates; each is then verified with the *exact* Jaccard of
+    # its shingle sets. A looser candidate bar buys recall at no precision cost
+    # (MEASUREMENTS M5d: review recall 0.76 -> 0.89 on real Helldivers 2 reviews).
+    lsh_candidate_jaccard: float = Field(0.5, ge=0.2, le=1.0)
+    # Short generic texts ("good game") repeat across independent reviewers. Below this
+    # length a duplicate is not evidence of copying, so it is never excluded as one.
+    dup_min_tokens: int = Field(8, ge=1)
+    low_info_max_tokens: int = Field(3, ge=0)
+    embedding_model: str = "sentence-transformers/all-MiniLM-L6-v2"
+    embedding_max_seq_len: int = Field(128, ge=16, le=512)
+    low_playtime_minutes: int = Field(120, ge=0)
 
 
 class RunCreate(Contract):
@@ -64,6 +90,7 @@ class RunCreate(Contract):
     concurrency: int = Field(8, ge=1, le=64)
     weights: ActionWeights = ActionWeights()
     thresholds: PolicyThresholds = PolicyThresholds()
+    features: FeatureConfig = FeatureConfig()
     bootstrap_resamples: int = Field(1000, ge=100, le=10_000)
     seed: int = 7
     mock_latency_ms: float = Field(
@@ -83,6 +110,7 @@ class StageEvent(Contract):
 class FeaturesDoneEvent(Contract):
     type: Literal["features_done"] = "features_done"
     counts: dict[str, int]
+    timings_s: dict[str, float] = {}
 
 
 class JudgedEvent(Contract):
@@ -140,6 +168,8 @@ class RunSummary(Contract):
     elapsed_s: float
     reviews_per_s: float
     model_version: str | None = None
+    timings_s: dict[str, float] = {}  # per stage, plus semantic_* sub-steps
+    embedding_cache_hit: bool | None = None
 
 
 class DoneEvent(Contract):

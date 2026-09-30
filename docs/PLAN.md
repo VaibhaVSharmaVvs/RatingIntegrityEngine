@@ -29,6 +29,8 @@
 | C10 | **Steam soft-throttles.** It returns HTTP 200 with an empty page, or 429 after about 140 pages at 1 req/s. | pull.log | Fetcher backs off on empty pages and honours `Retry-After`, paces at 1.5 s, and resumes pulls that stopped early. |
 | C11 | **Laya checkpoint ships invalid temperatures** for some choice entries ("treat confidence … as uncalibrated"). | laya-serve startup warning | Don't use Laya choice `confidence` for FLAG decisions until it has been re-calibrated. Record it in the methodology card. |
 
+**Decision (owner, 2026-09-30): Laya stays as a benchmark backend only.** It is kept as a pluggable backend (same client, no extra code path) and one zero-shot benchmark row on the 200-review dev set. Reasons: vendor-risk hedge, an on-prem/privacy option, and a second point on the cost-accuracy chart. The fine-tune (Phase 8) moves out of the MVP to an optional stretch goal. "Laya (fine-tuned)" is dropped from the run-config UI, and local `laya-serve` becomes opt-in (`docker compose --profile laya up`).
+
 ---
 
 ## Phase overview
@@ -43,8 +45,8 @@
 | 5 | Frontend core (live grid) | 4 d | 1 (API contract); 4 for real data | |
 | 6 | Drill-downs + results | 4 d | 4, 5 | **M1: demoable MVP** (~21 d) |
 | 7 | Evaluation + benchmarks | 4 d | 6 | |
-| 8 | Laya fine-tune (non-Jev labels) | 3 d | 7 (labels) | |
-| 9 | Ship public demo | 3 d | 6 (7, 8 for full story) | **M2: public launch** (~31 d) |
+| 8 | *(stretch, out of MVP)* Laya fine-tune | 3 d + labelling | 7 (labels) | |
+| 9 | Ship public demo | 3 d | 6, 7 | **M2: public launch** (~28 d) |
 
 **Critical path:** Steam pull (start day 1) → Phase 3 Jev token-cost and throughput measurement → Phase 4 → Phase 6. The frontend (Phase 5) can start against mocked SSE fixtures as soon as the Phase 1 API contract is frozen.
 
@@ -135,6 +137,22 @@ Not built yet, on purpose: `S1` features (Phase 2), real backends and spend guar
 **Process:** implement each extractor as a pure function `DataFrame → DataFrame`; test each with fixtures (known duplicates, known spam strings); then benchmark wall-clock on the 50K set.
 
 **Exit criteria:** 50K reviews through S1 on CPU in **< 5 min** with a cold embedding cache and **< 30 s** warm; duplicate detection finds 100% of injected exact copies and ≥ 90% of injected near-copies in a unit fixture.
+
+**✅ Delivered (2026-09-30, branch `phase-2-features`).** 79 backend tests. Measured on 49,497 real Helldivers 2 reviews (MEASUREMENTS M5):
+- Deterministic S1: **8.3 s**. Warm S1: **≈ 8.5 s** ✅. Exact-copy recall 100% ✅, near-copy recall 92% ✅.
+- **Cold < 5 min: missed as written.** MiniLM-L6 runs at 96–114 reviews/s on this laptop CPU, so cold embedding of 50K takes 7–9 min. Every faster option measured (shorter context, a 3-layer model, ONNX fp32/O3/int8) either wasn't faster or changed 17–81% of nearest neighbours. **Mitigation built instead:** embeddings run in a background thread overlapped with S2 (Jev takes about 13 min for 50K, network-bound), S3 waits for them, and embeddings and kNN are cached per dataset. On the critical path, cold S1 is the 8.3 s deterministic part.
+
+Design changes vs the spec, all deliberate:
+| Area | Spec | Built | Why |
+|---|---|---|---|
+| Shingles | "3-shingles" | **char 5-shingles** (configurable) | Word 3-shingles catch 45% of two-edit near-copies at J ≥ 0.7; char-5 catches 95%. 0 false groupings over 31,878 real pairs (M5a) |
+| MinHash | datasketch | NumPy signatures + banding; LSH candidates at 0.5, **exact Jaccard verification** at 0.7 | 17–39 s → 6 s; precision 1.0 by construction; review recall 0.76 → ≥ 0.89 (M5d) |
+| Duplicate EXCLUDE | any later copy | later copies with **≥ 8 tokens** only; action configurable (`duplicate_action`) | "Good game." ×434 is not copying evidence. "One of the best games I have ever played!" ×18 is a possible false positive, so DOWNWEIGHT is available for sensitivity |
+| When dups are decided | S4 | **S1**, before System One | Grid fills immediately, and copies cost $0 in S2 |
+| Heuristics-only backend | Phase 7 ablation | `backend: "heuristic"` works now | Real no-API run and ablation (a). Promo → FLAG, never EXCLUDE on regex alone |
+| Account signals | per-review NEW_ACCOUNT reason | **not** used per review; stored for Phase 4 cluster suspicion | New/short-playtime reviewers are often genuine; a *concentration* of them is the evidence |
+
+**Real-data finding:** the part of the HD2 window pulled so far (6–10 May 2024) is the **positive counter-wave** after the PSN reversal: 92–93% positive, with coordinated slogans ("Just doing my part" ×997, "FOR DEMOCRACY" ×967, "MAJOR ORDER COMPLETE WE DIVE TOGETHER OR NOT AT ALL" ×186). The demo therefore has coordination in *both* directions. Short slogans (< 8 tokens) are left to S2's `campaign_language` and `informativeness` questions.
 
 ---
 
@@ -228,7 +246,7 @@ Not built yet, on purpose: `S1` features (Phase 2), real backends and spend guar
 
 ---
 
-## Phase 8: Laya fine-tune on non-Jev labels (re-scoped, C6)
+## Phase 8 (stretch, out of MVP): Laya fine-tune on non-Jev labels (re-scoped, C6)
 
 **Goal:** show whether a free, local System One model fine-tuned on **legally clean labels** closes the accuracy gap with Jev on this task.
 

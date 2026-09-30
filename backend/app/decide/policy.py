@@ -1,7 +1,12 @@
 """Per-review decision policy (MVP_SPEC §6.5), with every number from run config.
 
-Phase 1 implements the per-review part. Phase 4 adds the cluster penalty, the
-grey-zone FLAG and the deterministic duplicate EXCLUDE.
+Deterministic rules (S1 features) run first and need no model: a later copy of an
+earlier review is EXCLUDEd before System One ever sees it. Phase 4 adds the cluster
+penalty and the grey-zone FLAG.
+
+Account signals (low playtime, single-review account) are deliberately *not* used
+per review: plenty of genuine reviewers are new or short-playtime. They feed cluster
+suspicion in Phase 4, where a concentration of them is evidence.
 
 Deliberate deviation from the spec: the spec EXCLUDEs on `spam_promo > 0.9` alone.
 That would let a System One answer exclude a review by itself, which the research
@@ -21,6 +26,37 @@ class Decision:
     action: ActionCode
     integrity_score: float
     reasons: list[str] = field(default_factory=list)
+
+
+def duplicate_exclusion(
+    review_id: int,
+    dup_of: int,
+    dup_score: float,
+    n_tokens: int,
+    min_tokens: int,
+    action: str = "EXCLUDE",
+) -> Decision | None:
+    """EXCLUDE a later copy of an earlier review ("keep the first", MVP_SPEC §6.5).
+
+    Short texts are exempt: "good game" repeated by independent reviewers is not
+    evidence of copying. Those stay in and are judged on informativeness instead.
+    """
+    if dup_of >= 0 and dup_of != review_id and n_tokens >= min_tokens:
+        return Decision(ActionCode[action], 0.0, ["NEAR_DUPLICATE"])
+    return None
+
+
+def decide_heuristic(
+    *, n_tokens: int, emoji_ratio: float, has_promo: bool, low_info_max_tokens: int
+) -> Decision:
+    """Heuristics-only baseline (ablation a): no System One. Conservative on purpose:
+    a regex promo hit goes to a human (FLAG), never straight to EXCLUDE."""
+    low_info = n_tokens <= low_info_max_tokens or emoji_ratio > 0.5
+    if has_promo:
+        return Decision(ActionCode.FLAG, 0.5, ["SPAM"])
+    if low_info:
+        return Decision(ActionCode.DOWNWEIGHT, 0.4, ["LOW_INFO"])
+    return Decision(ActionCode.KEEP, 1.0, [])
 
 
 def _norm_score(answer: dict, levels: int) -> float:

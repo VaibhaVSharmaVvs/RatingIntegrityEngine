@@ -1,10 +1,13 @@
 """Run orchestrator: S0 Ingest → S1 Features → S2 System One → S3 Corpus → S4 Decide.
 
-One asyncio task per run (MVP_SPEC §3). Phase 1 status per stage:
+One asyncio task per run (MVP_SPEC §3). Status per stage:
 - S0: real (loads the dataset).
-- S1: placeholder, real features land in Phase 2.
-- S2: real streaming loop and per-review policy; backend is `mock` until Phase 3.
-- S3: busiest-hour stub, real clustering and bursts land in Phase 4.
+- S1: real. Deterministic features first (seconds); their duplicate EXCLUDEs fill the
+  grid at once and never reach System One. Embeddings start in a background thread
+  here and overlap S2; S3 waits for them.
+- S2: real streaming loop and per-review policy. Backends: `mock`, `heuristic`
+  (no model, ablation a); Jev/Laya land in Phase 3.
+- S3: busiest-hour stub; real clustering and bursts land in Phase 4.
 - S4: real weights, adjusted rating, bootstrap CI, n_eff, Steam labels.
 """
 
@@ -14,14 +17,22 @@ import json
 import logging
 import time
 from datetime import UTC, datetime
+from pathlib import Path
 
 import numpy as np
 import polars as pl
 
 from app.core.db import Database
 from app.core.events import RunEventBus
-from app.decide.policy import Decision, decide
+from app.decide.policy import Decision, decide, decide_heuristic, duplicate_exclusion
 from app.decide.rating import bootstrap_ci, n_eff, steam_label, weighted_mean
+from app.features.embeddings import Embedder, SentenceTransformerEmbedder
+from app.features.extract import (
+    SemanticResult,
+    deterministic_features,
+    feature_counts,
+    semantic_features,
+)
 from app.models import (
     ActionCode,
     ClusterEvent,
@@ -45,15 +56,57 @@ EMIT_EVERY_N = 250
 EMIT_EVERY_S = 0.2
 SCORE_LEVELS = {q: len(s["criteria"]) for q, s in QUESTIONS.items() if s["type"] == "score"}
 ACTION_NAMES = {c: c.name for c in ActionCode if c is not ActionCode.PENDING}
+FEATURE_COLUMNS = [
+    "review_id",
+    "n_tokens",
+    "type_token_ratio",
+    "has_url",
+    "has_promo",
+    "emoji_ratio",
+    "max_char_run",
+    "promo_hits",
+    "exact_group_id",
+    "dup_group_id",
+    "dup_of",
+    "dup_score",
+    "low_playtime",
+    "single_review_account",
+    "received_for_free",
+    "not_purchased",
+]
+
+
+class HeuristicBackend:
+    """No model: S2 is skipped and decisions come from S1 features only."""
+
+    model_version = "heuristics-v1"
 
 
 class Pipeline:
-    def __init__(self, db: Database, run_id: str, config: RunCreate, bus: RunEventBus) -> None:
+    def __init__(
+        self,
+        db: Database,
+        run_id: str,
+        config: RunCreate,
+        bus: RunEventBus,
+        *,
+        cache_dir: Path,
+        embedder: Embedder | None = None,
+    ) -> None:
         self.db = db
         self.run_id = run_id
         self.config = config
         self.bus = bus
+        self.cache_dir = cache_dir
+        fc = config.features
+        self.embedder = embedder or SentenceTransformerEmbedder(
+            fc.embedding_model, fc.embedding_max_seq_len
+        )
         self.backend = self._make_backend()
+        self.features_frame = pl.DataFrame()
+        self.semantic: SemanticResult | None = None
+        self._semantic_task: asyncio.Task | None = None
+        self.timings: dict[str, float] = {}
         self.grid = np.zeros(0, dtype=np.uint8)
         self.reviews = pl.DataFrame()
         self.dataset: dict = {}
@@ -63,10 +116,12 @@ class Pipeline:
         self.tokens_in = 0
         self._t0 = 0.0
 
-    def _make_backend(self) -> MockBackend:
-        if self.config.backend != "mock":
-            raise ValueError(f"backend '{self.config.backend}' is not implemented yet (Phase 3)")
-        return MockBackend(seed=self.config.seed, latency_ms=self.config.mock_latency_ms)
+    def _make_backend(self) -> MockBackend | HeuristicBackend:
+        if self.config.backend == "mock":
+            return MockBackend(seed=self.config.seed, latency_ms=self.config.mock_latency_ms)
+        if self.config.backend == "heuristic":
+            return HeuristicBackend()
+        raise ValueError(f"backend '{self.config.backend}' is not implemented yet (Phase 3)")
 
     # --- lifecycle ------------------------------------------------------------------
 
@@ -74,11 +129,18 @@ class Pipeline:
         self._t0 = time.monotonic()
         self._set_run(status="running", started_at=datetime.now(UTC))
         try:
-            await self.ingest()
-            await self.features()
-            await self.systemone()
-            await self.corpus()
+            for name, stage in (
+                ("ingest", self.ingest),
+                ("features", self.features),
+                ("systemone", self.systemone),
+                ("corpus", self.corpus),
+            ):
+                t = time.monotonic()
+                await stage()
+                self.timings[name] = round(time.monotonic() - t, 3)
+            t = time.monotonic()
             summary = await self.decide()
+            summary.timings_s["decide"] = round(time.monotonic() - t, 3)
             self._set_run(
                 status="done",
                 finished_at=datetime.now(UTC),
@@ -93,6 +155,10 @@ class Pipeline:
             self._set_run(status="failed", error=str(exc), finished_at=datetime.now(UTC))
             self.bus.publish(ErrorEvent(message=str(exc), retryable=False))
         finally:
+            task = self._semantic_task
+            if task is not None and not task.done():
+                # A thread can't be cancelled; let it finish and drop its result.
+                task.add_done_callback(lambda t: t.cancelled() or t.exception())
             self.bus.close()
 
     def _set_run(self, **fields) -> None:
@@ -116,7 +182,7 @@ class Pipeline:
                 raise ValueError(f"dataset {self.config.dataset_id} not found")
             self.dataset = dict(zip(("name", "source", "rating_scale"), row, strict=True))
             self.reviews = cur.execute(
-                "SELECT id, text, rating_norm, created_at FROM reviews "
+                "SELECT id, text, rating_norm, created_at, meta FROM reviews "
                 "WHERE dataset_id = ? ORDER BY id",
                 [self.config.dataset_id],
             ).pl()
@@ -129,36 +195,83 @@ class Pipeline:
 
     async def features(self) -> None:
         self.bus.publish(StageEvent(name="features", status="started"))
-        self.bus.publish(FeaturesDoneEvent(counts={"reviews": self.reviews.height}))
+        cfg = self.config.features
+        frame, timings = await asyncio.to_thread(deterministic_features, self.reviews, cfg)
+        self.features_frame = frame
+        self._store_features(frame)
+
+        # Deterministic EXCLUDEs: decided now, never sent to System One.
+        idx, act = [], []
+        for rid, dup_of, score, n_tok in frame.select(
+            "review_id", "dup_of", "dup_score", "n_tokens"
+        ).iter_rows():
+            d = duplicate_exclusion(
+                rid,
+                dup_of,
+                score,
+                n_tok,
+                cfg.dup_min_tokens,
+                self.config.thresholds.duplicate_action,
+            )
+            if d is not None:
+                self.decisions[rid] = d
+                self.grid[rid] = d.action
+                idx.append(rid)
+                act.append(int(d.action))
+        self.bus.publish(FeaturesDoneEvent(counts=feature_counts(frame, cfg), timings_s=timings))
+        if idx:
+            self._emit_progress(idx, act)
+
+        # Embeddings overlap S2; S3 awaits them.
+        texts = self.reviews["text"].fill_null("").to_list()
+        self._semantic_task = asyncio.create_task(
+            asyncio.to_thread(
+                semantic_features, texts, self.embedder, self.cache_dir, self.config.dataset_id
+            )
+        )
         self.bus.publish(StageEvent(name="features", status="done"))
+
+    def _store_features(self, frame: pl.DataFrame) -> None:
+        arrow = (  # noqa: F841 (referenced by name in SQL)
+            frame.select(FEATURE_COLUMNS)
+            .with_columns(pl.lit(self.run_id).alias("run_id"))
+            .to_arrow()
+        )
+        cols = ", ".join(["run_id", *FEATURE_COLUMNS])
+        with self.db.cursor() as cur:
+            cur.execute(f"INSERT INTO features ({cols}) SELECT {cols} FROM arrow")
 
     # --- S2 -------------------------------------------------------------------------
 
     async def systemone(self) -> None:
+        if isinstance(self.backend, HeuristicBackend):
+            self._decide_heuristic()
+            self.bus.publish(StageEvent(name="systemone", status="skipped"))
+            return
         self.bus.publish(StageEvent(name="systemone", status="started"))
-        ids = self.reviews["id"].to_list()
+        promo = self.features_frame["has_promo"].to_list()
+        ids = [i for i in self.reviews["id"].to_list() if i not in self.decisions]
         texts = self.reviews["text"].to_list()
         verdicts = self.reviews["rating_norm"].to_list()
         game = self.dataset["name"]
-        batches = [(ids[i : i + BATCH_SIZE], i) for i in range(0, len(ids), BATCH_SIZE)]
+        batches = [ids[i : i + BATCH_SIZE] for i in range(0, len(ids), BATCH_SIZE)]
         sem = asyncio.Semaphore(self.config.concurrency)
         pending_idx: list[int] = []
         pending_act: list[int] = []
         last_emit = time.monotonic()
 
-        async def judge(batch_ids: list[int], offset: int) -> tuple[list[int], list[dict]]:
-            states = [
-                build_state(game, (verdicts[offset + k] or 0) >= 0.5, texts[offset + k])
-                for k in range(len(batch_ids))
-            ]
+        async def judge(batch_ids: list[int]) -> tuple[list[int], list[dict]]:
+            states = [build_state(game, (verdicts[i] or 0) >= 0.5, texts[i]) for i in batch_ids]
             async with sem:
                 return batch_ids, await self.backend.judge_batch(batch_ids, states)
 
-        tasks = [asyncio.create_task(judge(b, off)) for b, off in batches]
+        tasks = [asyncio.create_task(judge(b)) for b in batches]
         for fut in asyncio.as_completed(tasks):
             batch_ids, answers = await fut
             for rid, ans in zip(batch_ids, answers, strict=True):
-                d = decide(ans, self.config.thresholds, score_levels=SCORE_LEVELS)
+                d = decide(
+                    ans, self.config.thresholds, score_levels=SCORE_LEVELS, has_promo=promo[rid]
+                )
                 self.answers[rid] = ans
                 self.decisions[rid] = d
                 self.grid[rid] = d.action
@@ -170,8 +283,32 @@ class Pipeline:
                 pending_idx, pending_act, last_emit = [], [], now
         if pending_idx:
             self._emit_progress(pending_idx, pending_act)
-        self._store_judgments()
+        if self.answers:
+            self._store_judgments()
         self.bus.publish(StageEvent(name="systemone", status="done"))
+
+    def _decide_heuristic(self) -> None:
+        cfg = self.config.features
+        idx, act = [], []
+        for rid, n_tok, emoji, promo in self.features_frame.select(
+            "review_id", "n_tokens", "emoji_ratio", "has_promo"
+        ).iter_rows():
+            if rid in self.decisions:
+                continue
+            d = decide_heuristic(
+                n_tokens=n_tok,
+                emoji_ratio=emoji,
+                has_promo=promo,
+                low_info_max_tokens=cfg.low_info_max_tokens,
+            )
+            self.decisions[rid] = d
+            self.grid[rid] = d.action
+            idx.append(rid)
+            act.append(int(d.action))
+        for start in range(0, len(idx), EMIT_EVERY_N):
+            self._emit_progress(
+                idx[start : start + EMIT_EVERY_N], act[start : start + EMIT_EVERY_N]
+            )
 
     def _emit_progress(self, idx: list[int], act: list[int]) -> None:
         self.bus.publish(
@@ -246,8 +383,12 @@ class Pipeline:
     # --- S3 -------------------------------------------------------------------------
 
     async def corpus(self) -> None:
-        """Phase 1 stub: report the busiest UTC hour. Not a suspicion judgment."""
+        """Waits for S1 embeddings, then (Phase 1 stub) reports the busiest UTC hour."""
         self.bus.publish(StageEvent(name="corpus", status="started"))
+        if self._semantic_task is not None:
+            self.semantic = await self._semantic_task
+            self.timings.update({f"semantic_{k}": v for k, v in self.semantic.timings_s.items()})
+            self._store_semantic(self.semantic)
         ts = self.reviews.filter(pl.col("created_at").is_not_null())
         if ts.is_empty():
             self.bus.publish(StageEvent(name="corpus", status="skipped"))
@@ -281,6 +422,22 @@ class Pipeline:
         )
         self.bus.publish(StageEvent(name="corpus", status="done"))
 
+    def _store_semantic(self, sem: SemanticResult) -> None:
+        arrow = pl.DataFrame(  # noqa: F841 (referenced by name in SQL)
+            {
+                "review_id": self.reviews["id"].cast(pl.Int32),
+                "nn_review_id": sem.nn_review_id.astype(np.int32),
+                "nn_cosine_max": sem.nn_cosine_max.astype(np.float64),
+            }
+        ).to_arrow()
+        with self.db.cursor() as cur:
+            cur.execute(
+                "UPDATE features SET nn_review_id = a.nn_review_id, "
+                "nn_cosine_max = a.nn_cosine_max, embedding_idx = a.review_id FROM arrow a "
+                "WHERE features.run_id = ? AND features.review_id = a.review_id",
+                [self.run_id],
+            )
+
     # --- S4 -------------------------------------------------------------------------
 
     async def decide(self) -> RunSummary:
@@ -311,6 +468,8 @@ class Pipeline:
             elapsed_s=round(elapsed, 3),
             reviews_per_s=round(len(self.grid) / elapsed, 2) if elapsed else 0.0,
             model_version=self.backend.model_version,
+            timings_s=dict(self.timings),
+            embedding_cache_hit=self.semantic.cache_hit if self.semantic else None,
         )
         self.bus.publish(StageEvent(name="decide", status="done"))
         return summary
