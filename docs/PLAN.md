@@ -29,6 +29,10 @@
 | C10 | **Steam soft-throttles.** It returns HTTP 200 with an empty page, or 429 after about 140 pages at 1 req/s. | pull.log | Fetcher backs off on empty pages and honours `Retry-After`, paces at 1.5 s, and resumes pulls that stopped early. |
 | C11 | **Laya checkpoint ships invalid temperatures** for some choice entries ("treat confidence … as uncalibrated"). | laya-serve startup warning | Don't use Laya choice `confidence` for FLAG decisions until it has been re-calibrated. Record it in the methodology card. |
 
+**Principle (owner, 2026-09-30): accuracy over speed.** When a choice trades accuracy against runtime or modest API cost, choose accuracy, but only when a measurement shows an accuracy gain. Speed and cost stay *reported*, not optimised at accuracy's expense. Applied so far: embedding context 128 → 256, LSH candidate bar 0.4, 2,000 bootstrap resamples, duplicates judged instead of skipped (MEASUREMENTS M6).
+
+**Decision (owner, 2026-09-30): Laya stays as a benchmark backend only.** It is kept as a pluggable backend (same client, no extra code path) and one zero-shot benchmark row on the 200-review dev set. Reasons: vendor-risk hedge, an on-prem/privacy option, and a second point on the cost-accuracy chart. The fine-tune (Phase 8) moves out of the MVP to an optional stretch goal. "Laya (fine-tuned)" is dropped from the run-config UI, and local `laya-serve` becomes opt-in (`docker compose --profile laya up`).
+
 ---
 
 ## Phase overview
@@ -43,8 +47,8 @@
 | 5 | Frontend core (live grid) | 4 d | 1 (API contract); 4 for real data | |
 | 6 | Drill-downs + results | 4 d | 4, 5 | **M1: demoable MVP** (~21 d) |
 | 7 | Evaluation + benchmarks | 4 d | 6 | |
-| 8 | Laya fine-tune (non-Jev labels) | 3 d | 7 (labels) | |
-| 9 | Ship public demo | 3 d | 6 (7, 8 for full story) | **M2: public launch** (~31 d) |
+| 8 | *(stretch, out of MVP)* Laya fine-tune | 3 d + labelling | 7 (labels) | |
+| 9 | Ship public demo | 3 d | 6, 7 | **M2: public launch** (~28 d) |
 
 **Critical path:** Steam pull (start day 1) → Phase 3 Jev token-cost and throughput measurement → Phase 4 → Phase 6. The frontend (Phase 5) can start against mocked SSE fixtures as soon as the Phase 1 API contract is frozen.
 
@@ -136,6 +140,22 @@ Not built yet, on purpose: `S1` features (Phase 2), real backends and spend guar
 
 **Exit criteria:** 50K reviews through S1 on CPU in **< 5 min** with a cold embedding cache and **< 30 s** warm; duplicate detection finds 100% of injected exact copies and ≥ 90% of injected near-copies in a unit fixture.
 
+**✅ Delivered (2026-09-30, branch `phase-2-features`).** 79 backend tests. Measured on 49,497 real Helldivers 2 reviews (MEASUREMENTS M5):
+- Deterministic S1: **8.3 s**. Warm S1: **≈ 8.5 s** ✅. Exact-copy recall 100% ✅, near-copy recall 92% ✅.
+- **Cold < 5 min: missed as written.** MiniLM-L6 runs at 96–114 reviews/s on this laptop CPU, so cold embedding of 50K takes 7–9 min. Every faster option measured (shorter context, a 3-layer model, ONNX fp32/O3/int8) either wasn't faster or changed 17–81% of nearest neighbours. **Mitigation built instead:** embeddings run in a background thread overlapped with S2 (Jev takes about 13 min for 50K, network-bound), S3 waits for them, and embeddings and kNN are cached per dataset. On the critical path, cold S1 is the 8.3 s deterministic part.
+
+Design changes vs the spec, all deliberate:
+| Area | Spec | Built | Why |
+|---|---|---|---|
+| Shingles | "3-shingles" | **char 5-shingles** (configurable) | Word 3-shingles catch 45% of two-edit near-copies at J ≥ 0.7; char-5 catches 95%. 0 false groupings over 31,878 real pairs (M5a) |
+| MinHash | datasketch | NumPy signatures + banding; LSH candidates at 0.5, **exact Jaccard verification** at 0.7 | 17–39 s → 6 s; precision 1.0 by construction; review recall 0.76 → ≥ 0.89 (M5d) |
+| Duplicate action | EXCLUDE any later copy | **DOWNWEIGHT** later copies with **≥ 8 tokens** (owner decision); EXCLUDE is available via `duplicate_action` | "Good game." ×434 is not copying evidence. "One of the best games I have ever played!" ×18 is likely independent reviewers. Copies inside a detected burst are escalated in Phase 4 |
+| Are copies judged? | — | **Yes**: every review goes to System One; the copy rule is a floor (a worse model verdict still wins). Byte-identical inputs share one call (−10.5% calls on HD2) | Accuracy over cost; reuse only where it cannot change an answer |
+| Heuristics-only backend | Phase 7 ablation | `backend: "heuristic"` works now | Real no-API run and ablation (a). Promo → FLAG, never EXCLUDE on regex alone |
+| Account signals | per-review NEW_ACCOUNT reason | **not** used per review; stored for Phase 4 cluster suspicion | New/short-playtime reviewers are often genuine; a *concentration* of them is the evidence |
+
+**Real-data finding:** the part of the HD2 window pulled so far (6–10 May 2024) is the **positive counter-wave** after the PSN reversal: 92–93% positive, with coordinated slogans ("Just doing my part" ×997, "FOR DEMOCRACY" ×967, "MAJOR ORDER COMPLETE WE DIVE TOGETHER OR NOT AT ALL" ×186). The demo therefore has coordination in *both* directions. Short slogans (< 8 tokens) are left to S2's `campaign_language` and `informativeness` questions.
+
 ---
 
 ## Phase 3: S2 System One judgments (core)
@@ -145,17 +165,18 @@ Not built yet, on purpose: `S1` features (Phase 2), real backends and spend guar
 **Requirements**
 - `systemone/client.py`: one `httpx.AsyncClient` for Jev and laya-serve; `aiolimiter` + `asyncio.Semaphore`; `tenacity` backoff on 429/529; parses noul / choice / score answers; records `usage.input_tokens`, latency and resolved model version (C3).
 - `systemone/questions_v1.py` (**drafted in Phase 0**): the six questions in §6.3, versioned. Questions name state fields in backticks (`review`, `verdict`), the convention Jev and Laya both document. No other metadata in state (Jev distraction weakness).
-- `systemone/packing.py`: pack-N builder/unpacker behind a config flag, as a **cost** lever (−41% tokens at pack 5, M4b). It is not needed for throughput (M4c). Jev only: packing is broken on Laya (M1b).
+- `systemone/packing.py`: pack-N builder/unpacker behind a config flag, as a **cost** lever (−41% tokens at pack 5, M4b). It is not needed for throughput (M4c). Jev only: packing is broken on Laya (M1b). **Default stays pack=1 (accuracy over cost).** Packing ships only as an option, and only if dev-set agreement with pack=1 is ≥ 0.98 per question.
+- **Verify Jev determinism:** the same state sent twice must return the same answers, because S2 reuses judgments for byte-identical inputs (M6c). If it is not deterministic, measure the variance and decide whether reuse is still acceptable.
 - A fixed **200-review dev set** (stratified: bomb window, pre-bomb, short, long, spammy), stored and never used for final metrics.
 - Pre-flight estimator: tokens, $, ETA, requests; blocks above `MAX_RUN_COST_USD`.
 - Streaming: `judged` + `counters` events every ~250 reviews or 200 ms.
 
 **Process**
 1. Build client + questions; run the dev set on Jev at pack=1 with `tools/bench_throughput.py`. Record tokens/review, reviews/s and 429 rate.
-2. Eyeball 50 answers; tune instruction wording (≤ 3 iterations, each logged with its cost). If tokens/review × 50K × price > $2, trim criteria text and re-measure agreement against the untrimmed set.
+2. Eyeball 50 answers; tune instruction wording (≤ 3 iterations, each logged with its cost). **Do not trim criteria text to save cost** unless agreement with the untrimmed set is ≥ 0.98 per question (accuracy over cost). At about $2 per 50K, raising `MAX_RUN_COST_USD` is the preferred lever.
 3. Run the same dev set on Laya zero-shot on local CPU (~40 min at the measured 0.08 reviews/s). It is a benchmark row.
 
-**Exit criteria / go-no-go:** Jev 50K run projected at ≤ $2 and ≤ 45 min from measured numbers. If either fails, live runs use the 5K subset and the 50K run is recorded once and replayed. Numbers are written into `docs/MEASUREMENTS.md`. Total prompt-iteration spend is logged.
+**Exit criteria / go-no-go:** Jev 50K run projected at ≤ 45 min from measured numbers, with cost reported (not capped at $2; the owner accepts modest cost for accuracy). If either fails, live runs use the 5K subset and the 50K run is recorded once and replayed. Numbers are written into `docs/MEASUREMENTS.md`. Total prompt-iteration spend is logged.
 
 ---
 
@@ -167,6 +188,8 @@ Not built yet, on purpose: `S1` features (Phase 2), real backends and spend guar
 - `corpus/clusters.py`: duplicate clusters (LSH connected components, size ≥ 3); semantic clusters (UMAP → 10-D, `sklearn.cluster.HDBSCAN`, `min_cluster_size=15`); c-TF-IDF top phrases.
 - `corpus/bursts.py`: hourly counts per verdict, robust z-score vs 7-day trailing baseline, `ruptures` PELT on daily % positive → `kind='burst'` clusters.
 - `corpus/suspicion.py`: the geometric-mean formula in §6.4 with **every factor stored** so the caption is generated from data.
+- **In-burst copy escalation (owner decision 2026-09-30):** a later copy (≥ `dup_min_tokens`) that falls inside a detected burst window, or in a high-suspicion cluster, is escalated from DOWNWEIGHT (config `duplicate_in_burst_action`, default EXCLUDE; FLAG is the alternative). Copies outside bursts stay DOWNWEIGHT. Test on the Cities: Skylines II control: organic complaint waves must not trigger it.
+- Account signals (low playtime, single-review account) enter here as `new_account_share` in cluster suspicion, never per review.
 - `decide/policy.py`: the §6.5 rules; every threshold and weight in run `config`; top-3 reason codes.
 - `decide/rating.py`: weighted rating, bootstrap 95% CI (1,000 resamples, vectorised NumPy), `n_eff`, Steam label bands.
 - Guardrail tests: **System One alone can never EXCLUDE** (only deterministic duplicates or spam > 0.9 can); an on-topic genuine negative review with high informativeness stays KEEP.
@@ -228,7 +251,7 @@ Not built yet, on purpose: `S1` features (Phase 2), real backends and spend guar
 
 ---
 
-## Phase 8: Laya fine-tune on non-Jev labels (re-scoped, C6)
+## Phase 8 (stretch, out of MVP): Laya fine-tune on non-Jev labels (re-scoped, C6)
 
 **Goal:** show whether a free, local System One model fine-tuned on **legally clean labels** closes the accuracy gap with Jev on this task.
 

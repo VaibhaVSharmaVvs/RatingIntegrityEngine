@@ -1,7 +1,14 @@
 """Per-review decision policy (MVP_SPEC §6.5), with every number from run config.
 
-Phase 1 implements the per-review part. Phase 4 adds the cluster penalty, the
-grey-zone FLAG and the deterministic duplicate EXCLUDE.
+Duplicates (owner decision, 2026-09-30): a later copy of an earlier review is
+DOWNWEIGHTed by default, not EXCLUDEd, and it is still judged by System One. The copy
+rule sets a floor: a worse model-based action (FLAG, EXCLUDE) still wins. Phase 4
+escalates copies that fall inside a detected burst, where copying is evidence of
+coordination. Phase 4 also adds the cluster penalty and the grey-zone FLAG.
+
+Account signals (low playtime, single-review account) are deliberately *not* used
+per review: plenty of genuine reviewers are new or short-playtime. They feed cluster
+suspicion in Phase 4, where a concentration of them is evidence.
 
 Deliberate deviation from the spec: the spec EXCLUDEs on `spam_promo > 0.9` alone.
 That would let a System One answer exclude a review by itself, which the research
@@ -21,6 +28,51 @@ class Decision:
     action: ActionCode
     integrity_score: float
     reasons: list[str] = field(default_factory=list)
+
+
+def is_later_copy(review_id: int, dup_of: int, n_tokens: int, min_tokens: int) -> bool:
+    """A later copy of an earlier review ("keep the first", MVP_SPEC §6.5).
+
+    Short texts are exempt: "good game" repeated by independent reviewers is not
+    evidence of copying. Those are judged on informativeness like any other review.
+    """
+    return dup_of >= 0 and dup_of != review_id and n_tokens >= min_tokens
+
+
+# How severe an action is when two rules disagree. FLAG ranks above DOWNWEIGHT: an
+# unresolved "needs a human" must not be silently turned into a weight.
+_SEVERITY = {
+    ActionCode.KEEP: 0,
+    ActionCode.DOWNWEIGHT: 1,
+    ActionCode.FLAG: 2,
+    ActionCode.EXCLUDE: 3,
+}
+
+
+def apply_duplicate_rule(decision: Decision, copy_action: str) -> Decision:
+    """Combine a per-review decision with the later-copy rule: the stricter wins.
+
+    The integrity score is left as the model/heuristics computed it, so a copy of a
+    detailed review still shows high informativeness in the inspector; the copy is
+    visible through its action and the NEAR_DUPLICATE reason.
+    """
+    floor = ActionCode[copy_action]
+    action = max(decision.action, floor, key=_SEVERITY.__getitem__)
+    reasons = ["NEAR_DUPLICATE", *[r for r in decision.reasons if r != "NEAR_DUPLICATE"]][:3]
+    return Decision(action, decision.integrity_score, reasons)
+
+
+def decide_heuristic(
+    *, n_tokens: int, emoji_ratio: float, has_promo: bool, low_info_max_tokens: int
+) -> Decision:
+    """Heuristics-only baseline (ablation a): no System One. Conservative on purpose:
+    a regex promo hit goes to a human (FLAG), never straight to EXCLUDE."""
+    low_info = n_tokens <= low_info_max_tokens or emoji_ratio > 0.5
+    if has_promo:
+        return Decision(ActionCode.FLAG, 0.5, ["SPAM"])
+    if low_info:
+        return Decision(ActionCode.DOWNWEIGHT, 0.4, ["LOW_INFO"])
+    return Decision(ActionCode.KEEP, 1.0, [])
 
 
 def _norm_score(answer: dict, levels: int) -> float:

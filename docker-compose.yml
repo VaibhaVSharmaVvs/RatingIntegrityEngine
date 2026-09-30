@@ -7,9 +7,9 @@ services:
       LAYA_BASE_URL: http://laya:8000
     ports: ["8001:8001"]
     volumes: ["./data:/app/data"]
-    depends_on: [laya]
 
   laya:
+    profiles: ["laya"]  # opt-in: docker compose --profile laya up
     build:
       context: ./backend
       args: { EXTRAS: "--extra laya" }

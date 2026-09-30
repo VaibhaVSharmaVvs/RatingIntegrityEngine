@@ -130,6 +130,18 @@ MIGRATIONS: list[str] = [
         created_at TIMESTAMPTZ NOT NULL DEFAULT current_timestamp
     );
     """,
+    # 2: Phase 2 feature columns (spec §6.2 signals the §5 table didn't name)
+    """
+    ALTER TABLE features ADD COLUMN max_char_run INTEGER;
+    ALTER TABLE features ADD COLUMN promo_hits JSON;          -- names of matched promo patterns
+    ALTER TABLE features ADD COLUMN exact_group_id INTEGER;   -- same normalised text
+    ALTER TABLE features ADD COLUMN dup_of INTEGER;           -- earliest review in its dup group
+    ALTER TABLE features ADD COLUMN nn_review_id INTEGER;     -- nearest semantic neighbour
+    ALTER TABLE features ADD COLUMN low_playtime BOOLEAN;
+    ALTER TABLE features ADD COLUMN single_review_account BOOLEAN;
+    ALTER TABLE features ADD COLUMN received_for_free BOOLEAN;
+    ALTER TABLE features ADD COLUMN not_purchased BOOLEAN;
+    """,
 ]
 
 
