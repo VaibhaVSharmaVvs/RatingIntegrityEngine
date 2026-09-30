@@ -73,7 +73,7 @@ def main() -> None:
         "enum": [c.value for c in models.ActionCode],
     }
     schema["properties"]["ActionCode"] = {"$ref": "#/$defs/ActionCode"}
-    OUT.write_text(json.dumps(schema, indent=2) + "\n", encoding="utf-8")
+    OUT.write_text(json.dumps(schema, indent=2) + "\n", encoding="utf-8", newline="\n")
     print(f"wrote {OUT} ({len(defs)} models)")
 
 
