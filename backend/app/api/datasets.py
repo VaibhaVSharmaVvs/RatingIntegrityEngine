@@ -127,6 +127,7 @@ async def fetch_steam(req: SteamFetchRequest, state: AppState = Depends(get_stat
             state.db,
             pull_dir,
             name=name,
+            subject=req.subject or name,
             sample_n=req.sample_n,
             dataset_id=dataset_id,
             create=False,

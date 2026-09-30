@@ -50,6 +50,257 @@
       "title": "ActionWeights",
       "type": "object"
     },
+    "BurstConfig-Input": {
+      "description": "S3 burst detection (MVP_SPEC \u00a76.4). Calibrated on HD2 / CS2 (MEASUREMENTS M9).",
+      "properties": {
+        "baseline_hours": {
+          "default": 168,
+          "minimum": 24,
+          "type": "integer"
+        },
+        "min_history_hours": {
+          "default": 72,
+          "minimum": 6,
+          "type": "integer"
+        },
+        "z_threshold": {
+          "default": 6.0,
+          "exclusiveMinimum": 0,
+          "type": "number"
+        },
+        "min_scale": {
+          "default": 1.0,
+          "exclusiveMinimum": 0,
+          "type": "number"
+        },
+        "min_hour_count": {
+          "default": 5,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "merge_gap_hours": {
+          "default": 2,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "min_burst_reviews": {
+          "default": 30,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "min_daily_reviews": {
+          "default": 20,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "min_segment_days": {
+          "default": 3,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "change_point_penalty": {
+          "default": 3.0,
+          "exclusiveMinimum": 0,
+          "type": "number"
+        }
+      },
+      "title": "BurstConfig",
+      "type": "object"
+    },
+    "BurstConfig-Output": {
+      "description": "S3 burst detection (MVP_SPEC \u00a76.4). Calibrated on HD2 / CS2 (MEASUREMENTS M9).",
+      "properties": {
+        "baseline_hours": {
+          "default": 168,
+          "minimum": 24,
+          "type": "integer"
+        },
+        "min_history_hours": {
+          "default": 72,
+          "minimum": 6,
+          "type": "integer"
+        },
+        "z_threshold": {
+          "default": 6.0,
+          "exclusiveMinimum": 0,
+          "type": "number"
+        },
+        "min_scale": {
+          "default": 1.0,
+          "exclusiveMinimum": 0,
+          "type": "number"
+        },
+        "min_hour_count": {
+          "default": 5,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "merge_gap_hours": {
+          "default": 2,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "min_burst_reviews": {
+          "default": 30,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "min_daily_reviews": {
+          "default": 20,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "min_segment_days": {
+          "default": 3,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "change_point_penalty": {
+          "default": 3.0,
+          "exclusiveMinimum": 0,
+          "type": "number"
+        }
+      },
+      "required": [
+        "baseline_hours",
+        "min_history_hours",
+        "z_threshold",
+        "min_scale",
+        "min_hour_count",
+        "merge_gap_hours",
+        "min_burst_reviews",
+        "min_daily_reviews",
+        "min_segment_days",
+        "change_point_penalty"
+      ],
+      "title": "BurstConfig",
+      "type": "object"
+    },
+    "ClusterConfig-Input": {
+      "description": "S3 clusters (MVP_SPEC \u00a76.4).",
+      "properties": {
+        "umap_min_reviews": {
+          "default": 2000,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "umap_neighbors": {
+          "default": 15,
+          "minimum": 2,
+          "type": "integer"
+        },
+        "umap_components": {
+          "default": 10,
+          "minimum": 2,
+          "type": "integer"
+        },
+        "umap_min_dist": {
+          "default": 0.0,
+          "minimum": 0,
+          "type": "number"
+        },
+        "hdbscan_min_cluster_size": {
+          "default": 15,
+          "minimum": 2,
+          "type": "integer"
+        },
+        "hdbscan_min_samples": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "dup_min_size": {
+          "default": 3,
+          "minimum": 2,
+          "type": "integer"
+        },
+        "top_phrases": {
+          "default": 6,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "seed": {
+          "default": 7,
+          "type": "integer"
+        }
+      },
+      "title": "ClusterConfig",
+      "type": "object"
+    },
+    "ClusterConfig-Output": {
+      "description": "S3 clusters (MVP_SPEC \u00a76.4).",
+      "properties": {
+        "umap_min_reviews": {
+          "default": 2000,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "umap_neighbors": {
+          "default": 15,
+          "minimum": 2,
+          "type": "integer"
+        },
+        "umap_components": {
+          "default": 10,
+          "minimum": 2,
+          "type": "integer"
+        },
+        "umap_min_dist": {
+          "default": 0.0,
+          "minimum": 0,
+          "type": "number"
+        },
+        "hdbscan_min_cluster_size": {
+          "default": 15,
+          "minimum": 2,
+          "type": "integer"
+        },
+        "hdbscan_min_samples": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "dup_min_size": {
+          "default": 3,
+          "minimum": 2,
+          "type": "integer"
+        },
+        "top_phrases": {
+          "default": 6,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "seed": {
+          "default": 7,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "umap_min_reviews",
+        "umap_neighbors",
+        "umap_components",
+        "umap_min_dist",
+        "hdbscan_min_cluster_size",
+        "hdbscan_min_samples",
+        "dup_min_size",
+        "top_phrases",
+        "seed"
+      ],
+      "title": "ClusterConfig",
+      "type": "object"
+    },
     "ClusterEvent": {
       "properties": {
         "type": {
@@ -87,6 +338,45 @@
         "caption"
       ],
       "title": "ClusterEvent",
+      "type": "object"
+    },
+    "CorpusSummary": {
+      "properties": {
+        "clusters": {
+          "additionalProperties": {
+            "type": "integer"
+          },
+          "default": {},
+          "type": "object"
+        },
+        "suspicious_clusters": {
+          "default": 0,
+          "type": "integer"
+        },
+        "change_points": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "penalised_reviews": {
+          "default": 0,
+          "type": "integer"
+        },
+        "actions_changed_by_clusters": {
+          "default": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "clusters",
+        "suspicious_clusters",
+        "change_points",
+        "penalised_reviews",
+        "actions_changed_by_clusters"
+      ],
+      "title": "CorpusSummary",
       "type": "object"
     },
     "CountersEvent": {
@@ -520,7 +810,7 @@
       "type": "object"
     },
     "JudgedEvent": {
-      "description": "Provisional per-review actions. Decoding: indices = Uint32Array (little-endian)\nfrom base64 `indices_b64`; actions = Uint8Array from `actions_b64`; same length.",
+      "description": "Per-review actions. Decoding: indices = Uint32Array (little-endian) from base64\n`indices_b64`; actions = Uint8Array from `actions_b64`; same length. A review can\nappear again later (S4 cluster rules update it): the last update wins.",
       "properties": {
         "type": {
           "const": "judged",
@@ -592,6 +882,31 @@
             "DOWNWEIGHT"
           ],
           "type": "string"
+        },
+        "cluster_penalty_threshold": {
+          "default": 0.5,
+          "type": "number"
+        },
+        "cluster_penalty_strength": {
+          "default": 0.5,
+          "type": "number"
+        },
+        "min_penalty_cluster_size": {
+          "default": 10,
+          "type": "integer"
+        },
+        "grey_zone_width": {
+          "default": 0.1,
+          "type": "number"
+        },
+        "duplicate_in_burst_action": {
+          "default": "EXCLUDE",
+          "enum": [
+            "EXCLUDE",
+            "FLAG",
+            "DOWNWEIGHT"
+          ],
+          "type": "string"
         }
       },
       "title": "PolicyThresholds",
@@ -647,6 +962,31 @@
             "DOWNWEIGHT"
           ],
           "type": "string"
+        },
+        "cluster_penalty_threshold": {
+          "default": 0.5,
+          "type": "number"
+        },
+        "cluster_penalty_strength": {
+          "default": 0.5,
+          "type": "number"
+        },
+        "min_penalty_cluster_size": {
+          "default": 10,
+          "type": "integer"
+        },
+        "grey_zone_width": {
+          "default": 0.1,
+          "type": "number"
+        },
+        "duplicate_in_burst_action": {
+          "default": "EXCLUDE",
+          "enum": [
+            "EXCLUDE",
+            "FLAG",
+            "DOWNWEIGHT"
+          ],
+          "type": "string"
         }
       },
       "required": [
@@ -660,7 +1000,12 @@
         "w_templated",
         "w_offtopic",
         "reason_min_contribution",
-        "duplicate_action"
+        "duplicate_action",
+        "cluster_penalty_threshold",
+        "cluster_penalty_strength",
+        "min_penalty_cluster_size",
+        "grey_zone_width",
+        "duplicate_in_burst_action"
       ],
       "title": "PolicyThresholds",
       "type": "object"
@@ -785,7 +1130,8 @@
             "laya",
             "laya-ft",
             "heuristic",
-            "mock"
+            "mock",
+            "cached"
           ],
           "type": "string"
         },
@@ -815,6 +1161,17 @@
         "reuse_identical_inputs": {
           "default": false,
           "type": "boolean"
+        },
+        "reuse_judgments_from": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
         },
         "confirm_cost": {
           "default": false,
@@ -856,7 +1213,12 @@
             "w_templated": 0.15,
             "w_offtopic": 0.1,
             "reason_min_contribution": 0.05,
-            "duplicate_action": "DOWNWEIGHT"
+            "duplicate_action": "DOWNWEIGHT",
+            "cluster_penalty_threshold": 0.5,
+            "cluster_penalty_strength": 0.5,
+            "min_penalty_cluster_size": 10,
+            "grey_zone_width": 0.1,
+            "duplicate_in_burst_action": "EXCLUDE"
           }
         },
         "features": {
@@ -872,6 +1234,60 @@
             "embedding_model": "sentence-transformers/all-MiniLM-L6-v2",
             "embedding_max_seq_len": 256,
             "low_playtime_minutes": 120
+          }
+        },
+        "bursts": {
+          "$ref": "#/$defs/BurstConfig-Input",
+          "default": {
+            "baseline_hours": 168,
+            "min_history_hours": 72,
+            "z_threshold": 6.0,
+            "min_scale": 1.0,
+            "min_hour_count": 5,
+            "merge_gap_hours": 2,
+            "min_burst_reviews": 30,
+            "min_daily_reviews": 20,
+            "min_segment_days": 3,
+            "change_point_penalty": 3.0
+          }
+        },
+        "clusters": {
+          "$ref": "#/$defs/ClusterConfig-Input",
+          "default": {
+            "umap_min_reviews": 2000,
+            "umap_neighbors": 15,
+            "umap_components": 10,
+            "umap_min_dist": 0.0,
+            "hdbscan_min_cluster_size": 15,
+            "hdbscan_min_samples": null,
+            "dup_min_size": 3,
+            "top_phrases": 6,
+            "seed": 7
+          }
+        },
+        "suspicion": {
+          "$ref": "#/$defs/SuspicionConfig-Input",
+          "default": {
+            "time_scales_hours": [
+              0.25,
+              1.0,
+              6.0,
+              24.0,
+              72.0
+            ],
+            "similar_cosine": 0.8,
+            "offtopic_topics": [
+              "off_topic",
+              "joke_meme",
+              "platform_policy"
+            ],
+            "factor_floor": 0.02,
+            "factor_weights": {
+              "new_account_share": 0.5
+            },
+            "null_samples": 24,
+            "null_floor": 0.5,
+            "max_cluster_events": 25
           }
         },
         "bootstrap_resamples": {
@@ -910,7 +1326,8 @@
             "laya",
             "laya-ft",
             "heuristic",
-            "mock"
+            "mock",
+            "cached"
           ],
           "type": "string"
         },
@@ -940,6 +1357,17 @@
         "reuse_identical_inputs": {
           "default": false,
           "type": "boolean"
+        },
+        "reuse_judgments_from": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
         },
         "confirm_cost": {
           "default": false,
@@ -981,7 +1409,12 @@
             "w_templated": 0.15,
             "w_offtopic": 0.1,
             "reason_min_contribution": 0.05,
-            "duplicate_action": "DOWNWEIGHT"
+            "duplicate_action": "DOWNWEIGHT",
+            "cluster_penalty_threshold": 0.5,
+            "cluster_penalty_strength": 0.5,
+            "min_penalty_cluster_size": 10,
+            "grey_zone_width": 0.1,
+            "duplicate_in_burst_action": "EXCLUDE"
           }
         },
         "features": {
@@ -997,6 +1430,60 @@
             "embedding_model": "sentence-transformers/all-MiniLM-L6-v2",
             "embedding_max_seq_len": 256,
             "low_playtime_minutes": 120
+          }
+        },
+        "bursts": {
+          "$ref": "#/$defs/BurstConfig-Output",
+          "default": {
+            "baseline_hours": 168,
+            "min_history_hours": 72,
+            "z_threshold": 6.0,
+            "min_scale": 1.0,
+            "min_hour_count": 5,
+            "merge_gap_hours": 2,
+            "min_burst_reviews": 30,
+            "min_daily_reviews": 20,
+            "min_segment_days": 3,
+            "change_point_penalty": 3.0
+          }
+        },
+        "clusters": {
+          "$ref": "#/$defs/ClusterConfig-Output",
+          "default": {
+            "umap_min_reviews": 2000,
+            "umap_neighbors": 15,
+            "umap_components": 10,
+            "umap_min_dist": 0.0,
+            "hdbscan_min_cluster_size": 15,
+            "hdbscan_min_samples": null,
+            "dup_min_size": 3,
+            "top_phrases": 6,
+            "seed": 7
+          }
+        },
+        "suspicion": {
+          "$ref": "#/$defs/SuspicionConfig-Output",
+          "default": {
+            "time_scales_hours": [
+              0.25,
+              1.0,
+              6.0,
+              24.0,
+              72.0
+            ],
+            "similar_cosine": 0.8,
+            "offtopic_topics": [
+              "off_topic",
+              "joke_meme",
+              "platform_policy"
+            ],
+            "factor_floor": 0.02,
+            "factor_weights": {
+              "new_account_share": 0.5
+            },
+            "null_samples": 24,
+            "null_floor": 0.5,
+            "max_cluster_events": 25
           }
         },
         "bootstrap_resamples": {
@@ -1024,12 +1511,16 @@
         "pack_size",
         "samples_per_review",
         "reuse_identical_inputs",
+        "reuse_judgments_from",
         "confirm_cost",
         "question_set",
         "concurrency",
         "weights",
         "thresholds",
         "features",
+        "bursts",
+        "clusters",
+        "suspicion",
         "bootstrap_resamples",
         "seed",
         "mock_latency_ms"
@@ -1270,6 +1761,16 @@
             }
           ],
           "default": null
+        },
+        "corpus": {
+          "$ref": "#/$defs/CorpusSummary",
+          "default": {
+            "clusters": {},
+            "suspicious_clusters": 0,
+            "change_points": [],
+            "penalised_reviews": 0,
+            "actions_changed_by_clusters": 0
+          }
         }
       },
       "required": [
@@ -1293,7 +1794,8 @@
         "retries",
         "latency_p50_ms",
         "latency_p95_ms",
-        "embedding_cache_hit"
+        "embedding_cache_hit",
+        "corpus"
       ],
       "title": "RunSummary",
       "type": "object"
@@ -1369,6 +1871,18 @@
             }
           ],
           "default": null
+        },
+        "subject": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "game title used in the model context line"
         }
       },
       "required": [
@@ -1377,6 +1891,150 @@
         "to"
       ],
       "title": "SteamFetchRequest",
+      "type": "object"
+    },
+    "SuspicionConfig-Input": {
+      "description": "Cluster suspicion factors (app/corpus/suspicion.py).",
+      "properties": {
+        "time_scales_hours": {
+          "default": [
+            0.25,
+            1,
+            6,
+            24,
+            72
+          ],
+          "items": {
+            "type": "number"
+          },
+          "type": "array"
+        },
+        "similar_cosine": {
+          "default": 0.8,
+          "maximum": 1,
+          "minimum": 0,
+          "type": "number"
+        },
+        "offtopic_topics": {
+          "default": [
+            "off_topic",
+            "joke_meme",
+            "platform_policy"
+          ],
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "factor_floor": {
+          "default": 0.02,
+          "exclusiveMaximum": 1,
+          "exclusiveMinimum": 0,
+          "type": "number"
+        },
+        "factor_weights": {
+          "additionalProperties": {
+            "type": "number"
+          },
+          "default": {
+            "new_account_share": 0.5
+          },
+          "type": "object"
+        },
+        "null_samples": {
+          "default": 24,
+          "minimum": 4,
+          "type": "integer"
+        },
+        "null_floor": {
+          "default": 0.5,
+          "exclusiveMinimum": 0,
+          "type": "number"
+        },
+        "max_cluster_events": {
+          "default": 25,
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "title": "SuspicionConfig",
+      "type": "object"
+    },
+    "SuspicionConfig-Output": {
+      "description": "Cluster suspicion factors (app/corpus/suspicion.py).",
+      "properties": {
+        "time_scales_hours": {
+          "default": [
+            0.25,
+            1,
+            6,
+            24,
+            72
+          ],
+          "items": {
+            "type": "number"
+          },
+          "type": "array"
+        },
+        "similar_cosine": {
+          "default": 0.8,
+          "maximum": 1,
+          "minimum": 0,
+          "type": "number"
+        },
+        "offtopic_topics": {
+          "default": [
+            "off_topic",
+            "joke_meme",
+            "platform_policy"
+          ],
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "factor_floor": {
+          "default": 0.02,
+          "exclusiveMaximum": 1,
+          "exclusiveMinimum": 0,
+          "type": "number"
+        },
+        "factor_weights": {
+          "additionalProperties": {
+            "type": "number"
+          },
+          "default": {
+            "new_account_share": 0.5
+          },
+          "type": "object"
+        },
+        "null_samples": {
+          "default": 24,
+          "minimum": 4,
+          "type": "integer"
+        },
+        "null_floor": {
+          "default": 0.5,
+          "exclusiveMinimum": 0,
+          "type": "number"
+        },
+        "max_cluster_events": {
+          "default": 25,
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "time_scales_hours",
+        "similar_cosine",
+        "offtopic_topics",
+        "factor_floor",
+        "factor_weights",
+        "null_samples",
+        "null_floor",
+        "max_cluster_events"
+      ],
+      "title": "SuspicionConfig",
       "type": "object"
     },
     "TimelineBucket": {
@@ -1421,8 +2079,23 @@
     "ActionWeights-Output": {
       "$ref": "#/$defs/ActionWeights-Output"
     },
+    "BurstConfig-Input": {
+      "$ref": "#/$defs/BurstConfig-Input"
+    },
+    "BurstConfig-Output": {
+      "$ref": "#/$defs/BurstConfig-Output"
+    },
+    "ClusterConfig-Input": {
+      "$ref": "#/$defs/ClusterConfig-Input"
+    },
+    "ClusterConfig-Output": {
+      "$ref": "#/$defs/ClusterConfig-Output"
+    },
     "ClusterEvent": {
       "$ref": "#/$defs/ClusterEvent"
+    },
+    "CorpusSummary": {
+      "$ref": "#/$defs/CorpusSummary"
     },
     "CountersEvent": {
       "$ref": "#/$defs/CountersEvent"
@@ -1486,6 +2159,12 @@
     },
     "SteamFetchRequest": {
       "$ref": "#/$defs/SteamFetchRequest"
+    },
+    "SuspicionConfig-Input": {
+      "$ref": "#/$defs/SuspicionConfig-Input"
+    },
+    "SuspicionConfig-Output": {
+      "$ref": "#/$defs/SuspicionConfig-Output"
     },
     "TimelineBucket": {
       "$ref": "#/$defs/TimelineBucket"

@@ -9,7 +9,7 @@ from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-Backend = Literal["jev", "laya", "laya-ft", "heuristic", "mock"]
+Backend = Literal["jev", "laya", "laya-ft", "heuristic", "mock", "cached"]
 StageName = Literal["ingest", "features", "systemone", "corpus", "decide"]
 ActionName = Literal["KEEP", "DOWNWEIGHT", "FLAG", "EXCLUDE"]
 
@@ -57,6 +57,20 @@ class PolicyThresholds(Contract):
     # DOWNWEIGHT by default (independent reviewers do repeat generic sentences); the
     # spec's EXCLUDE stays available. In-burst escalation is Phase 4.
     duplicate_action: Literal["EXCLUDE", "DOWNWEIGHT"] = "DOWNWEIGHT"
+    # S4 cluster rules (MVP_SPEC §6.5). A review in a cluster with suspicion above
+    # `cluster_penalty_threshold` has its integrity multiplied by
+    # (1 - cluster_penalty_strength * suspicion).
+    cluster_penalty_threshold: float = 0.5
+    cluster_penalty_strength: float = 0.5
+    # Clusters smaller than this are shown but never penalise: "coordination" among 3
+    # reviews is not evidence worth moving a rating for.
+    min_penalty_cluster_size: int = 10
+    # FLAG a clustered review whose penalised integrity lands within this distance of
+    # `downweight_below` (the spec's grey zone). Measured cost: +32 FLAGs on HD2 5K
+    # (+0.6%); FLAG counts as KEEP in the rating (MEASUREMENTS M9d). 0 disables it.
+    grey_zone_width: float = 0.1
+    # A later copy inside a suspicious burst or cluster (owner decision 2026-09-30).
+    duplicate_in_burst_action: Literal["EXCLUDE", "FLAG", "DOWNWEIGHT"] = "EXCLUDE"
 
 
 class FeatureConfig(Contract):
@@ -84,6 +98,55 @@ class FeatureConfig(Contract):
     low_playtime_minutes: int = Field(120, ge=0)
 
 
+class BurstConfig(Contract):
+    """S3 burst detection (MVP_SPEC §6.4). Calibrated on HD2 / CS2 (MEASUREMENTS M9)."""
+
+    baseline_hours: int = Field(168, ge=24)  # trailing 7-day baseline
+    min_history_hours: int = Field(72, ge=6)  # no z-score until 3 days of history
+    z_threshold: float = Field(6.0, gt=0)
+    min_scale: float = Field(1.0, gt=0)  # floor on MAD*1.4826 for sparse series
+    min_hour_count: int = Field(5, ge=1)
+    merge_gap_hours: int = Field(2, ge=0)
+    min_burst_reviews: int = Field(30, ge=1)
+    min_daily_reviews: int = Field(20, ge=1)  # days with fewer are left out of PELT
+    min_segment_days: int = Field(3, ge=1)
+    change_point_penalty: float = Field(3.0, gt=0)
+
+
+class ClusterConfig(Contract):
+    """S3 clusters (MVP_SPEC §6.4)."""
+
+    # Below this many reviews HDBSCAN runs on the unit-normalised embeddings directly
+    # (euclidean on unit vectors ranks like cosine); UMAP only pays off at scale.
+    umap_min_reviews: int = Field(2000, ge=0)
+    umap_neighbors: int = Field(15, ge=2)
+    umap_components: int = Field(10, ge=2)
+    umap_min_dist: float = Field(0.0, ge=0)
+    hdbscan_min_cluster_size: int = Field(15, ge=2)
+    hdbscan_min_samples: int | None = None  # None = min_cluster_size (sklearn default)
+    dup_min_size: int = Field(3, ge=2)
+    top_phrases: int = Field(6, ge=1)
+    seed: int = 7
+
+
+class SuspicionConfig(Contract):
+    """Cluster suspicion factors (app/corpus/suspicion.py)."""
+
+    time_scales_hours: list[float] = [0.25, 1, 6, 24, 72]
+    similar_cosine: float = Field(0.8, ge=0, le=1)
+    # Topics that count as "not about the game" for coordination. The spec includes
+    # platform/account policy (as Steam's off-topic review-bomb filter does); that is
+    # a methodology choice, reported with sensitivity (MEASUREMENTS M9).
+    offtopic_topics: list[str] = ["off_topic", "joke_meme", "platform_policy"]
+    factor_floor: float = Field(0.02, gt=0, lt=1)
+    factor_weights: dict[str, float] = {"new_account_share": 0.5}
+    null_samples: int = Field(24, ge=4)  # random subsets per (size, scale) for the time null
+    # Minimum expected "other reviews" in the densest window: 2 of 3 reviews within
+    # 15 min is unusual but a single coincidence, so it scores at most 0.5.
+    null_floor: float = Field(0.5, gt=0)
+    max_cluster_events: int = Field(25, ge=0)
+
+
 class RunCreate(Contract):
     dataset_id: str
     backend: Backend = "mock"
@@ -95,6 +158,8 @@ class RunCreate(Contract):
     # Off by default: reuse gives every identical copy the *same* noise draw, so a
     # borderline answer flips all copies together (M7c). On = cheaper, less accurate.
     reuse_identical_inputs: bool = False
+    # backend="cached": replay this finished run's System One answers ($0).
+    reuse_judgments_from: str | None = None
     # Required when the pre-flight estimate exceeds MAX_RUN_COST_USD.
     confirm_cost: bool = False
     # v2 is the default after dev-set review (MEASUREMENTS M8); v1 stays for comparison.
@@ -103,6 +168,9 @@ class RunCreate(Contract):
     weights: ActionWeights = ActionWeights()
     thresholds: PolicyThresholds = PolicyThresholds()
     features: FeatureConfig = FeatureConfig()
+    bursts: BurstConfig = BurstConfig()
+    clusters: ClusterConfig = ClusterConfig()
+    suspicion: SuspicionConfig = SuspicionConfig()
     bootstrap_resamples: int = Field(2000, ge=100, le=10_000)
     seed: int = 7
     mock_latency_ms: float = Field(
@@ -126,8 +194,9 @@ class FeaturesDoneEvent(Contract):
 
 
 class JudgedEvent(Contract):
-    """Provisional per-review actions. Decoding: indices = Uint32Array (little-endian)
-    from base64 `indices_b64`; actions = Uint8Array from `actions_b64`; same length."""
+    """Per-review actions. Decoding: indices = Uint32Array (little-endian) from base64
+    `indices_b64`; actions = Uint8Array from `actions_b64`; same length. A review can
+    appear again later (S4 cluster rules update it): the last update wins."""
 
     type: Literal["judged"] = "judged"
     indices_b64: str
@@ -165,6 +234,14 @@ class ClusterEvent(Contract):
     caption: str
 
 
+class CorpusSummary(Contract):
+    clusters: dict[str, int] = {}  # count per kind: burst / duplicate / semantic
+    suspicious_clusters: int = 0  # suspicion above the penalty threshold
+    change_points: list[str] = []  # ISO dates where daily % positive shifts
+    penalised_reviews: int = 0
+    actions_changed_by_clusters: int = 0
+
+
 class RunSummary(Contract):
     n_reviews: int
     counts: dict[ActionName, int]
@@ -187,6 +264,7 @@ class RunSummary(Contract):
     latency_p50_ms: float | None = None
     latency_p95_ms: float | None = None
     embedding_cache_hit: bool | None = None
+    corpus: CorpusSummary = CorpusSummary()
 
 
 class DoneEvent(Contract):
@@ -277,6 +355,35 @@ class PreflightOut(Contract):
     needs_confirmation: bool
 
 
+class ClusterOut(Contract):
+    cluster_id: int
+    kind: Literal["semantic", "duplicate", "burst"]
+    size: int
+    t_start: datetime | None
+    t_end: datetime | None
+    suspicion: float
+    factors: dict[str, float | None]
+    caption: str
+    top_phrases: list[str]
+    window: dict[str, Any]
+
+
+class ClusterReview(Contract):
+    review_id: int
+    text: str
+    rating_norm: float | None
+    created_at: datetime | None
+    action: str | None
+    reasons: list[str]
+
+
+class ClusterDetail(ClusterOut):
+    hourly: list[dict[str, Any]]  # {hour, count} for the cluster's span
+    actions: dict[str, int]  # action counts among members
+    sample: list[ClusterReview]
+    member_ids: list[int]
+
+
 class CsvPreview(Contract):
     columns: list[str]
     n_rows: int
@@ -291,3 +398,4 @@ class SteamFetchRequest(Contract):
     language: str = "english"
     sample_n: int | None = None
     name: str | None = None
+    subject: str | None = Field(None, description="game title used in the model context line")

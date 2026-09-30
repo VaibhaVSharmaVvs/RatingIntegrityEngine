@@ -9,17 +9,27 @@ from sse_starlette.sse import EventSourceResponse
 from app.api.datasets import fetch_dataset
 from app.api.deps import AppState, get_state
 from app.ingest.store import new_id
-from app.models import ActionCode, PreflightOut, RunCreate, RunOut, RunSummary
+from app.models import (
+    ActionCode,
+    ClusterDetail,
+    ClusterOut,
+    ClusterReview,
+    PreflightOut,
+    RunCreate,
+    RunOut,
+    RunSummary,
+)
 from app.pipeline import COST_CAP_SLACK, Pipeline
 from app.systemone import preflight
 from app.systemone import questions as question_sets
 from app.systemone.backend import SystemOneBackend, backend_spec
+from app.systemone.cached import CachedBackend
 from app.systemone.client import SystemOneClient
 from app.systemone.questions_v1 import build_state, verdict_words
 
 router = APIRouter(prefix="/runs", tags=["runs"])
 
-IMPLEMENTED_BACKENDS = {"mock", "heuristic", "jev", "laya"}
+IMPLEMENTED_BACKENDS = {"mock", "heuristic", "jev", "laya", "cached"}
 _COLUMNS = (
     "id, dataset_id, backend, model_version, status, error, config, started_at, finished_at, "
     "stats, cost_usd, tokens_in"
@@ -124,11 +134,17 @@ async def create_run(req: RunCreate, state: AppState = Depends(get_state)) -> Ru
     bus = state.events.create(run_id)
     embedder = state.embedder_factory(req.features) if state.embedder_factory else None
     backend = None
-    if req.backend in ("jev", "laya"):
-        try:
+    try:
+        if req.backend in ("jev", "laya"):
             backend = make_systemone_backend(req, state)
-        except ValueError as exc:
-            raise HTTPException(422, str(exc)) from exc
+        elif req.backend == "cached":
+            if not req.reuse_judgments_from:
+                raise ValueError("backend 'cached' needs reuse_judgments_from=<run id>")
+            backend = CachedBackend(
+                state.db, req.reuse_judgments_from, req.dataset_id, req.question_set
+            )
+    except ValueError as exc:
+        raise HTTPException(422, str(exc)) from exc
     pipeline = Pipeline(
         state.db,
         run_id,
@@ -202,3 +218,108 @@ def run_replay(run_id: str, state: AppState = Depends(get_state)) -> FileRespons
         _fetch_run(state, run_id)
         raise HTTPException(404, "replay not available yet (run still in progress?)")
     return FileResponse(path, media_type="application/gzip", filename=f"{run_id}.jsonl.gz")
+
+
+_CLUSTER_COLS = (
+    "cluster_id, kind, size, t_start, t_end, suspicion, time_concentration, mean_similarity, "
+    "rating_homogeneity, new_account_share, offtopic_mean, caption, top_phrases, window_info"
+)
+
+
+def _cluster_row(row: tuple) -> ClusterOut:
+    (cid, kind, size, t0, t1, susp, tc, sim, homog, new, off, caption, phrases, window) = row
+    return ClusterOut(
+        cluster_id=cid,
+        kind=kind,
+        size=size,
+        t_start=t0,
+        t_end=t1,
+        suspicion=susp,
+        factors={
+            "time_concentration": tc,
+            "similarity": sim,
+            "rating_homogeneity": homog,
+            "new_account_share": new,
+            "offtopic_mean": off,
+        },
+        caption=caption or "",
+        top_phrases=json.loads(phrases or "[]"),
+        window=json.loads(window or "{}"),
+    )
+
+
+@router.get("/{run_id}/clusters", response_model=list[ClusterOut])
+def list_clusters(
+    run_id: str, kind: str | None = None, limit: int = 100, state: AppState = Depends(get_state)
+) -> list[ClusterOut]:
+    """Clusters ranked by suspicion (most suspicious first)."""
+    _fetch_run(state, run_id)
+    sql = f"SELECT {_CLUSTER_COLS} FROM clusters WHERE run_id = ?"
+    params: list = [run_id]
+    if kind:
+        sql += " AND kind = ?"
+        params.append(kind)
+    sql += " ORDER BY suspicion DESC, size DESC LIMIT ?"
+    params.append(min(max(limit, 1), 1000))
+    with state.db.cursor() as cur:
+        return [_cluster_row(r) for r in cur.execute(sql, params).fetchall()]
+
+
+@router.get("/{run_id}/clusters/{cluster_id}", response_model=ClusterDetail)
+def get_cluster(
+    run_id: str, cluster_id: int, sample: int = 12, state: AppState = Depends(get_state)
+) -> ClusterDetail:
+    run = _fetch_run(state, run_id)
+    with state.db.cursor() as cur:
+        row = cur.execute(
+            f"SELECT {_CLUSTER_COLS} FROM clusters WHERE run_id = ? AND cluster_id = ?",
+            [run_id, cluster_id],
+        ).fetchone()
+        if row is None:
+            raise HTTPException(404, f"cluster {cluster_id} not found")
+        members = [
+            r[0]
+            for r in cur.execute(
+                "SELECT review_id FROM cluster_members WHERE run_id = ? AND cluster_id = ? ORDER BY 1",
+                [run_id, cluster_id],
+            ).fetchall()
+        ]
+        hourly = cur.execute(
+            "SELECT date_trunc('hour', r.created_at) AS hour, count(*) FROM cluster_members m "
+            "JOIN reviews r ON r.dataset_id = ? AND r.id = m.review_id "
+            "WHERE m.run_id = ? AND m.cluster_id = ? AND r.created_at IS NOT NULL GROUP BY 1 ORDER BY 1",
+            [run.dataset_id, run_id, cluster_id],
+        ).fetchall()
+        actions = dict(
+            cur.execute(
+                "SELECT d.action, count(*) FROM cluster_members m JOIN decisions d "
+                "ON d.run_id = m.run_id AND d.review_id = m.review_id "
+                "WHERE m.run_id = ? AND m.cluster_id = ? GROUP BY 1",
+                [run_id, cluster_id],
+            ).fetchall()
+        )
+        rows = cur.execute(
+            "SELECT r.id, r.text, r.rating_norm, r.created_at, d.action, d.reasons FROM cluster_members m "
+            "JOIN reviews r ON r.dataset_id = ? AND r.id = m.review_id "
+            "LEFT JOIN decisions d ON d.run_id = m.run_id AND d.review_id = m.review_id "
+            "WHERE m.run_id = ? AND m.cluster_id = ? ORDER BY hash(r.id) LIMIT ?",
+            [run.dataset_id, run_id, cluster_id, min(max(sample, 0), 100)],
+        ).fetchall()
+    base = _cluster_row(row)
+    return ClusterDetail(
+        **base.model_dump(),
+        hourly=[{"hour": h.isoformat(), "count": c} for h, c in hourly],
+        actions=actions,
+        sample=[
+            ClusterReview(
+                review_id=i,
+                text=t,
+                rating_norm=rn,
+                created_at=ca,
+                action=a,
+                reasons=json.loads(rs or "[]"),
+            )
+            for i, t, rn, ca, a, rs in rows
+        ],
+        member_ids=members,
+    )

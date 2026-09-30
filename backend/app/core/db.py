@@ -142,6 +142,13 @@ MIGRATIONS: list[str] = [
     ALTER TABLE features ADD COLUMN received_for_free BOOLEAN;
     ALTER TABLE features ADD COLUMN not_purchased BOOLEAN;
     """,
+    # 3: Phase 4 corpus analysis and S4 cluster rules
+    """
+    ALTER TABLE clusters ADD COLUMN window_info JSON;       -- densest window / burst rate
+    ALTER TABLE decisions ADD COLUMN base_integrity DOUBLE;  -- before the cluster penalty
+    ALTER TABLE decisions ADD COLUMN cluster_id INTEGER;     -- most suspicious cluster (-1 none)
+    ALTER TABLE decisions ADD COLUMN cluster_suspicion DOUBLE;
+    """,
 ]
 
 
