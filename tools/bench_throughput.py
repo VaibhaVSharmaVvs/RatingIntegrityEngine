@@ -20,7 +20,7 @@ import httpx
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "backend"))
 from app.core.config import settings
 from app.ingest.steam_fetcher import load_pull
-from app.systemone.questions_v1 import QUESTIONS, build_state
+from app.systemone.questions_v1 import QUESTIONS, build_state, verdict_words
 
 DEFAULT_PULL = settings.data_dir / "raw" / "steam" / "1265780_2023-05-01_2023-07-31"
 
@@ -43,7 +43,10 @@ async def main() -> None:
         base, model, headers = settings.laya_base_url, settings.laya_model, {}
 
     df = load_pull(args.pull).sample(n=args.n, seed=7, shuffle=True)
-    states = [build_state(args.game, v, t) for v, t in zip(df["voted_up"], df["text"], strict=True)]
+    states = [
+        build_state(args.game, "steam", verdict_words(float(v), float(v), "binary"), t)
+        for v, t in zip(df["voted_up"], df["text"], strict=True)
+    ]
     sem = asyncio.Semaphore(args.concurrency)
     latencies: list[float] = []
     tokens = 0

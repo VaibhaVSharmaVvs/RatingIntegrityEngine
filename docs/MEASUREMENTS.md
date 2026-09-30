@@ -328,3 +328,31 @@ Targeted checks (v1 → v2): short own-words opinions, `templated` "good game" 0
 - Jev: **4,999/4,999 HTTP 200, 0 retries, 0 throttling**. Model `jev-1.13.0`.
 - Result: KEEP 3,076 · DOWNWEIGHT 1,623 · FLAG 300 · EXCLUDE 0. **Raw 76.4% → adjusted 73.2% positive (95% CI 71.8–74.5%)**, n_eff 4,113. Steam label "Mostly Positive" both. There is no burst/cluster logic yet (Phase 4). The drop comes from the positive counter-wave slogans being downweighted, while specific negative PSN complaints stay KEEP.
 - **Throughput 18.3 reviews/s** (S2 267 s), against 64/s in the M4c benchmark. Requests per minute went 1,438 → 711 → 642 → 53 → 1,145 → 972. The trough coincides with MiniLM loading in the S1 background thread while the Laya dev-set benchmark saturated the CPU. Since Jev never throttled, the bottleneck is **client-side CPU contention** (the asyncio loop starved by torch + laya-serve), not the API. S1 embeddings took 350 s for 5K (normally about 50 s), for the same reason. To be re-measured with the CPU otherwise idle.
+
+### M8f. Throughput re-tests (CPU otherwise idle, laya-serve stopped)
+
+| Run (HD2 5K, v2, k=1, concurrency 32) | S2 time | Reviews/s | Retries | Latency p50 / p95 | Embeddings | Adjusted (95% CI) |
+|---|---|---|---|---|---|---|
+| #1 during the Laya benchmark, cold embeddings (M8e) | 267 s | 18.3 | 0 | — | 350 s | 73.2% (71.8–74.5) |
+| #2 idle CPU, **warm** embedding cache | 124.7 s | **40.1** | 0 | 327 / 407 ms | 0.04 s | 73.2% (71.8–74.5) |
+| #3 idle CPU, **cold** embeddings overlapped with S2 | 124.5 s | **40.1** | 0 | 334 / 435 ms | 67 s (background) | 73.2% (71.7–74.5) |
+
+- **The S1/S2 overlap does not slow S2.** Runs #2 and #3 are both pinned at the client's 40 req/s limiter, Jev's documented limit, which we deliberately don't exceed although M4c showed 64/s. Run #1's slowdown came from laya-serve *plus* the embeddings saturating the laptop CPU together. Don't run Laya benchmarks during live Jev runs.
+- **Test-retest of the aggregate is stable:** three runs gave identical 73.2% adjusted and CIs within 0.001, even though individual actions moved slightly (FLAG 300 / 308, from Jev noise, M7).
+- **Projected 50K: 20.8 min, $2.55 (v2, k=1).** Phase 3 exit criterion (≤ 45 min) met.
+
+### M8g. Laya zero-shot on the dev set (v1 questions, laptop CPU)
+
+200 reviews in about 43 min (0.05–0.1 reviews/s, slowed while sharing the CPU), $0. Agreement with Jev v1 on the same states. This is **not accuracy**; no human labels yet.
+
+| Question | Laya vs Jev |
+|---|---|
+| informativeness | Spearman 0.589 |
+| rating_support | 0.481 |
+| topic | 38.5% same choice |
+| spam_promo / templated / campaign_language | 0.456 / 0.164 / 0.553 |
+| decisions | 9.5% same action |
+
+**Laya FLAGs 191/200:** its confidences are low across the board, consistent with the checkpoint's calibration warning (PLAN C11). Jev's confidence-based FLAG rule can't be applied to Laya as-is. The Phase 7 benchmark row needs either Laya-specific confidence handling or FLAG disabled for it.
+
+**Phase 3 Jev spend:** probes $0.020 (M7) + dev-set runs $0.052 (M8b/c) + three 5K live runs $0.763 = **≈ $0.84**.

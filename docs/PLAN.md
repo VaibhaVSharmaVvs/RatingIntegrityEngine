@@ -179,6 +179,18 @@ Design changes vs the spec, all deliberate:
 
 **Exit criteria / go-no-go:** Jev 50K run projected at ≤ 45 min from measured numbers, with cost reported (not capped at $2; the owner accepts modest cost for accuracy). If either fails, live runs use the 5K subset and the 50K run is recorded once and replayed. Numbers are written into `docs/MEASUREMENTS.md`. Total prompt-iteration spend is logged.
 
+**✅ Delivered (2026-09-30, branch `phase-3-systemone`).** 122 backend tests. Measured (MEASUREMENTS M7–M8):
+- **Exit criterion met:** 50K projected **20.8 min, $2.55** (v2, k=1) at Jev's documented 40 req/s. Live 5K runs sustain 40.1 reviews/s with 0 retries. The pre-flight is within **0.1%** of actual cost.
+- **Jev is not deterministic** (C12): identical-input reuse is opt-in; `samples_per_review` averages k calls (k=2 halves decision flips, 2.6% → 1.0%; the owner decides whether to pay 2×).
+- **Packing rejected** on 200 real reviews: 87.5% decision agreement at pack 5 against a 96.5% noise floor, and only −17% tokens.
+- **Question set v2 is the default:** double LOW_INFO+TEMPLATED penalty 108 → 38, self-agreement 0.965 → 0.985, +24% tokens. Validated by Claude's review of about 20 targeted cases; Phase 7 human labels are the real test.
+- **Spend guard:** 402 above `MAX_RUN_COST_USD` unless `confirm_cost`; runs stop at 1.25× the approved spend.
+- **First integrity-adjusted rating** (HD2 5K, no burst/cluster logic yet): 76.4% → **73.2% (95% CI 71.8–74.5%)**, identical across 3 runs.
+- **Laya zero-shot row:** 9.5% decision agreement with Jev, FLAGs 191/200 because of uncalibrated confidences (C11).
+- Tests can no longer read `.env` or reach the network. During development one test did start a real Jev run on synthetic data (fixed; spend was at most cents).
+
+Not done here, on purpose: the frontend pre-flight UI (Phase 6), per-question latency in `judgments.latency_ms` (the column exists but is not filled), and Laya-specific confidence handling (Phase 7).
+
 ---
 
 ## Phase 4: S3 corpus analysis + S4 decisions
