@@ -29,6 +29,7 @@
 | C10 | **Steam soft-throttles.** It returns HTTP 200 with an empty page, or 429 after about 140 pages at 1 req/s. | pull.log | Fetcher backs off on empty pages and honours `Retry-After`, paces at 1.5 s, and resumes pulls that stopped early. |
 | C11 | **Laya checkpoint ships invalid temperatures** for some choice entries ("treat confidence … as uncalibrated"). | laya-serve startup warning | Don't use Laya choice `confidence` for FLAG decisions until it has been re-calibrated. Record it in the methodology card. |
 | C12 | **Jev is not deterministic** (1/60 identical on resend; decision flips 2.6% at k=1, 1.0% at k=2). | MEASUREMENTS M7 | Reuse of identical inputs is off by default; `samples_per_review` averages k calls. Report Jev test-retest agreement as a benchmark row (it bounds achievable human–Jev agreement). |
+| C13 | **Steam verdicts are current, not as-posted.** 77% of HD2 bomb-day reviews were edited (median 3 days later), mostly flipping to positive after the reversal: unedited bomb reviews are 9–16% positive, edited ones 75–86%. | MEASUREMENTS M9a | Analyse reviews as they stand today; say so on the methodology card; show edit status in the inspector/timeline; bursts are detected on volume as well as per verdict. The as-posted verdict is not recoverable from the public API. |
 
 **Principle (owner, 2026-09-30): accuracy over speed.** When a choice trades accuracy against runtime or modest API cost, choose accuracy, but only when a measurement shows an accuracy gain. Speed and cost stay *reported*, not optimised at accuracy's expense. Applied so far: embedding context 128 → 256, LSH candidate bar 0.4, 2,000 bootstrap resamples, duplicates judged instead of skipped (MEASUREMENTS M6).
 
@@ -210,6 +211,23 @@ Not done here, on purpose: the frontend pre-flight UI (Phase 6), per-question la
 **Process:** implement against the heuristic backend first so it is testable without API spend; then plug in the Phase 3 Jev results for the 5K subset.
 
 **Exit criteria:** a full S0→S4 run on the HD2 5K subset completes; burst detection places a window in early May 2024; UMAP+HDBSCAN on 50K finishes in < 10 min on CPU (else lower dims / sample); `GET /runs/{id}` returns raw, adjusted, CI and counts.
+
+**✅ Delivered (2026-09-30, branch `phase-4-corpus`).** 142 backend tests. Every exit criterion was measured (MEASUREMENTS M9):
+- Full S0–S4 on HD2 5K with Jev: **76.4% → 72.9% (95% CI 71.5–74.2%)**. Bursts found **2024-05-03 → 05-08** at every sample size. UMAP + HDBSCAN on 50K: **3.3 min cold**. `GET /runs/{id}` returns raw / adjusted / CI / counts plus a `corpus` summary. `/runs/{id}/clusters` and `/clusters/{cid}` are added.
+- **Controls pass:** CS2 organic backlash has 0 reviews penalised by clusters; Gollum is not inflated (35.7% → 34.4%).
+- **Owner decisions applied:** copies inside a suspicious burst/cluster are escalated (EXCLUDE by default); outside one they stay DOWNWEIGHT. One Jev call per review (no averaging).
+
+Deviations and findings:
+| Area | Spec | Built | Why |
+|---|---|---|---|
+| Time concentration | share in densest 1 h window, normalised | densest window at 15 min–3 days vs a **permutation null** (random same-size corpus subsets); anchor review not counted; bursts use rate vs baseline | The corpus-lift version made 3-review clusters look maximally coordinated (M9c) |
+| Geometric mean | all factors equal | missing factors skipped, floor 0.02, **new accounts at half weight** | An absent signal must not zero the score; established accounts can coordinate too |
+| Penalty eligibility | any cluster | clusters with **≥ 10 reviews** | Coordination among 3 reviews is not evidence worth moving a rating for |
+| Steam verdicts | as-posted | **current** (C13): 77% of bomb-day reviews were edited, median 3 days later | Not recoverable from the public API; state it on the methodology card |
+| Cached backend | none | `backend: "cached"` replays a finished run's answers at $0 | Sensitivity analysis, ablations and Phase 6 sliders without new API spend |
+| Small corpora | UMAP always | HDBSCAN directly on unit embeddings below 2,000 reviews | UMAP only pays off at scale, and it made the test suite 10x slower |
+
+**Finding for Phase 7:** on HD2 the cluster stage moves the aggregate by < 0.1 pp, because coordinated slogans are already downweighted per review. Its rating value has to be demonstrated on synthetic coordinated campaigns that *look* informative. A "great community" cluster sits exactly at the 0.5 threshold, so check threshold robustness.
 
 ---
 

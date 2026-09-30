@@ -356,3 +356,76 @@ Targeted checks (v1 → v2): short own-words opinions, `templated` "good game" 0
 **Laya FLAGs 191/200:** its confidences are low across the board, consistent with the checkpoint's calibration warning (PLAN C11). Jev's confidence-based FLAG rule can't be applied to Laya as-is. The Phase 7 benchmark row needs either Laya-specific confidence handling or FLAG disabled for it.
 
 **Phase 3 Jev spend:** probes $0.020 (M7) + dev-set runs $0.052 (M8b/c) + three 5K live runs $0.763 = **≈ $0.84**.
+
+---
+
+## M9. Phase 4: corpus analysis (2026-09-30)
+
+### M9a. Most Helldivers 2 bomb reviews were edited afterwards
+
+Full HD2 pull (366,270 English reviews, Apr–Jun 2024). "Edited" = `timestamp_updated − timestamp_created > 1 h`.
+
+| Day (created) | Reviews | Edited share | Positive, unedited | Positive, edited |
+|---|---|---|---|---|
+| 2024-04-10 (baseline) | 1,800 | 29% | 95.5% | 74.3% |
+| 2024-05-02 | 968 | 33% | 93.2% | 73.7% |
+| **2024-05-03** | 36,031 | **78.8%** | **16.1%** | 75.4% |
+| **2024-05-04** | 62,032 | **77.3%** | **13.8%** | 81.9% |
+| **2024-05-05** | 76,705 | **76.2%** | **9.5%** | 86.1% |
+| 2024-05-06 (reversal) | 78,136 | 23.4% | 91.4% | 78.1% |
+| 2024-05-07 | 22,317 | 10.9% | 97.5% | 65.5% |
+
+Bomb-day edits (134,815 reviews): edit lag median **3 days** (p25 2, p75 53). Most flipped to positive right after Sony's 6 May reversal. **Steam's current `voted_up` shows the bomb largely reversed:** bomb days now read 63–68% positive overall.
+
+Consequences: (1) the pipeline analyses reviews **as they stand today** (current text and current verdict, consistent with each other), and the methodology card must say so (PLAN C13); (2) burst detection works on volume (3 May ≈ 40× the median day); (3) edit status is a useful inspector/timeline signal, but not an integrity penalty (editing a review is legitimate).
+
+Cities: Skylines II for comparison: launch day 2023-10-24 had 3,551 English reviews at 48% positive, 25 Oct 3,963 at 62%, then decaying (median day 103). That is an organic launch burst.
+
+### M9b. Burst detection on real corpora (`BurstConfig` defaults: 7-day trailing baseline excluding flagged hours, robust z ≥ 6, ≥ 5/h, ≥ 30 reviews)
+
+| Corpus | Bursts | Main windows | Change points (daily % positive) | Time |
+|---|---|---|---|---|
+| HD2 full (366,270) | 8 | **negative 2024-05-03 05h → 05-08 03h** (119 h, 69,399 reviews, peak 1,483/h, z = 332, baseline 6/h); positive 05-03 07h → 05-09 05h (214,123); plus small blips (Apr 29, May 8–10) | 2024-05-01, 2024-05-26 | 0.9 s |
+| HD2 50K sample | 3 | negative 05-03 05h → 05-07 04h (9,400); positive 05-03 07h → 05-09 05h (29,180) | 2024-04-26 | 0.9 s |
+| HD2 5K sample | 2 | negative 05-03 08h → 05-06 07h (927); positive 05-03 12h → 05-08 05h (2,793) | none | 0.8 s |
+| CS2 full (20,818) | 2 | positive **2023-11-21 18h → 11-23 03h** (686), which coincides with the Steam Autumn Sale start. The **launch spike (Oct 24) is not a burst**: it starts the series, so there is no baseline | none | 0.6 s |
+| Gollum (297) | 0 | | none | 0.5 s |
+
+**Phase 4 exit criterion "burst detection places a window in early May 2024": ✅** at every sample size.
+
+### M9c. Suspicion factor bias found and fixed (HD2 5K, same Jev answers via the cached backend)
+
+| Version | Top clusters | Suspicious (> 0.5) | Penalised | Actions changed | CS2 penalised |
+|---|---|---|---|---|---|
+| v0: corpus lift | 3-review duplicates, "33% within 15 min" | 42 | 577 | 97 | 6 |
+| v1: anchor review excluded + min size 10 to penalise | "2 of 46 within 15 min (vs 0.0%)" still scored 0.99 | 34 | 502 | 90 | 0 |
+| **v2: permutation null** (random same-size corpus subsets, 24 draws) + new accounts at half weight | coordinated counter-wave slogans: "Just doing my part", "MAJOR ORDER COMPLETE", "Democracy prevails", "managed democracy" | 32 | **264** | **14** | **0** |
+
+Root cause: a cluster is a subset of the corpus, and the window starts at a member. Against the corpus-wide rate, any coincidence at a 15-minute scale looked like a 100x lift. The null model asks the right question: more concentrated than a random set of the same size?
+
+**Borderline to watch:** a "great community" cluster (31 reviews, likely genuine praise) sits at suspicion 0.50, exactly at the penalty threshold (> 0.5 required). Phase 7 should check threshold robustness.
+
+HD2's two bursts score 0.18–0.23: their wording is diverse (0% within cosine 0.8 of the centroid) and new accounts are no higher than the corpus. **By design, a diverse mass protest by real owners is not "coordinated"**. Its memes, slogans and copies are handled per review and by the slogan clusters.
+
+### M9d. Phase 4 results and sensitivity (all from the same Jev answers, $0 via `backend: "cached"`)
+
+| Run | KEEP / DOWN / FLAG / EXCL | Raw → adjusted (95% CI) |
+|---|---|---|
+| **HD2 5K, full S0–S4 (Jev v2)** | 2,987 / 1,707 / 301 / 4 | **76.4% → 72.9% (71.5–74.2)** |
+| HD2 5K, cluster rules off | 2,997 / 1,701 / 301 / 0 | 76.4% → 72.9% (71.5–74.3) |
+| HD2 5K, platform policy *not* off-topic | 2,987 / 1,707 / 301 / 4 | 72.9% (30 vs 32 suspicious clusters) |
+| HD2 5K, grey-zone FLAG 0.1 (now the default) | 2,965 / 1,697 / **333** / 4 | 72.9% (+32 FLAGs, +0.6%) |
+| HD2 5K, in-burst copies → FLAG | 2,987 / 1,707 / 305 / 0 | 72.9% |
+| **CS2 5K control (organic backlash)** | 4,595 / 289 / 116 / 0 | 59.6% → 58.8% (57.5–60.3); **0 reviews penalised by clusters** ✅ |
+| **Gollum control (known-bad)** | 259 / 32 / 6 / 0 | 35.7% → 34.4% (29.1–40.1); **not inflated** ✅ |
+| HD2 50K, heuristic backend | 38,617 / 11,058 / 66 / 265 | 77.2% → 75.4% (75.0–75.8); 1,152 clusters, 267 suspicious, 5,836 penalised (no off-topic factor without System One) |
+
+**The honest takeaway:** on HD2 the cluster stage changes the aggregate by < 0.1 pp. The coordinated slogans are already downweighted per review (low informativeness). Clusters add *explanation* here; their rating impact has to be shown on coordinated campaigns that look informative (Phase 7 synthetic attacks). Platform-policy-as-off-topic makes no difference on this data. The grey-zone FLAG was first disabled on an unmeasured worry ("thousands of FLAGs"); measured at +0.6%, it is now enabled as the spec intended.
+
+Jev spend for Phase 4: HD2 5K $0.252 + CS2 5K $0.264 + Gollum $0.016 = **$0.53**. Every sensitivity run was $0 (cached).
+
+### M9e. Scale
+
+- UMAP (cosine, 10-D, seeded) + HDBSCAN on 50,006 × 384: **3.3 min cold** (UMAP 154 s + HDBSCAN 45 s), **54 s with UMAP cached**. 481 clusters, 56% of reviews clustered, identical clusters on rerun. **Exit criterion (< 10 min) ✅**
+- Full 50K run (heuristic backend, warm caches): **48 s end to end**. S1 8.4 s, S3 38 s (HDBSCAN 20.5 s, top phrases 3.2 s, bursts 0.4 s).
+- Embedding the 50K cold took 780 s, contended with test runs (cf. M5: 433–518 s idle).

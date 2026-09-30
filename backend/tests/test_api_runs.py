@@ -87,15 +87,14 @@ def test_full_mock_run_streams_every_event_and_replays(client: TestClient) -> No
     assert "error" not in kinds
     assert events[-1][0] == "done"
 
-    # Every review is judged exactly once across the judged events.
-    seen = np.concatenate(
-        [
-            np.frombuffer(base64.b64decode(e["indices_b64"]), dtype="<u4")
-            for k, e in events
-            if k == "judged"
-        ]
-    )
-    assert sorted(seen.tolist()) == list(range(N))
+    # Every review appears in the judged events; replaying them (last update wins)
+    # reproduces the final grid exactly.
+    replayed = np.zeros(N, dtype=np.uint8)
+    for k, e in events:
+        if k == "judged":
+            idx = np.frombuffer(base64.b64decode(e["indices_b64"]), dtype="<u4")
+            replayed[idx] = np.frombuffer(base64.b64decode(e["actions_b64"]), dtype=np.uint8)
+    assert (replayed > 0).all()
 
     stages = [(e["name"], e["status"]) for k, e in events if k == "stage"]
     assert [s for s, st in stages if st == "done"] == [
@@ -116,6 +115,7 @@ def test_full_mock_run_streams_every_event_and_replays(client: TestClient) -> No
 
     grid = np.frombuffer(client.get(f"/runs/{run_id}/grid").content, dtype=np.uint8)
     assert len(grid) == N and (grid > 0).all()
+    assert (grid == replayed).all()  # the SSE stream and the stored decisions agree
 
     # The replay holds the same events, in the same order, with rising timestamps.
     replay = client.get(f"/runs/{run_id}/replay")
@@ -463,3 +463,57 @@ def test_samples_per_review_averages_k_calls(tmp_path: Path) -> None:
         read_sse(c, run_id)
         assert c.get(f"/runs/{run_id}").json()["status"] == "done"
     assert len(fake.requests) == 3 * N
+
+
+def test_cluster_endpoints(client: TestClient) -> None:
+    texts = organic(60)
+    texts[10:10] = [COPY] * 12  # a duplicate cluster of 12
+    ds = upload_texts(client, texts)
+    run_id = client.post("/runs", json={"dataset_id": ds, "bootstrap_resamples": 100}).json()["id"]
+    events = read_sse(client, run_id)
+    summary = client.get(f"/runs/{run_id}").json()["summary"]
+    assert summary["corpus"]["clusters"]["duplicate"] >= 1
+
+    listed = client.get(f"/runs/{run_id}/clusters").json()
+    assert listed and listed == sorted(listed, key=lambda c: -c["suspicion"])
+    dup = next(c for c in listed if c["kind"] == "duplicate")
+    assert dup["size"] == 12 and set(dup["factors"]) >= {"time_concentration", "rating_homogeneity"}
+    assert "12 reviews" in dup["caption"]
+    only_dups = client.get(f"/runs/{run_id}/clusters", params={"kind": "duplicate"}).json()
+    assert {c["kind"] for c in only_dups} == {"duplicate"}
+
+    detail = client.get(f"/runs/{run_id}/clusters/{dup['cluster_id']}").json()
+    assert detail["member_ids"] == list(range(10, 22))
+    assert sum(detail["actions"].values()) == 12
+    assert sum(h["count"] for h in detail["hourly"]) == 12
+    assert detail["sample"] and all(s["text"] == COPY for s in detail["sample"])
+    assert client.get(f"/runs/{run_id}/clusters/9999").status_code == 404
+    assert any(k == "cluster" for k, _ in events)
+
+
+def test_cached_backend_replays_answers_for_free(client: TestClient) -> None:
+    ds = upload(client)
+    src = client.post("/runs", json={"dataset_id": ds, "bootstrap_resamples": 100}).json()["id"]
+    read_sse(client, src)
+    body = {
+        "dataset_id": ds,
+        "backend": "cached",
+        "reuse_judgments_from": src,
+        "bootstrap_resamples": 100,
+    }
+    run_id = client.post("/runs", json=body).json()["id"]
+    read_sse(client, run_id)
+    a, b = client.get(f"/runs/{src}").json(), client.get(f"/runs/{run_id}").json()
+    assert b["status"] == "done" and b["summary"]["model_version"] == "cached:mock-1"
+    assert b["summary"]["counts"] == a["summary"]["counts"]  # same answers, same config
+    assert b["cost_usd"] == 0
+    # A different S4 setting on the same answers changes the outcome without new calls.
+    strict = body | {"thresholds": {"downweight_below": 0.95}}
+    rid = client.post("/runs", json=strict).json()["id"]
+    read_sse(client, rid)
+    assert (
+        client.get(f"/runs/{rid}").json()["summary"]["counts"]["DOWNWEIGHT"]
+        > a["summary"]["counts"]["DOWNWEIGHT"]
+    )
+    bad = client.post("/runs", json={"dataset_id": ds, "backend": "cached"})
+    assert bad.status_code == 422

@@ -75,6 +75,7 @@ def import_pull(
     pull_dir: Path,
     *,
     name: str,
+    subject: str | None = None,
     sample_n: int | None = None,
     dataset_id: str | None = None,
     create: bool = True,
@@ -91,6 +92,8 @@ def import_pull(
         "pull_dir": pull_dir.name,
         "sample_n": sample_n,
         "pulled_in_window": state["stored"],
+        # The product being reviewed; System One state says "Steam review of '<subject>'".
+        "subject": subject or name,
     }
     if create:
         dataset_id = create_dataset(
@@ -105,11 +108,16 @@ def main() -> None:
     p = argparse.ArgumentParser(description="Import a Steam pull as a dataset")
     p.add_argument("--pull", required=True, help="directory name under data/raw/steam")
     p.add_argument("--name", required=True)
+    p.add_argument("--subject", default=None, help="game title for the model context line")
     p.add_argument("--sample", type=int, default=None)
     args = p.parse_args()
     db = Database(settings.db_path)
     dataset_id = import_pull(
-        db, settings.steam_pulls_dir / args.pull, name=args.name, sample_n=args.sample
+        db,
+        settings.steam_pulls_dir / args.pull,
+        name=args.name,
+        subject=args.subject,
+        sample_n=args.sample,
     )
     print(dataset_id)
 

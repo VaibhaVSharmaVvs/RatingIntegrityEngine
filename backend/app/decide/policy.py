@@ -126,3 +126,40 @@ def decide(
     if score < t.downweight_below:
         return Decision(ActionCode.DOWNWEIGHT, score, reasons)
     return Decision(ActionCode.KEEP, score, reasons)
+
+
+def apply_cluster_rules(
+    base: Decision,
+    *,
+    suspicion: float,
+    cluster_kind: str | None,
+    later_copy: bool,
+    thresholds: PolicyThresholds,
+) -> Decision:
+    """S4 (MVP_SPEC §6.5): penalise members of a suspicious burst/cluster.
+
+    - integrity x (1 - strength x suspicion) when suspicion > threshold;
+    - the penalised score is re-thresholded; the stricter of that and `base` wins;
+    - a later copy inside a suspicious burst/cluster gets `duplicate_in_burst_action`
+      (outside one it stays at the S2 floor, DOWNWEIGHT by default);
+    - optional grey-zone FLAG around the DOWNWEIGHT threshold.
+    System One alone still cannot EXCLUDE: the only EXCLUDE added here needs a
+    deterministic copy *and* a suspicious cluster.
+    """
+    t = thresholds
+    if cluster_kind is None or suspicion <= t.cluster_penalty_threshold:
+        return base
+    penalised = base.integrity_score * (1.0 - t.cluster_penalty_strength * suspicion)
+    by_score = ActionCode.DOWNWEIGHT if penalised < t.downweight_below else ActionCode.KEEP
+    action = max(base.action, by_score, key=_SEVERITY.__getitem__)
+    if later_copy:
+        action = max(action, ActionCode[t.duplicate_in_burst_action], key=_SEVERITY.__getitem__)
+    if (
+        t.grey_zone_width > 0
+        and action is not ActionCode.EXCLUDE
+        and abs(penalised - t.downweight_below) <= t.grey_zone_width
+    ):
+        action = ActionCode.FLAG
+    code = "BURST_WINDOW" if cluster_kind == "burst" else "COORDINATED_CLUSTER"
+    reasons = [code, *[r for r in base.reasons if r != code]][:3]
+    return Decision(action, penalised, reasons)

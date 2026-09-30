@@ -11,7 +11,12 @@ export type ActionCode = 0 | 1 | 2 | 3 | 4;
 export interface RIEAPI {
   "ActionWeights-Input"?: ActionWeights;
   "ActionWeights-Output"?: ActionWeights1;
+  "BurstConfig-Input"?: BurstConfig;
+  "BurstConfig-Output"?: BurstConfig1;
+  "ClusterConfig-Input"?: ClusterConfig;
+  "ClusterConfig-Output"?: ClusterConfig1;
   ClusterEvent?: ClusterEvent;
+  CorpusSummary?: CorpusSummary;
   CountersEvent?: CountersEvent;
   CsvPreview?: CsvPreview;
   DatasetDetail?: DatasetDetail;
@@ -33,6 +38,8 @@ export interface RIEAPI {
   RunSummary?: RunSummary;
   StageEvent?: StageEvent;
   SteamFetchRequest?: SteamFetchRequest;
+  "SuspicionConfig-Input"?: SuspicionConfig2;
+  "SuspicionConfig-Output"?: SuspicionConfig3;
   TimelineBucket?: TimelineBucket;
   ActionCode?: ActionCode;
 }
@@ -57,6 +64,76 @@ export interface ActionWeights1 {
   EXCLUDE: number;
 }
 /**
+ * S3 burst detection (MVP_SPEC §6.4). Calibrated on HD2 / CS2 (MEASUREMENTS M9).
+ *
+ * This interface was referenced by `RIEAPI`'s JSON-Schema
+ * via the `definition` "BurstConfig-Input".
+ */
+export interface BurstConfig {
+  baseline_hours?: number;
+  min_history_hours?: number;
+  z_threshold?: number;
+  min_scale?: number;
+  min_hour_count?: number;
+  merge_gap_hours?: number;
+  min_burst_reviews?: number;
+  min_daily_reviews?: number;
+  min_segment_days?: number;
+  change_point_penalty?: number;
+}
+/**
+ * S3 burst detection (MVP_SPEC §6.4). Calibrated on HD2 / CS2 (MEASUREMENTS M9).
+ *
+ * This interface was referenced by `RIEAPI`'s JSON-Schema
+ * via the `definition` "BurstConfig-Output".
+ */
+export interface BurstConfig1 {
+  baseline_hours: number;
+  min_history_hours: number;
+  z_threshold: number;
+  min_scale: number;
+  min_hour_count: number;
+  merge_gap_hours: number;
+  min_burst_reviews: number;
+  min_daily_reviews: number;
+  min_segment_days: number;
+  change_point_penalty: number;
+}
+/**
+ * S3 clusters (MVP_SPEC §6.4).
+ *
+ * This interface was referenced by `RIEAPI`'s JSON-Schema
+ * via the `definition` "ClusterConfig-Input".
+ */
+export interface ClusterConfig {
+  umap_min_reviews?: number;
+  umap_neighbors?: number;
+  umap_components?: number;
+  umap_min_dist?: number;
+  hdbscan_min_cluster_size?: number;
+  hdbscan_min_samples?: number | null;
+  dup_min_size?: number;
+  top_phrases?: number;
+  seed?: number;
+}
+/**
+ * S3 clusters (MVP_SPEC §6.4).
+ *
+ * This interface was referenced by `RIEAPI`'s JSON-Schema
+ * via the `definition` "ClusterConfig-Output".
+ */
+export interface ClusterConfig1 {
+  umap_min_reviews: number;
+  umap_neighbors: number;
+  umap_components: number;
+  umap_min_dist: number;
+  hdbscan_min_cluster_size: number;
+  hdbscan_min_samples: number | null;
+  dup_min_size: number;
+  top_phrases: number;
+  seed: number;
+}
+/**
  * This interface was referenced by `RIEAPI`'s JSON-Schema
  * via the `definition` "ClusterEvent".
  */
@@ -67,6 +144,19 @@ export interface ClusterEvent {
   size: number;
   suspicion: number;
   caption: string;
+}
+/**
+ * This interface was referenced by `RIEAPI`'s JSON-Schema
+ * via the `definition` "CorpusSummary".
+ */
+export interface CorpusSummary {
+  clusters: {
+    [k: string]: number;
+  };
+  suspicious_clusters: number;
+  change_points: string[];
+  penalised_reviews: number;
+  actions_changed_by_clusters: number;
 }
 /**
  * This interface was referenced by `RIEAPI`'s JSON-Schema
@@ -193,6 +283,16 @@ export interface RunSummary {
   latency_p50_ms: number | null;
   latency_p95_ms: number | null;
   embedding_cache_hit: boolean | null;
+  corpus: CorpusSummary1;
+}
+export interface CorpusSummary1 {
+  clusters: {
+    [k: string]: number;
+  };
+  suspicious_clusters: number;
+  change_points: string[];
+  penalised_reviews: number;
+  actions_changed_by_clusters: number;
 }
 /**
  * This interface was referenced by `RIEAPI`'s JSON-Schema
@@ -253,8 +353,9 @@ export interface FeaturesDoneEvent {
   };
 }
 /**
- * Provisional per-review actions. Decoding: indices = Uint32Array (little-endian)
- * from base64 `indices_b64`; actions = Uint8Array from `actions_b64`; same length.
+ * Per-review actions. Decoding: indices = Uint32Array (little-endian) from base64
+ * `indices_b64`; actions = Uint8Array from `actions_b64`; same length. A review can
+ * appear again later (S4 cluster rules update it): the last update wins.
  *
  * This interface was referenced by `RIEAPI`'s JSON-Schema
  * via the `definition` "JudgedEvent".
@@ -282,6 +383,11 @@ export interface PolicyThresholds {
   w_offtopic?: number;
   reason_min_contribution?: number;
   duplicate_action?: "EXCLUDE" | "DOWNWEIGHT";
+  cluster_penalty_threshold?: number;
+  cluster_penalty_strength?: number;
+  min_penalty_cluster_size?: number;
+  grey_zone_width?: number;
+  duplicate_in_burst_action?: "EXCLUDE" | "FLAG" | "DOWNWEIGHT";
 }
 /**
  * Every number the decision policy uses (MVP_SPEC §6.5). Nothing is hard-coded.
@@ -301,6 +407,11 @@ export interface PolicyThresholds1 {
   w_offtopic: number;
   reason_min_contribution: number;
   duplicate_action: "EXCLUDE" | "DOWNWEIGHT";
+  cluster_penalty_threshold: number;
+  cluster_penalty_strength: number;
+  min_penalty_cluster_size: number;
+  grey_zone_width: number;
+  duplicate_in_burst_action: "EXCLUDE" | "FLAG" | "DOWNWEIGHT";
 }
 /**
  * This interface was referenced by `RIEAPI`'s JSON-Schema
@@ -340,17 +451,21 @@ export interface StageEvent {
  */
 export interface RunCreate {
   dataset_id: string;
-  backend?: "jev" | "laya" | "laya-ft" | "heuristic" | "mock";
+  backend?: "jev" | "laya" | "laya-ft" | "heuristic" | "mock" | "cached";
   model?: string | null;
   pack_size?: number;
   samples_per_review?: number;
   reuse_identical_inputs?: boolean;
+  reuse_judgments_from?: string | null;
   confirm_cost?: boolean;
   question_set?: "v1" | "v2";
   concurrency?: number;
   weights?: ActionWeights2;
   thresholds?: PolicyThresholds2;
   features?: FeatureConfig2;
+  bursts?: BurstConfig2;
+  clusters?: ClusterConfig2;
+  suspicion?: SuspicionConfig;
   bootstrap_resamples?: number;
   seed?: number;
   /**
@@ -379,6 +494,11 @@ export interface PolicyThresholds2 {
   w_offtopic?: number;
   reason_min_contribution?: number;
   duplicate_action?: "EXCLUDE" | "DOWNWEIGHT";
+  cluster_penalty_threshold?: number;
+  cluster_penalty_strength?: number;
+  min_penalty_cluster_size?: number;
+  grey_zone_width?: number;
+  duplicate_in_burst_action?: "EXCLUDE" | "FLAG" | "DOWNWEIGHT";
 }
 /**
  * S1 deterministic features (MVP_SPEC §6.2).
@@ -396,22 +516,70 @@ export interface FeatureConfig2 {
   low_playtime_minutes?: number;
 }
 /**
+ * S3 burst detection (MVP_SPEC §6.4). Calibrated on HD2 / CS2 (MEASUREMENTS M9).
+ */
+export interface BurstConfig2 {
+  baseline_hours?: number;
+  min_history_hours?: number;
+  z_threshold?: number;
+  min_scale?: number;
+  min_hour_count?: number;
+  merge_gap_hours?: number;
+  min_burst_reviews?: number;
+  min_daily_reviews?: number;
+  min_segment_days?: number;
+  change_point_penalty?: number;
+}
+/**
+ * S3 clusters (MVP_SPEC §6.4).
+ */
+export interface ClusterConfig2 {
+  umap_min_reviews?: number;
+  umap_neighbors?: number;
+  umap_components?: number;
+  umap_min_dist?: number;
+  hdbscan_min_cluster_size?: number;
+  hdbscan_min_samples?: number | null;
+  dup_min_size?: number;
+  top_phrases?: number;
+  seed?: number;
+}
+/**
+ * Cluster suspicion factors (app/corpus/suspicion.py).
+ */
+export interface SuspicionConfig {
+  time_scales_hours?: number[];
+  similar_cosine?: number;
+  offtopic_topics?: string[];
+  factor_floor?: number;
+  factor_weights?: {
+    [k: string]: number;
+  };
+  null_samples?: number;
+  null_floor?: number;
+  max_cluster_events?: number;
+}
+/**
  * This interface was referenced by `RIEAPI`'s JSON-Schema
  * via the `definition` "RunCreate-Output".
  */
 export interface RunCreate1 {
   dataset_id: string;
-  backend: "jev" | "laya" | "laya-ft" | "heuristic" | "mock";
+  backend: "jev" | "laya" | "laya-ft" | "heuristic" | "mock" | "cached";
   model: string | null;
   pack_size: number;
   samples_per_review: number;
   reuse_identical_inputs: boolean;
+  reuse_judgments_from: string | null;
   confirm_cost: boolean;
   question_set: "v1" | "v2";
   concurrency: number;
   weights: ActionWeights3;
   thresholds: PolicyThresholds3;
   features: FeatureConfig3;
+  bursts: BurstConfig3;
+  clusters: ClusterConfig3;
+  suspicion: SuspicionConfig1;
   bootstrap_resamples: number;
   seed: number;
   /**
@@ -440,6 +608,11 @@ export interface PolicyThresholds3 {
   w_offtopic: number;
   reason_min_contribution: number;
   duplicate_action: "EXCLUDE" | "DOWNWEIGHT";
+  cluster_penalty_threshold: number;
+  cluster_penalty_strength: number;
+  min_penalty_cluster_size: number;
+  grey_zone_width: number;
+  duplicate_in_burst_action: "EXCLUDE" | "FLAG" | "DOWNWEIGHT";
 }
 /**
  * S1 deterministic features (MVP_SPEC §6.2).
@@ -455,6 +628,50 @@ export interface FeatureConfig3 {
   embedding_model: string;
   embedding_max_seq_len: number;
   low_playtime_minutes: number;
+}
+/**
+ * S3 burst detection (MVP_SPEC §6.4). Calibrated on HD2 / CS2 (MEASUREMENTS M9).
+ */
+export interface BurstConfig3 {
+  baseline_hours: number;
+  min_history_hours: number;
+  z_threshold: number;
+  min_scale: number;
+  min_hour_count: number;
+  merge_gap_hours: number;
+  min_burst_reviews: number;
+  min_daily_reviews: number;
+  min_segment_days: number;
+  change_point_penalty: number;
+}
+/**
+ * S3 clusters (MVP_SPEC §6.4).
+ */
+export interface ClusterConfig3 {
+  umap_min_reviews: number;
+  umap_neighbors: number;
+  umap_components: number;
+  umap_min_dist: number;
+  hdbscan_min_cluster_size: number;
+  hdbscan_min_samples: number | null;
+  dup_min_size: number;
+  top_phrases: number;
+  seed: number;
+}
+/**
+ * Cluster suspicion factors (app/corpus/suspicion.py).
+ */
+export interface SuspicionConfig1 {
+  time_scales_hours: number[];
+  similar_cosine: number;
+  offtopic_topics: string[];
+  factor_floor: number;
+  factor_weights: {
+    [k: string]: number;
+  };
+  null_samples: number;
+  null_floor: number;
+  max_cluster_events: number;
 }
 /**
  * This interface was referenced by `RIEAPI`'s JSON-Schema
@@ -488,4 +705,44 @@ export interface SteamFetchRequest {
   language?: string;
   sample_n?: number | null;
   name?: string | null;
+  /**
+   * game title used in the model context line
+   */
+  subject?: string | null;
+}
+/**
+ * Cluster suspicion factors (app/corpus/suspicion.py).
+ *
+ * This interface was referenced by `RIEAPI`'s JSON-Schema
+ * via the `definition` "SuspicionConfig-Input".
+ */
+export interface SuspicionConfig2 {
+  time_scales_hours?: number[];
+  similar_cosine?: number;
+  offtopic_topics?: string[];
+  factor_floor?: number;
+  factor_weights?: {
+    [k: string]: number;
+  };
+  null_samples?: number;
+  null_floor?: number;
+  max_cluster_events?: number;
+}
+/**
+ * Cluster suspicion factors (app/corpus/suspicion.py).
+ *
+ * This interface was referenced by `RIEAPI`'s JSON-Schema
+ * via the `definition` "SuspicionConfig-Output".
+ */
+export interface SuspicionConfig3 {
+  time_scales_hours: number[];
+  similar_cosine: number;
+  offtopic_topics: string[];
+  factor_floor: number;
+  factor_weights: {
+    [k: string]: number;
+  };
+  null_samples: number;
+  null_floor: number;
+  max_cluster_events: number;
 }
