@@ -4,13 +4,14 @@ import json
 from collections.abc import Iterator
 from pathlib import Path
 
+import httpx
 import numpy as np
 import pytest
 from fastapi.testclient import TestClient
 
-from app.core.config import Settings
 from app.main import create_app
 from app.systemone.mock import MockBackend
+from tests.conftest import make_settings
 from tests.fakes import HashingEmbedder
 from tests.test_features import organic
 
@@ -30,7 +31,7 @@ def csv_bytes(n: int = N) -> bytes:
 
 @pytest.fixture
 def client(tmp_path: Path) -> Iterator[TestClient]:
-    settings = Settings(data_dir=tmp_path, author_hash_salt="s" * 64)
+    settings = make_settings(tmp_path)
     with TestClient(create_app(settings, embedder_factory=lambda cfg: HashingEmbedder())) as c:
         yield c
 
@@ -162,7 +163,7 @@ def test_backend_failure_emits_error_event(client: TestClient, monkeypatch) -> N
 
 def test_unimplemented_backend_is_rejected(client: TestClient) -> None:
     ds = upload(client)
-    r = client.post("/runs", json={"dataset_id": ds, "backend": "laya"})
+    r = client.post("/runs", json={"dataset_id": ds, "backend": "laya-ft"})
     assert r.status_code == 422
 
 
@@ -237,11 +238,11 @@ def test_later_copies_are_downweighted_and_still_judged(client: TestClient, monk
             [run_id],
         ).fetchone()
 
-    # Every review has a judgment, copies included (accuracy over cost) ...
+    # Every review has its own, independent judgment by default (Jev is not
+    # deterministic, M7): copies included, nothing reused.
     assert n_judged == len(texts)
-    # ... but byte-identical inputs were sent once: 10 copies -> 2 states, 8 reused.
-    assert len(judged_states) == len(texts) - 8
-    assert client.get(f"/runs/{run_id}").json()["summary"]["reused_judgments"] == 8
+    assert len(judged_states) == len(texts)
+    assert client.get(f"/runs/{run_id}").json()["summary"]["reused_judgments"] == 0
 
     # The first copy is judged like any review; later copies are at least DOWNWEIGHT.
     assert "NEAR_DUPLICATE" not in decisions[5][1]
@@ -249,8 +250,6 @@ def test_later_copies_are_downweighted_and_still_judged(client: TestClient, monk
         action, reasons, _ = decisions[rid]
         assert reasons[0] == "NEAR_DUPLICATE"
         assert action in {"DOWNWEIGHT", "FLAG", "EXCLUDE"}
-    # Same input -> same judgment -> same integrity score (copies 5, 7, 9... share one).
-    assert len({decisions[rid][2] for rid in range(5, 15, 2)}) == 1
     # Short duplicates are never penalised as copies.
     assert "NEAR_DUPLICATE" not in decisions[len(texts) - 1][1]
     assert feats_rows == (len(texts), len(texts), 12)  # nn filled after S3; 10 + 2 dups
@@ -258,6 +257,25 @@ def test_later_copies_are_downweighted_and_still_judged(client: TestClient, monk
     summary = client.get(f"/runs/{run_id}").json()["summary"]
     assert {"ingest", "features", "systemone", "corpus", "decide"} <= set(summary["timings_s"])
     assert summary["embedding_cache_hit"] is False
+
+
+def test_reuse_identical_inputs_is_opt_in(client: TestClient, monkeypatch) -> None:
+    judged_states: list[dict] = []
+    original = MockBackend.judge_batch
+
+    async def counting(self, ids, states):
+        judged_states.extend(states)
+        return await original(self, ids, states)
+
+    monkeypatch.setattr(MockBackend, "judge_batch", counting)
+    texts = organic(20)
+    texts[3:3] = [COPY] * 10  # verdicts alternate: 2 distinct inputs among the copies
+    ds = upload_texts(client, texts)
+    body = {"dataset_id": ds, "bootstrap_resamples": 100, "reuse_identical_inputs": True}
+    run_id = client.post("/runs", json=body).json()["id"]
+    read_sse(client, run_id)
+    assert len(judged_states) == len(texts) - 8
+    assert client.get(f"/runs/{run_id}").json()["summary"]["reused_judgments"] == 8
 
 
 def test_duplicate_action_exclude_is_available(client: TestClient) -> None:
@@ -321,3 +339,127 @@ def test_heuristic_backend_runs_without_system_one(client: TestClient) -> None:
     assert actions[30] == "FLAG"  # promo -> human, never straight to EXCLUDE
     assert actions[31] == "DOWNWEIGHT" and actions[32] == "DOWNWEIGHT"
     assert all(actions[i] == "KEEP" for i in range(30))
+
+
+def test_jev_run_through_the_real_client(tmp_path: Path) -> None:
+    from tests.fake_systemone import FakeSystemOne
+
+    fake = FakeSystemOne(fail_first=1)  # one 429 on the way, retried
+    # Fake server: lift the 40 req/s limiter so 600 requests take ms, not 15 s.
+    settings = make_settings(tmp_path, typesafe_api_key="test-key", jev_requests_per_second=5000)
+    app = create_app(
+        settings,
+        embedder_factory=lambda cfg: HashingEmbedder(),
+        systemone_transport=fake.transport,
+    )
+    with TestClient(app) as c:
+        ds = upload(c)  # 1-5 star CSV
+        r = c.post("/runs", json={"dataset_id": ds, "backend": "jev", "bootstrap_resamples": 100})
+        assert r.status_code == 201, r.text
+        run_id = r.json()["id"]
+        events = read_sse(c, run_id)
+        run = c.get(f"/runs/{run_id}").json()
+
+    assert events[-1][0] == "done", events[-1]
+    assert run["status"] == "done"
+    s = run["summary"]
+    assert s["model_version"] == "jev:jev-1.13.0"  # resolved from the response, not the alias
+    assert s["tokens_in"] > 0 and s["cost_usd"] > 0
+    assert s["requests"] == N and s["retries"] == 1  # the injected 429 was retried once
+    assert s["latency_p50_ms"] is not None
+    assert run["cost_usd"] == s["cost_usd"] and run["tokens_in"] == s["tokens_in"]
+    counters = [e for k, e in events if k == "counters"]
+    assert counters[-1]["cost_usd"] > 0
+    # One request per distinct input (+1 retried 429): texts are all distinct here.
+    assert len(fake.requests) == N + 1
+    state = fake.requests[-1]["state"]
+    assert state["context"] == "Review of 'test'."
+    assert state["verdict"].endswith("of 5 stars)")
+    assert set(state) == {"context", "verdict", "review"}  # minimal state, no metadata
+
+
+def test_jev_without_api_key_is_rejected(client: TestClient) -> None:
+    ds = upload(client)
+    r = client.post("/runs", json={"dataset_id": ds, "backend": "jev"})
+    assert r.status_code == 422 and "TYPESAFE_API_KEY" in r.text
+
+
+def jev_app(tmp_path: Path, fake, **settings_overrides):
+    settings = make_settings(
+        tmp_path, typesafe_api_key="test-key", jev_requests_per_second=5000, **settings_overrides
+    )
+    return create_app(
+        settings, embedder_factory=lambda cfg: HashingEmbedder(), systemone_transport=fake.transport
+    )
+
+
+def test_preflight_and_spend_guard(tmp_path: Path) -> None:
+    from tests.fake_systemone import FakeSystemOne
+
+    fake = FakeSystemOne()
+    with TestClient(jev_app(tmp_path, fake, max_run_cost_usd=0.001)) as c:
+        ds = upload(c)
+        body = {"dataset_id": ds, "backend": "jev", "bootstrap_resamples": 100}
+        pf = c.post("/runs/preflight", json=body).json()
+        assert pf["reviews"] == N and pf["calls"] == N
+        assert pf["est_input_tokens"] > N * 893  # question text alone is ~893 tokens/call
+        assert pf["est_cost_usd"] > 0.001 and pf["needs_confirmation"] is True
+        assert pf["est_seconds"] > 0
+        assert len(fake.requests) == 0  # a pre-flight never calls the model
+
+        refused = c.post("/runs", json=body)
+        assert refused.status_code == 402
+        assert "confirm_cost" in refused.json()["detail"]["message"]
+        assert len(fake.requests) == 0
+
+        k3 = c.post("/runs/preflight", json=body | {"samples_per_review": 3}).json()
+        assert k3["calls"] == 3 * N and k3["est_cost_usd"] == pytest.approx(
+            3 * pf["est_cost_usd"], rel=0.01
+        )
+
+        ok = c.post("/runs", json=body | {"confirm_cost": True})
+        assert ok.status_code == 201
+        read_sse(c, ok.json()["id"])
+        assert c.get(f"/runs/{ok.json()['id']}").json()["status"] == "done"
+
+
+def test_run_is_stopped_when_spend_runs_away(tmp_path: Path) -> None:
+    """A backend that bills far more than estimated must not run to completion."""
+    from tests.fake_systemone import FakeSystemOne
+
+    class Expensive(FakeSystemOne):
+        def handler(self, request):
+            r = super().handler(request)
+            body = json.loads(r.content)
+            body["usage"]["input_tokens"] = 5_000_000  # ~$0.21 per call
+            return httpx.Response(200, json=body)
+
+    fake = Expensive()
+    with TestClient(jev_app(tmp_path, fake, max_run_cost_usd=1.0)) as c:
+        ds = upload(c)
+        run_id = c.post(
+            "/runs", json={"dataset_id": ds, "backend": "jev", "concurrency": 2}
+        ).json()["id"]
+        events = read_sse(c, run_id)
+        run = c.get(f"/runs/{run_id}").json()
+    assert events[-1][0] == "error" and "over the cap" in events[-1][1]["message"]
+    assert run["status"] == "failed"
+    assert len(fake.requests) < N  # stopped early, not after all 600
+
+
+def test_samples_per_review_averages_k_calls(tmp_path: Path) -> None:
+    from tests.fake_systemone import FakeSystemOne
+
+    fake = FakeSystemOne()
+    with TestClient(jev_app(tmp_path, fake)) as c:
+        ds = upload(c)
+        body = {
+            "dataset_id": ds,
+            "backend": "jev",
+            "samples_per_review": 3,
+            "bootstrap_resamples": 100,
+        }
+        run_id = c.post("/runs", json=body).json()["id"]
+        read_sse(c, run_id)
+        assert c.get(f"/runs/{run_id}").json()["status"] == "done"
+    assert len(fake.requests) == 3 * N

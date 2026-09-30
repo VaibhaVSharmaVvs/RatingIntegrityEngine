@@ -89,7 +89,16 @@ class RunCreate(Contract):
     backend: Backend = "mock"
     model: str | None = None
     pack_size: int = Field(1, ge=1, le=20)
-    question_set: Literal["v1"] = "v1"
+    # Jev is not deterministic (MEASUREMENTS M7): k calls per review, averaged, halve
+    # decision flips at k=2 (2.6% -> 1.0%) for k times the cost.
+    samples_per_review: int = Field(1, ge=1, le=5)
+    # Off by default: reuse gives every identical copy the *same* noise draw, so a
+    # borderline answer flips all copies together (M7c). On = cheaper, less accurate.
+    reuse_identical_inputs: bool = False
+    # Required when the pre-flight estimate exceeds MAX_RUN_COST_USD.
+    confirm_cost: bool = False
+    # v2 is the default after dev-set review (MEASUREMENTS M8); v1 stays for comparison.
+    question_set: Literal["v1", "v2"] = "v2"
     concurrency: int = Field(8, ge=1, le=64)
     weights: ActionWeights = ActionWeights()
     thresholds: PolicyThresholds = PolicyThresholds()
@@ -173,6 +182,10 @@ class RunSummary(Contract):
     model_version: str | None = None
     timings_s: dict[str, float] = {}  # per stage, plus semantic_* sub-steps
     reused_judgments: int = 0  # reviews whose model input was byte-identical to another's
+    requests: int = 0  # System One HTTP requests (0 for mock/heuristic)
+    retries: int = 0
+    latency_p50_ms: float | None = None
+    latency_p95_ms: float | None = None
     embedding_cache_hit: bool | None = None
 
 
@@ -251,6 +264,17 @@ class RunOut(Contract):
     summary: RunSummary | None
     cost_usd: float
     tokens_in: int
+
+
+class PreflightOut(Contract):
+    backend: str
+    reviews: int
+    calls: int
+    est_input_tokens: int
+    est_cost_usd: float
+    est_seconds: float
+    limit_usd: float
+    needs_confirmation: bool
 
 
 class CsvPreview(Contract):

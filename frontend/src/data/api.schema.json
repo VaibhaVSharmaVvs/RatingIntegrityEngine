@@ -806,9 +806,26 @@
           "minimum": 1,
           "type": "integer"
         },
+        "samples_per_review": {
+          "default": 1,
+          "maximum": 5,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "reuse_identical_inputs": {
+          "default": false,
+          "type": "boolean"
+        },
+        "confirm_cost": {
+          "default": false,
+          "type": "boolean"
+        },
         "question_set": {
-          "const": "v1",
-          "default": "v1",
+          "default": "v2",
+          "enum": [
+            "v1",
+            "v2"
+          ],
           "type": "string"
         },
         "concurrency": {
@@ -914,9 +931,26 @@
           "minimum": 1,
           "type": "integer"
         },
+        "samples_per_review": {
+          "default": 1,
+          "maximum": 5,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "reuse_identical_inputs": {
+          "default": false,
+          "type": "boolean"
+        },
+        "confirm_cost": {
+          "default": false,
+          "type": "boolean"
+        },
         "question_set": {
-          "const": "v1",
-          "default": "v1",
+          "default": "v2",
+          "enum": [
+            "v1",
+            "v2"
+          ],
           "type": "string"
         },
         "concurrency": {
@@ -988,6 +1022,9 @@
         "backend",
         "model",
         "pack_size",
+        "samples_per_review",
+        "reuse_identical_inputs",
+        "confirm_cost",
         "question_set",
         "concurrency",
         "weights",
@@ -1193,6 +1230,36 @@
           "default": 0,
           "type": "integer"
         },
+        "requests": {
+          "default": 0,
+          "type": "integer"
+        },
+        "retries": {
+          "default": 0,
+          "type": "integer"
+        },
+        "latency_p50_ms": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "latency_p95_ms": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
         "embedding_cache_hit": {
           "anyOf": [
             {
@@ -1222,6 +1289,10 @@
         "model_version",
         "timings_s",
         "reused_judgments",
+        "requests",
+        "retries",
+        "latency_p50_ms",
+        "latency_p95_ms",
         "embedding_cache_hit"
       ],
       "title": "RunSummary",

@@ -1,6 +1,7 @@
 from collections.abc import Callable
 from dataclasses import dataclass, field
 
+import httpx
 from fastapi import Request
 
 from app.core.config import Settings
@@ -19,6 +20,8 @@ class AppState:
     tasks: set = field(default_factory=set)  # strong refs so tasks aren't GC'd
     # None = the real sentence-transformers embedder; tests inject a cheap stand-in.
     embedder_factory: Callable[[FeatureConfig], Embedder] | None = None
+    # None = real network; tests inject an httpx.MockTransport for Jev/Laya.
+    systemone_transport: httpx.AsyncBaseTransport | None = None
 
 
 def get_state(request: Request) -> AppState:

@@ -37,10 +37,13 @@ def _answer(rng: np.random.Generator, spec: dict) -> dict:
 
 class MockBackend:
     model_version = "mock-1"
+    cost_usd = 0.0
+    tokens_in = 0
 
-    def __init__(self, seed: int, latency_ms: float = 0.0) -> None:
+    def __init__(self, seed: int, latency_ms: float = 0.0, questions: dict | None = None) -> None:
         self.seed = seed
         self.latency_ms = latency_ms
+        self.questions = questions or QUESTIONS
 
     async def judge_batch(self, review_ids: list[int], states: list[dict]) -> list[dict]:
         if self.latency_ms:
@@ -48,5 +51,5 @@ class MockBackend:
         out = []
         for rid in review_ids:
             rng = np.random.default_rng([self.seed, rid])
-            out.append({qid: _answer(rng, spec) for qid, spec in QUESTIONS.items()})
+            out.append({qid: _answer(rng, spec) for qid, spec in self.questions.items()})
         return out

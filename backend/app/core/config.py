@@ -11,6 +11,7 @@ class Settings(BaseSettings):
     typesafe_api_key: str = ""
     typesafe_base_url: str = "https://api.typesafe.ai"
     jev_model: str = "jev-latest"
+    jev_requests_per_second: float = 40.0  # documented limit, docs.typesafe.ai/models.md
 
     laya_base_url: str = "http://localhost:8000"
     laya_model: str = "english"

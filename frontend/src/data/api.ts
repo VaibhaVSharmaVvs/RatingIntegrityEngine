@@ -188,6 +188,10 @@ export interface RunSummary {
     [k: string]: number;
   };
   reused_judgments: number;
+  requests: number;
+  retries: number;
+  latency_p50_ms: number | null;
+  latency_p95_ms: number | null;
   embedding_cache_hit: boolean | null;
 }
 /**
@@ -339,7 +343,10 @@ export interface RunCreate {
   backend?: "jev" | "laya" | "laya-ft" | "heuristic" | "mock";
   model?: string | null;
   pack_size?: number;
-  question_set?: "v1";
+  samples_per_review?: number;
+  reuse_identical_inputs?: boolean;
+  confirm_cost?: boolean;
+  question_set?: "v1" | "v2";
   concurrency?: number;
   weights?: ActionWeights2;
   thresholds?: PolicyThresholds2;
@@ -397,7 +404,10 @@ export interface RunCreate1 {
   backend: "jev" | "laya" | "laya-ft" | "heuristic" | "mock";
   model: string | null;
   pack_size: number;
-  question_set: "v1";
+  samples_per_review: number;
+  reuse_identical_inputs: boolean;
+  confirm_cost: boolean;
+  question_set: "v1" | "v2";
   concurrency: number;
   weights: ActionWeights3;
   thresholds: PolicyThresholds3;
