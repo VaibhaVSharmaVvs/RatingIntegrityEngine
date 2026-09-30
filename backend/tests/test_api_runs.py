@@ -199,51 +199,85 @@ def upload_texts(client: TestClient, texts: list[str]) -> str:
 COPY = "this game is a total scam and the developers lied about everything they promised us"
 
 
-def test_duplicates_are_excluded_before_system_one(client: TestClient) -> None:
+def test_later_copies_are_downweighted_and_still_judged(client: TestClient, monkeypatch) -> None:
+    judged_states: list[dict] = []
+    original = MockBackend.judge_batch
+
+    async def counting(self, ids, states):
+        judged_states.extend(states)
+        return await original(self, ids, states)
+
+    monkeypatch.setattr(MockBackend, "judge_batch", counting)
     texts = organic(40)  # varied filler; templated filler is itself near-dup
-    texts[5:5] = [COPY] * 10  # the first copy is kept, the other 9 excluded
-    texts.append("good game")
-    texts.append("good game")  # short duplicate: not evidence of copying
+    texts[5:5] = [COPY] * 10  # verdicts alternate, so 2 distinct model inputs among the copies
+    texts += ["good game", "good game"]  # short duplicate: not evidence of copying
     ds = upload_texts(client, texts)
     run_id = client.post("/runs", json={"dataset_id": ds, "bootstrap_resamples": 100}).json()["id"]
     events = read_sse(client, run_id)
 
     feats = next(e for k, e in events if k == "features_done")
-    assert feats["counts"]["excludable_dups"] == 9
+    assert feats["counts"]["later_copies"] == 9
     assert {"heuristics", "minhash"} <= set(feats["timings_s"])
-    # The excluded copies are on the grid before System One starts.
-    first_judged = next(i for i, (k, _) in enumerate(events) if k == "judged")
-    s2_start = events.index(
-        ("stage", next(e for k, e in events if k == "stage" and e["name"] == "systemone"))
-    )
-    assert first_judged < s2_start
 
     db = client.app.state.rie.db
     with db.cursor() as cur:
-        excluded = cur.execute(
-            "SELECT review_id, reasons FROM decisions WHERE run_id = ? AND action = 'EXCLUDE' ORDER BY 1",
-            [run_id],
-        ).fetchall()
-        judged_ids = {
-            r[0]
-            for r in cur.execute(
-                "SELECT DISTINCT review_id FROM judgments WHERE run_id = ?", [run_id]
+        decisions = {
+            rid: (action, json.loads(reasons), score)
+            for rid, action, reasons, score in cur.execute(
+                "SELECT review_id, action, reasons, integrity_score FROM decisions WHERE run_id = ?",
+                [run_id],
             ).fetchall()
         }
+        n_judged = cur.execute(
+            "SELECT count(DISTINCT review_id) FROM judgments WHERE run_id = ?", [run_id]
+        ).fetchone()[0]
         feats_rows = cur.execute(
-            "SELECT count(*), count(nn_cosine_max), count(*) FILTER (WHERE dup_of >= 0) FROM features WHERE run_id = ?",
+            "SELECT count(*), count(nn_cosine_max), count(*) FILTER (WHERE dup_of >= 0) "
+            "FROM features WHERE run_id = ?",
             [run_id],
         ).fetchone()
-    assert [r[0] for r in excluded] == list(range(6, 15))
-    assert all(json.loads(r[1]) == ["NEAR_DUPLICATE"] for r in excluded)
-    assert judged_ids.isdisjoint(r[0] for r in excluded)  # never sent to System One
-    assert len(judged_ids) == len(texts) - 9
+
+    # Every review has a judgment, copies included (accuracy over cost) ...
+    assert n_judged == len(texts)
+    # ... but byte-identical inputs were sent once: 10 copies -> 2 states, 8 reused.
+    assert len(judged_states) == len(texts) - 8
+    assert client.get(f"/runs/{run_id}").json()["summary"]["reused_judgments"] == 8
+
+    # The first copy is judged like any review; later copies are at least DOWNWEIGHT.
+    assert "NEAR_DUPLICATE" not in decisions[5][1]
+    for rid in range(6, 15):
+        action, reasons, _ = decisions[rid]
+        assert reasons[0] == "NEAR_DUPLICATE"
+        assert action in {"DOWNWEIGHT", "FLAG", "EXCLUDE"}
+    # Same input -> same judgment -> same integrity score (copies 5, 7, 9... share one).
+    assert len({decisions[rid][2] for rid in range(5, 15, 2)}) == 1
+    # Short duplicates are never penalised as copies.
+    assert "NEAR_DUPLICATE" not in decisions[len(texts) - 1][1]
     assert feats_rows == (len(texts), len(texts), 12)  # nn filled after S3; 10 + 2 dups
 
     summary = client.get(f"/runs/{run_id}").json()["summary"]
-    assert summary["counts"]["EXCLUDE"] >= 9
     assert {"ingest", "features", "systemone", "corpus", "decide"} <= set(summary["timings_s"])
     assert summary["embedding_cache_hit"] is False
+
+
+def test_duplicate_action_exclude_is_available(client: TestClient) -> None:
+    texts = organic(20)
+    texts[3:3] = [COPY] * 4
+    ds = upload_texts(client, texts)
+    body = {
+        "dataset_id": ds,
+        "bootstrap_resamples": 100,
+        "thresholds": {"duplicate_action": "EXCLUDE"},
+    }
+    run_id = client.post("/runs", json=body).json()["id"]
+    read_sse(client, run_id)
+    with client.app.state.rie.db.cursor() as cur:
+        actions = dict(
+            cur.execute(
+                "SELECT review_id, action FROM decisions WHERE run_id = ?", [run_id]
+            ).fetchall()
+        )
+    assert [actions[i] for i in range(4, 7)] == ["EXCLUDE"] * 3
 
 
 def test_second_run_reuses_embedding_cache(client: TestClient) -> None:

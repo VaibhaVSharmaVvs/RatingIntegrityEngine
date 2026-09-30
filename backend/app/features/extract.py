@@ -3,7 +3,7 @@
 S1 is split in two because the parts differ in cost by two orders of magnitude on CPU
 (MEASUREMENTS M5):
 - `deterministic_features`: heuristics + duplicates. Seconds for 50K. Runs before S2
-  so its EXCLUDEs fill the grid immediately and skip System One entirely.
+  and marks later copies for the decision policy.
 - `semantic_features`: embeddings + nearest neighbour. Minutes for 50K cold. The
   pipeline overlaps it with S2 (network-bound on Jev) and waits for it in S3.
 """
@@ -93,7 +93,7 @@ def feature_counts(frame: pl.DataFrame, cfg: FeatureConfig) -> dict[str, int]:
         "exact_dup_reviews": int((frame["exact_group_id"] >= 0).sum()),
         "near_dup_reviews": int((frame["dup_group_id"] >= 0).sum()),
         "dup_groups": int(frame.filter(pl.col("dup_group_id") >= 0)["dup_group_id"].n_unique()),
-        "excludable_dups": int((later_dup & (frame["n_tokens"] >= cfg.dup_min_tokens)).sum()),
+        "later_copies": int((later_dup & (frame["n_tokens"] >= cfg.dup_min_tokens)).sum()),
         "low_playtime": int(frame["low_playtime"].fill_null(False).sum()),
         "single_review_account": int(frame["single_review_account"].fill_null(False).sum()),
     }

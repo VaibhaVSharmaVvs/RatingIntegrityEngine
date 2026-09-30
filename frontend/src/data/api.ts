@@ -187,6 +187,7 @@ export interface RunSummary {
   timings_s: {
     [k: string]: number;
   };
+  reused_judgments: number;
   embedding_cache_hit: boolean | null;
 }
 /**

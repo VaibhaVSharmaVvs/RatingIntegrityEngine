@@ -28,7 +28,8 @@ Portfolio project. System One models (Jev hosted, Laya local) make typed judgmen
 - Every threshold/weight lives in run config (`PolicyThresholds`, `ActionWeights` in `app/models.py`), not constants.
 - `reviews.id` is the chronological position within its dataset, and equals the grid index.
 - DuckDB access goes through `Database.cursor()` (UTC-pinned, thread-safe); never share a raw connection.
-- Duplicate EXCLUDEs are decided in S1 and never sent to System One; texts shorter than `dup_min_tokens` are never excluded as copies.
+- **Accuracy over speed** (owner): prefer the more accurate option when a measurement shows a gain; report speed and cost, don't optimise them at accuracy's expense.
+- Later copies (>= `dup_min_tokens`) are DOWNWEIGHTed by default and still judged by System One; the copy rule is a floor. Only byte-identical model inputs share a judgment. Texts shorter than `dup_min_tokens` are never penalised as copies.
 - Tests never load MiniLM: inject `tests.fakes.HashingEmbedder` via `create_app(..., embedder_factory=...)`.
 - CPU timings on the dev laptop vary about ±35% under sustained load; record ranges, not single numbers.
 - Never store raw author IDs (hash with salt at ingest). Never commit `data/` or `.env`.

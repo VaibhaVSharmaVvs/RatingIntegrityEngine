@@ -1,8 +1,10 @@
 """Per-review decision policy (MVP_SPEC §6.5), with every number from run config.
 
-Deterministic rules (S1 features) run first and need no model: a later copy of an
-earlier review is EXCLUDEd before System One ever sees it. Phase 4 adds the cluster
-penalty and the grey-zone FLAG.
+Duplicates (owner decision, 2026-09-30): a later copy of an earlier review is
+DOWNWEIGHTed by default, not EXCLUDEd, and it is still judged by System One. The copy
+rule sets a floor: a worse model-based action (FLAG, EXCLUDE) still wins. Phase 4
+escalates copies that fall inside a detected burst, where copying is evidence of
+coordination. Phase 4 also adds the cluster penalty and the grey-zone FLAG.
 
 Account signals (low playtime, single-review account) are deliberately *not* used
 per review: plenty of genuine reviewers are new or short-playtime. They feed cluster
@@ -28,22 +30,36 @@ class Decision:
     reasons: list[str] = field(default_factory=list)
 
 
-def duplicate_exclusion(
-    review_id: int,
-    dup_of: int,
-    dup_score: float,
-    n_tokens: int,
-    min_tokens: int,
-    action: str = "EXCLUDE",
-) -> Decision | None:
-    """EXCLUDE a later copy of an earlier review ("keep the first", MVP_SPEC §6.5).
+def is_later_copy(review_id: int, dup_of: int, n_tokens: int, min_tokens: int) -> bool:
+    """A later copy of an earlier review ("keep the first", MVP_SPEC §6.5).
 
     Short texts are exempt: "good game" repeated by independent reviewers is not
-    evidence of copying. Those stay in and are judged on informativeness instead.
+    evidence of copying. Those are judged on informativeness like any other review.
     """
-    if dup_of >= 0 and dup_of != review_id and n_tokens >= min_tokens:
-        return Decision(ActionCode[action], 0.0, ["NEAR_DUPLICATE"])
-    return None
+    return dup_of >= 0 and dup_of != review_id and n_tokens >= min_tokens
+
+
+# How severe an action is when two rules disagree. FLAG ranks above DOWNWEIGHT: an
+# unresolved "needs a human" must not be silently turned into a weight.
+_SEVERITY = {
+    ActionCode.KEEP: 0,
+    ActionCode.DOWNWEIGHT: 1,
+    ActionCode.FLAG: 2,
+    ActionCode.EXCLUDE: 3,
+}
+
+
+def apply_duplicate_rule(decision: Decision, copy_action: str) -> Decision:
+    """Combine a per-review decision with the later-copy rule: the stricter wins.
+
+    The integrity score is left as the model/heuristics computed it, so a copy of a
+    detailed review still shows high informativeness in the inspector; the copy is
+    visible through its action and the NEAR_DUPLICATE reason.
+    """
+    floor = ActionCode[copy_action]
+    action = max(decision.action, floor, key=_SEVERITY.__getitem__)
+    reasons = ["NEAR_DUPLICATE", *[r for r in decision.reasons if r != "NEAR_DUPLICATE"]][:3]
+    return Decision(action, decision.integrity_score, reasons)
 
 
 def decide_heuristic(

@@ -2,11 +2,11 @@
 
 One asyncio task per run (MVP_SPEC §3). Status per stage:
 - S0: real (loads the dataset).
-- S1: real. Deterministic features first (seconds); their duplicate EXCLUDEs fill the
-  grid at once and never reach System One. Embeddings start in a background thread
-  here and overlap S2; S3 waits for them.
-- S2: real streaming loop and per-review policy. Backends: `mock`, `heuristic`
-  (no model, ablation a); Jev/Laya land in Phase 3.
+- S1: real. Deterministic features first (seconds), which mark later copies.
+  Embeddings start in a background thread here and overlap S2; S3 waits for them.
+- S2: real streaming loop and per-review policy, with the later-copy rule as a floor.
+  Every review is judged; byte-identical inputs share one call. Backends: `mock`,
+  `heuristic` (no model, ablation a); Jev/Laya land in Phase 3.
 - S3: busiest-hour stub; real clustering and bursts land in Phase 4.
 - S4: real weights, adjusted rating, bootstrap CI, n_eff, Steam labels.
 """
@@ -24,7 +24,13 @@ import polars as pl
 
 from app.core.db import Database
 from app.core.events import RunEventBus
-from app.decide.policy import Decision, decide, decide_heuristic, duplicate_exclusion
+from app.decide.policy import (
+    Decision,
+    apply_duplicate_rule,
+    decide,
+    decide_heuristic,
+    is_later_copy,
+)
 from app.decide.rating import bootstrap_ci, n_eff, steam_label, weighted_mean
 from app.features.embeddings import Embedder, SentenceTransformerEmbedder
 from app.features.extract import (
@@ -107,6 +113,8 @@ class Pipeline:
         self.semantic: SemanticResult | None = None
         self._semantic_task: asyncio.Task | None = None
         self.timings: dict[str, float] = {}
+        self.later_copy: set[int] = set()
+        self.reused_judgments = 0
         self.grid = np.zeros(0, dtype=np.uint8)
         self.reviews = pl.DataFrame()
         self.dataset: dict = {}
@@ -200,27 +208,14 @@ class Pipeline:
         self.features_frame = frame
         self._store_features(frame)
 
-        # Deterministic EXCLUDEs: decided now, never sent to System One.
-        idx, act = [], []
-        for rid, dup_of, score, n_tok in frame.select(
-            "review_id", "dup_of", "dup_score", "n_tokens"
-        ).iter_rows():
-            d = duplicate_exclusion(
-                rid,
-                dup_of,
-                score,
-                n_tok,
-                cfg.dup_min_tokens,
-                self.config.thresholds.duplicate_action,
-            )
-            if d is not None:
-                self.decisions[rid] = d
-                self.grid[rid] = d.action
-                idx.append(rid)
-                act.append(int(d.action))
+        # Later copies are marked here but still judged in S2 (accuracy over cost);
+        # the copy rule is applied as a floor when each review is decided.
+        self.later_copy = {
+            rid
+            for rid, dup_of, n_tok in frame.select("review_id", "dup_of", "n_tokens").iter_rows()
+            if is_later_copy(rid, dup_of, n_tok, cfg.dup_min_tokens)
+        }
         self.bus.publish(FeaturesDoneEvent(counts=feature_counts(frame, cfg), timings_s=timings))
-        if idx:
-            self._emit_progress(idx, act)
 
         # Embeddings overlap S2; S3 awaits them.
         texts = self.reviews["text"].fill_null("").to_list()
@@ -250,33 +245,47 @@ class Pipeline:
             return
         self.bus.publish(StageEvent(name="systemone", status="started"))
         promo = self.features_frame["has_promo"].to_list()
-        ids = [i for i in self.reviews["id"].to_list() if i not in self.decisions]
         texts = self.reviews["text"].to_list()
         verdicts = self.reviews["rating_norm"].to_list()
         game = self.dataset["name"]
-        batches = [ids[i : i + BATCH_SIZE] for i in range(0, len(ids), BATCH_SIZE)]
+
+        # Judge each distinct model input once. Only byte-identical states share an
+        # answer (same text *and* verdict), so reuse cannot change any judgment.
+        states: dict[str, dict] = {}
+        members: dict[str, list[int]] = {}
+        for rid in self.reviews["id"].to_list():
+            state = build_state(game, (verdicts[rid] or 0) >= 0.5, texts[rid])
+            key = json.dumps(state, sort_keys=True, ensure_ascii=False)
+            states.setdefault(key, state)
+            members.setdefault(key, []).append(rid)
+        self.reused_judgments = self.reviews.height - len(states)
+        keys = list(states)
+        batches = [keys[i : i + BATCH_SIZE] for i in range(0, len(keys), BATCH_SIZE)]
         sem = asyncio.Semaphore(self.config.concurrency)
         pending_idx: list[int] = []
         pending_act: list[int] = []
         last_emit = time.monotonic()
 
-        async def judge(batch_ids: list[int]) -> tuple[list[int], list[dict]]:
-            states = [build_state(game, (verdicts[i] or 0) >= 0.5, texts[i]) for i in batch_ids]
+        async def judge(batch_keys: list[str]) -> tuple[list[str], list[dict]]:
+            first_ids = [members[k][0] for k in batch_keys]
             async with sem:
-                return batch_ids, await self.backend.judge_batch(batch_ids, states)
+                answers = await self.backend.judge_batch(first_ids, [states[k] for k in batch_keys])
+            return batch_keys, answers
 
         tasks = [asyncio.create_task(judge(b)) for b in batches]
         for fut in asyncio.as_completed(tasks):
-            batch_ids, answers = await fut
-            for rid, ans in zip(batch_ids, answers, strict=True):
-                d = decide(
-                    ans, self.config.thresholds, score_levels=SCORE_LEVELS, has_promo=promo[rid]
-                )
-                self.answers[rid] = ans
-                self.decisions[rid] = d
-                self.grid[rid] = d.action
-                pending_idx.append(rid)
-                pending_act.append(int(d.action))
+            batch_keys, answers = await fut
+            for key, ans in zip(batch_keys, answers, strict=True):
+                for rid in members[key]:
+                    d = decide(
+                        ans, self.config.thresholds, score_levels=SCORE_LEVELS, has_promo=promo[rid]
+                    )
+                    d = self._with_copy_rule(rid, d)
+                    self.answers[rid] = ans
+                    self.decisions[rid] = d
+                    self.grid[rid] = d.action
+                    pending_idx.append(rid)
+                    pending_act.append(int(d.action))
             now = time.monotonic()
             if len(pending_idx) >= EMIT_EVERY_N or now - last_emit >= EMIT_EVERY_S:
                 self._emit_progress(pending_idx, pending_act)
@@ -293,14 +302,13 @@ class Pipeline:
         for rid, n_tok, emoji, promo in self.features_frame.select(
             "review_id", "n_tokens", "emoji_ratio", "has_promo"
         ).iter_rows():
-            if rid in self.decisions:
-                continue
             d = decide_heuristic(
                 n_tokens=n_tok,
                 emoji_ratio=emoji,
                 has_promo=promo,
                 low_info_max_tokens=cfg.low_info_max_tokens,
             )
+            d = self._with_copy_rule(rid, d)
             self.decisions[rid] = d
             self.grid[rid] = d.action
             idx.append(rid)
@@ -309,6 +317,11 @@ class Pipeline:
             self._emit_progress(
                 idx[start : start + EMIT_EVERY_N], act[start : start + EMIT_EVERY_N]
             )
+
+    def _with_copy_rule(self, rid: int, d: Decision) -> Decision:
+        if rid in self.later_copy:
+            return apply_duplicate_rule(d, self.config.thresholds.duplicate_action)
+        return d
 
     def _emit_progress(self, idx: list[int], act: list[int]) -> None:
         self.bus.publish(
@@ -469,6 +482,7 @@ class Pipeline:
             reviews_per_s=round(len(self.grid) / elapsed, 2) if elapsed else 0.0,
             model_version=self.backend.model_version,
             timings_s=dict(self.timings),
+            reused_judgments=self.reused_judgments,
             embedding_cache_hit=self.semantic.cache_hit if self.semantic else None,
         )
         self.bus.publish(StageEvent(name="decide", status="done"))

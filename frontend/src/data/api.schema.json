@@ -364,7 +364,7 @@
           "type": "number"
         },
         "lsh_candidate_jaccard": {
-          "default": 0.5,
+          "default": 0.4,
           "maximum": 1.0,
           "minimum": 0.2,
           "type": "number"
@@ -384,7 +384,7 @@
           "type": "string"
         },
         "embedding_max_seq_len": {
-          "default": 128,
+          "default": 256,
           "maximum": 512,
           "minimum": 16,
           "type": "integer"
@@ -428,7 +428,7 @@
           "type": "number"
         },
         "lsh_candidate_jaccard": {
-          "default": 0.5,
+          "default": 0.4,
           "maximum": 1.0,
           "minimum": 0.2,
           "type": "number"
@@ -448,7 +448,7 @@
           "type": "string"
         },
         "embedding_max_seq_len": {
-          "default": 128,
+          "default": 256,
           "maximum": 512,
           "minimum": 16,
           "type": "integer"
@@ -586,7 +586,7 @@
           "type": "number"
         },
         "duplicate_action": {
-          "default": "EXCLUDE",
+          "default": "DOWNWEIGHT",
           "enum": [
             "EXCLUDE",
             "DOWNWEIGHT"
@@ -641,7 +641,7 @@
           "type": "number"
         },
         "duplicate_action": {
-          "default": "EXCLUDE",
+          "default": "DOWNWEIGHT",
           "enum": [
             "EXCLUDE",
             "DOWNWEIGHT"
@@ -839,7 +839,7 @@
             "w_templated": 0.15,
             "w_offtopic": 0.1,
             "reason_min_contribution": 0.05,
-            "duplicate_action": "EXCLUDE"
+            "duplicate_action": "DOWNWEIGHT"
           }
         },
         "features": {
@@ -849,16 +849,16 @@
             "shingle_size": 5,
             "minhash_perm": 128,
             "near_dup_jaccard": 0.7,
-            "lsh_candidate_jaccard": 0.5,
+            "lsh_candidate_jaccard": 0.4,
             "dup_min_tokens": 8,
             "low_info_max_tokens": 3,
             "embedding_model": "sentence-transformers/all-MiniLM-L6-v2",
-            "embedding_max_seq_len": 128,
+            "embedding_max_seq_len": 256,
             "low_playtime_minutes": 120
           }
         },
         "bootstrap_resamples": {
-          "default": 1000,
+          "default": 2000,
           "maximum": 10000,
           "minimum": 100,
           "type": "integer"
@@ -947,7 +947,7 @@
             "w_templated": 0.15,
             "w_offtopic": 0.1,
             "reason_min_contribution": 0.05,
-            "duplicate_action": "EXCLUDE"
+            "duplicate_action": "DOWNWEIGHT"
           }
         },
         "features": {
@@ -957,16 +957,16 @@
             "shingle_size": 5,
             "minhash_perm": 128,
             "near_dup_jaccard": 0.7,
-            "lsh_candidate_jaccard": 0.5,
+            "lsh_candidate_jaccard": 0.4,
             "dup_min_tokens": 8,
             "low_info_max_tokens": 3,
             "embedding_model": "sentence-transformers/all-MiniLM-L6-v2",
-            "embedding_max_seq_len": 128,
+            "embedding_max_seq_len": 256,
             "low_playtime_minutes": 120
           }
         },
         "bootstrap_resamples": {
-          "default": 1000,
+          "default": 2000,
           "maximum": 10000,
           "minimum": 100,
           "type": "integer"
@@ -1189,6 +1189,10 @@
           "default": {},
           "type": "object"
         },
+        "reused_judgments": {
+          "default": 0,
+          "type": "integer"
+        },
         "embedding_cache_hit": {
           "anyOf": [
             {
@@ -1217,6 +1221,7 @@
         "reviews_per_s",
         "model_version",
         "timings_s",
+        "reused_judgments",
         "embedding_cache_hit"
       ],
       "title": "RunSummary",

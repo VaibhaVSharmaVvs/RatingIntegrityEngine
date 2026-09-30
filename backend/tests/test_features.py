@@ -274,8 +274,8 @@ def test_deterministic_and_semantic_features(tmp_path: Path) -> None:
     assert counts["promo"] == 1
     assert counts["exact_dup_reviews"] == 4
     # "good game" is a duplicate but too short to count as copying evidence;
-    # the second long copy is excludable.
-    assert counts["excludable_dups"] == 1
+    # the second long copy is a later copy.
+    assert counts["later_copies"] == 1
     assert set(timings) == {"heuristics", "minhash"}
 
     emb = HashingEmbedder()

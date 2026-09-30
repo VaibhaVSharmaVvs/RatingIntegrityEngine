@@ -209,3 +209,33 @@ The first pattern set was hand-checked against every hit on real data:
 Changes: stream links and "check out my channel" became weak `SELF_PROMO_PATTERNS` (recorded in `promo_hits`, not counted as `has_promo`). `free_keys` no longer matches "free game(s)/skins", and `boosting` no longer matches "buy credits/coins". The real false-positive phrases are now regression tests.
 
 After: `has_promo` = **0** on Gollum and **0** on HD2. Weak hits recorded: 5 and 9. **Precision on real data only.** Neither window appears to contain real advertising, so recall on real spam is unmeasured until the Phase 7 synthetic-attack injector. The "promo" counts in M5c and M5e predate this fix.
+
+---
+
+## M6. Accuracy-over-speed changes (owner direction, 2026-09-30)
+
+### M6a. Embedding context length
+
+Review lengths in MiniLM tokens (incl. special tokens):
+
+| Corpus | Median | p90 | p99 | Truncated @128 | @256 | @512 |
+|---|---|---|---|---|---|---|
+| Gollum (297) | 67 | 283 | 1,634 | 30.6% | 11.8% | 4.7% |
+| HD2 (49,497) | 18 | 99 | 407 | 7.0% | 2.4% | 0.6% |
+
+Speed on 4,000 random HD2 reviews (two alternating runs each): @128 126–146 reviews/s, **@256 94–101 reviews/s** (about 30% slower; length-sorted batching limits the cost to long reviews). 128 → 256 changes exactly the truncated 7%: median cosine 1.0000, **min 0.604**, 7.0% below 0.99. → **Default is now 256**, MiniLM-L6's native training length. Beyond 256 the model is untrained, so longer reviews are still truncated (2.4% of HD2). Chunk-and-average is a candidate for Phase 4 if cluster quality shows it matters.
+
+### M6b. LSH candidate bar and permutations (exact verification at J ≥ 0.7)
+
+| Permutations | LSH bar (b, r) | Candidates | Time (cand + verify) | True pairs | Reviews grouped |
+|---|---|---|---|---|---|
+| 128 | 0.5 (25, 5) | 42,831 | 0.7 s | 2,623 | 1,763 |
+| **128** | **0.4 (32, 4)** | 155,794 | 2.0 s | **2,630** | **1,763** |
+| 128 | 0.3 (37, 3) | 830,363 | 7.0 s | 2,630 | 1,763 |
+| 256 | 0.5 / 0.4 / 0.3 | 33K / 75K / 263K | 0.8 / 1.5 / 3.0 s | 2,629 / 2,630 / 2,630 | 1,762 / 1,763 / 1,763 |
+
+Recall saturates at 0.4 with 128 permutations. **Default is now 0.4** (+7 pairs, about 1.3 s). 0.3 and 256 permutations find nothing more.
+
+### M6c. Duplicates: DOWNWEIGHT and judge every review
+
+Later copies default to **DOWNWEIGHT** and are **judged by System One** like every other review; the copy rule is a floor. Only byte-identical model inputs (same text *and* verdict) share one call. On the HD2 window, 49,497 reviews → 44,291 distinct inputs: **5,206 reused (10.5% fewer Jev calls)**, with no accuracy risk if Jev is deterministic for identical input (**verify in Phase 3**). Bootstrap resamples default 1,000 → 2,000.

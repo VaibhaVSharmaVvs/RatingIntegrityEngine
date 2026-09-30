@@ -62,15 +62,32 @@ def test_thresholds_come_from_config() -> None:
     assert decide(answers(inf=2.5), strict, score_levels=LEVELS).action is ActionCode.DOWNWEIGHT
 
 
-def test_duplicate_rule_keeps_first_exempts_short_and_is_configurable() -> None:
-    from app.decide.policy import duplicate_exclusion
+def test_later_copy_rule_keeps_first_and_exempts_short_texts() -> None:
+    from app.decide.policy import is_later_copy
 
-    assert duplicate_exclusion(5, 5, 1.0, 20, 8) is None  # the first copy is kept
-    assert duplicate_exclusion(6, -1, 0.0, 20, 8) is None  # not a duplicate
-    assert duplicate_exclusion(6, 5, 1.0, 3, 8) is None  # "good game": too short
-    assert duplicate_exclusion(6, 5, 0.9, 20, 8).action is ActionCode.EXCLUDE
-    soft = duplicate_exclusion(6, 5, 0.9, 20, 8, action="DOWNWEIGHT")
-    assert soft.action is ActionCode.DOWNWEIGHT and soft.reasons == ["NEAR_DUPLICATE"]
+    assert not is_later_copy(5, 5, 20, 8)  # the first copy is kept
+    assert not is_later_copy(6, -1, 20, 8)  # not a duplicate
+    assert not is_later_copy(6, 5, 3, 8)  # "good game": too short to be copying evidence
+    assert is_later_copy(6, 5, 20, 8)
+
+
+@pytest.mark.parametrize(
+    ("policy_action", "copy_action", "expected"),
+    [
+        (ActionCode.KEEP, "DOWNWEIGHT", ActionCode.DOWNWEIGHT),  # the copy rule is a floor
+        (ActionCode.DOWNWEIGHT, "DOWNWEIGHT", ActionCode.DOWNWEIGHT),
+        (ActionCode.FLAG, "DOWNWEIGHT", ActionCode.FLAG),  # "needs a human" is not hidden
+        (ActionCode.EXCLUDE, "DOWNWEIGHT", ActionCode.EXCLUDE),  # a worse verdict still wins
+        (ActionCode.KEEP, "EXCLUDE", ActionCode.EXCLUDE),
+    ],
+)
+def test_duplicate_rule_is_a_floor(policy_action, copy_action, expected) -> None:
+    from app.decide.policy import Decision, apply_duplicate_rule
+
+    d = apply_duplicate_rule(Decision(policy_action, 0.8, ["LOW_INFO"]), copy_action)
+    assert d.action is expected
+    assert d.reasons == ["NEAR_DUPLICATE", "LOW_INFO"]
+    assert d.integrity_score == 0.8  # the judged quality stays visible
 
 
 def test_weighted_rating_and_n_eff() -> None:
