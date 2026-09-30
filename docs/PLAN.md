@@ -23,9 +23,9 @@
 | # | Issue | Evidence | Action |
 |---|---|---|---|
 | C6 | **Jev → Laya distillation is prohibited.** MCA §2.3(b): customers may not "use the Services or any Output to perform model distillation, train a model to imitate the output of the Services…". | typesafe.ai/legal/mca | **Phase 8 re-scoped** (see below): fine-tune Laya on human labels + synthetic ground truth only. Confirm the reading with Solulever legal. |
-| C7 | **Jev limits changed:** 40 req/s and 100K tokens/s (spec: 1,200 rpm, 250K tok/s). State counts once per request; each question counts separately. | docs.typesafe.ai/models.md | At pack=1, 50K reviews ≈ 21 min at the documented limit. **Packing is no longer on the critical path**, and it can't cut question-token cost because packed questions are namespaced per review. Phase 3 re-framed. |
+| C7 | **Jev limits changed:** 40 req/s and 100K tokens/s (spec: 1,200 rpm, 250K tok/s). **Measured:** 64 reviews/s at concurrency 32 with zero 429s → 50K in ≈ 13 min at pack=1. | models.md; MEASUREMENTS M4c | **Packing is not needed for throughput.** It is now a *cost* lever only: packing 5 reviews cut tokens by 41% (M4b). Phase 3 re-framed. |
 | C8 | **Laya on this CPU is unusable for bulk runs.** Measured 0.08 reviews/s (i7-1255U, 6 questions). | MEASUREMENTS.md | Local Laya is limited to the 200-review dev set. Every Laya bulk run (5K and 50K) moves to the Kaggle notebook. The "Laya" option in the live UI becomes replay-only. |
-| C9 | **Question tokens dominate cost.** Laya reported 1,390 input tokens/review for question set v1. If Jev counts similarly, 50K costs ≈ $2.9, above the spec's $1 and the $2 spend guard. | MEASUREMENTS.md | Measure on Jev first (Phase 3). If confirmed, trim criteria descriptions and add a token-budget check to question-set versioning. |
+| C9 | **50K costs more than the spec's $1.** **Measured on Jev:** 1,057 input tokens/review → **$2.22 per 50K**, just above the $2 spend guard ($0.22 per 5K). | MEASUREMENTS M4c | Phase 3: trim criteria text and/or pack (−41% tokens on 5 reviews, M4b) and re-measure agreement against the untrimmed pack=1 answers. Raise the guard only as a conscious decision. |
 | C10 | **Steam soft-throttles.** It returns HTTP 200 with an empty page, or 429 after about 140 pages at 1 req/s. | pull.log | Fetcher backs off on empty pages and honours `Retry-After`, paces at 1.5 s, and resumes pulls that stopped early. |
 | C11 | **Laya checkpoint ships invalid temperatures** for some choice entries ("treat confidence … as uncalibrated"). | laya-serve startup warning | Don't use Laya choice `confidence` for FLAG decisions until it has been re-calibrated. Record it in the methodology card. |
 
@@ -61,10 +61,10 @@
 - [x] Frontend: React 19, Vite 8, TypeScript 6, Tailwind v4, shadcn/ui, TanStack Query, Zustand, Recharts, Vitest.
 - [x] `docker-compose.yml` (api `:8001`, laya `:8000`, web `:5173`), `.env.example`, spend-guard variable.
 - [x] `.env` created with a random `AUTHOR_HASH_SALT` (the fetcher refuses the default salt).
-- [ ] **BLOCKED on owner:** Jev API key in `.env`. Smoke test passes: `uv run python ../tools/smoke_systemone.py --backend jev`.
+- [x] Jev API key in `.env`. Smoke test passes (`jev-1.13.0`, 0.3–0.4 s per request).
 - [x] `laya-serve` running on CPU; smoke test passes with `--backend laya`.
 - [x] **Measured** Laya reviews/s on this CPU with question set v1 → `docs/MEASUREMENTS.md` (C8).
-- [ ] **BLOCKED on Jev key:** packing probe `--packed 5` and Jev throughput/token measurement. Now informational (C7).
+- [x] Jev packing probe (works per item, −41% tokens on 5 reviews) and throughput (64 reviews/s at concurrency 32, 1,057 tokens/review) → MEASUREMENTS M4.
 - [x] Steam fetcher (`app/ingest/steam_fetcher.py`, tested, PII dropped at source) running for Gollum (1265780, done), Helldivers 2 (553850) and Cities: Skylines II (949230 confirmed), English only.
 - [x] Jev terms checked: **distillation prohibited** (C6). No fixed retention period; ZDR is enterprise-only.
 
@@ -74,7 +74,7 @@
 3. Time 200 reviews × 6 questions on Laya CPU to get reviews/s.
 4. Write a minimal `ingest/steam_fetcher.py` (cursor paging, 1 req/s, checkpoint the cursor to disk, append to Parquet) and start it. Back-paginating ~2.4 years of HD2 English reviews at 100/page is thousands of pages: expect several hours [estimate].
 
-**Exit criteria:** both backends return valid answers to an identical request; Laya CPU throughput is a measured number; Steam pull is running and resumable.
+**Exit criteria:** ✅ both backends return valid answers to an identical request; Laya CPU throughput is a measured number; Steam pull is running and resumable.
 
 **Risks:** Jev rate limits differ from the documented 1,200 rpm → measure 429 frequency during the smoke test. Laya CPU is very slow (<2 reviews/s) → Laya runs locally only on a 200-review dev set; bulk runs move to Kaggle (spec §9).
 
@@ -130,7 +130,7 @@
 **Requirements**
 - `systemone/client.py`: one `httpx.AsyncClient` for Jev and laya-serve; `aiolimiter` + `asyncio.Semaphore`; `tenacity` backoff on 429/529; parses noul / choice / score answers; records `usage.input_tokens`, latency and resolved model version (C3).
 - `systemone/questions_v1.py` (**drafted in Phase 0**): the six questions in §6.3, versioned. Questions name state fields in backticks (`review`, `verdict`), the convention Jev and Laya both document. No other metadata in state (Jev distraction weakness).
-- `systemone/packing.py`: **only if** Jev's measured 429 rate at pack=1 makes 50K slower than ~45 min. Otherwise drop it.
+- `systemone/packing.py`: pack-N builder/unpacker behind a config flag, as a **cost** lever (−41% tokens at pack 5, M4b). It is not needed for throughput (M4c). Jev only: packing is broken on Laya (M1b).
 - A fixed **200-review dev set** (stratified: bomb window, pre-bomb, short, long, spammy), stored and never used for final metrics.
 - Pre-flight estimator: tokens, $, ETA, requests; blocks above `MAX_RUN_COST_USD`.
 - Streaming: `judged` + `counters` events every ~250 reviews or 200 ms.

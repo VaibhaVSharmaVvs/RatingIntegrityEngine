@@ -64,6 +64,49 @@ Single-request tokens: 267 + 264 + 210 + 246 + 240 = 1,227. Latency after the fi
 | Helldivers 2 553850 | 2024-04-01 → 2024-06-30 | | | | running |
 | Cities: Skylines II 949230 | 2023-10-01 → 2023-12-31 | | | | queued after HD2 |
 
-## M4. Jev (pending API key)
+## M4. Jev (2026-09-30)
 
-To measure: tokens/review with question set v1, reviews/s at pack=1, 429 rate, packing agreement at pack 5. Documented limits as of 2026-09-30 (docs.typesafe.ai/models.md): `jev-latest` → `jev-1.13.0`, 40 req/s, 100K tokens/s, 64K context, $0.042 per 1M input tokens, state counted once per request, each question counted separately.
+Documented limits (docs.typesafe.ai/models.md, 2026-09-30): `jev-latest` → `jev-1.13.0`, 40 req/s, 100K tokens/s, 64K context, $0.042 per 1M input tokens (output free), state counted once per request, each question counted separately.
+
+### M4a. Smoke test (3 short questions, 1 review per request)
+
+Command: `uv run python ../tools/smoke_systemone.py --backend jev`. Response `model` = `jev-1.13.0`.
+
+| # | Review (verdict) | informativeness (0–3) | conf | spam_promo | campaign_language | Input tokens | Latency |
+|---|---|---|---|---|---|---|---|
+| 0 | PSN account requirement… Refunded. (Not rec.) | 1.14 | 0.78 | 0.10 | 0.09 | 413 | 659 ms (first) |
+| 1 | Stratagem combos… 60 hours, still fun. (Rec.) | 1.89 | 0.89 | 0.04 | 0.02 | 412 | 346 ms |
+| 2 | "bad" (Not rec.) | 0.26 | 0.74 | 0.08 | 0.03 | 394 | 323 ms |
+| 3 | Everyone go review bomb this… (Not rec.) | 0.17 | 0.83 | **0.85** ⚠️ | **0.99** ✅ | 406 | 425 ms |
+| 4 | Free keys at discord.gg/xxxx (Rec.) | 0.15 | 0.85 | **0.98** ✅ | 0.07 | 402 | 391 ms |
+
+Every row ranks correctly, unlike Laya zero-shot (M1b). **Overlap:** the campaign call also scores 0.85 on spam, so the decision policy must not penalise the same review twice for correlated signals. Noul answers carry no `confidence` on Jev (Laya adds one). `output_tokens` is reported (55 per request) but is free.
+
+### M4b. Packing probe (5 reviews, array state, namespaced questions)
+
+Command: `... --backend jev --packed 5`. One request: 362 ms, **1,191 input tokens** (vs 2,027 for the five single requests: **−41%**), 294 output tokens.
+
+| # | informativeness single → packed | spam single → packed | campaign single → packed |
+|---|---|---|---|
+| 0 | 1.14 → 1.44 | 0.10 → 0.05 | 0.09 → 0.05 |
+| 1 | 1.89 → 2.08 | 0.04 → 0.03 | 0.02 → 0.02 |
+| 2 | 0.26 → 0.11 | 0.08 → 0.04 | 0.03 → 0.02 |
+| 3 | 0.17 → 0.40 | 0.85 → 0.33 | 0.99 → 0.99 |
+| 4 | 0.15 → 0.00 | 0.98 → 0.98 | 0.07 → 0.04 |
+
+Jev answers per item under packing, unlike Laya. Only 5 items: an anecdote, not an agreement measurement. The Phase 3 dev-set test decides.
+
+### M4c. Throughput, question set v1 (6 questions, 1 review per request)
+
+Command: `uv run python ../tools/bench_throughput.py --backend jev --n 200 --concurrency <c>`, 200 Gollum reviews (seed 7, same sample both rows).
+
+| Concurrency | Wall | Reviews/s | Questions/s | p50 | p95 | Input tokens/review | 429s |
+|---|---|---|---|---|---|---|---|
+| 8 | 9.0 s | 22.21 | 133.2 | 0.34 s | 0.42 s | 1,057 | 0 |
+| 32 | 3.1 s | 64.41 | 386.5 | 0.44 s | 0.59 s | 1,057 | 0 |
+
+Throughput at concurrency 32 is above the documented 40 req/s with no throttling (limits "adjusting dynamically"). Extrapolated from measured rates: 5K ≈ 1.3 min, 50K ≈ 13 min.
+
+**Cost (computed from measured tokens):** 1,057 × $0.042/1M = $0.0000444 per review → **$0.22 per 5K, $2.22 per 50K**. That is above the $2 default spend guard (PLAN C9 confirmed).
+
+**Spend on 2026-09-30:** ≈ 427K input tokens across all probes ≈ **$0.018**.
