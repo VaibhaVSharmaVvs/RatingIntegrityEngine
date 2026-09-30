@@ -18,6 +18,17 @@
 | C4 | **Python SDK is `typesafe-sdk`** (import `typesafe_sdk`), not `typesafe-ai`. | docs.typesafe.ai/sdk/python.md | Installed as an optional extra. Our own httpx client stays the default so Jev and Laya share one code path. |
 | C5 | **Timeline risk.** 31 working days assumes full-time. Phases 7–8 (evaluation, distillation) carry the most uncertainty. | Spec §12 | Phases 0–6 are the demoable MVP. Treat 7–9 as a second milestone with its own date. |
 
+**Found during Phase 0 execution (2026-09-30).** Measurements are in `docs/MEASUREMENTS.md`.
+
+| # | Issue | Evidence | Action |
+|---|---|---|---|
+| C6 | **Jev → Laya distillation is prohibited.** MCA §2.3(b): customers may not "use the Services or any Output to perform model distillation, train a model to imitate the output of the Services…". | typesafe.ai/legal/mca | **Phase 8 re-scoped** (see below): fine-tune Laya on human labels + synthetic ground truth only. Confirm the reading with Solulever legal. |
+| C7 | **Jev limits changed:** 40 req/s and 100K tokens/s (spec: 1,200 rpm, 250K tok/s). State counts once per request; each question counts separately. | docs.typesafe.ai/models.md | At pack=1, 50K reviews ≈ 21 min at the documented limit. **Packing is no longer on the critical path**, and it can't cut question-token cost because packed questions are namespaced per review. Phase 3 re-framed. |
+| C8 | **Laya on this CPU is unusable for bulk runs.** Measured 0.08 reviews/s (i7-1255U, 6 questions). | MEASUREMENTS.md | Local Laya is limited to the 200-review dev set. Every Laya bulk run (5K and 50K) moves to the Kaggle notebook. The "Laya" option in the live UI becomes replay-only. |
+| C9 | **Question tokens dominate cost.** Laya reported 1,390 input tokens/review for question set v1. If Jev counts similarly, 50K costs ≈ $2.9, above the spec's $1 and the $2 spend guard. | MEASUREMENTS.md | Measure on Jev first (Phase 3). If confirmed, trim criteria descriptions and add a token-budget check to question-set versioning. |
+| C10 | **Steam soft-throttles.** It returns HTTP 200 with an empty page, or 429 after about 140 pages at 1 req/s. | pull.log | Fetcher backs off on empty pages and honours `Retry-After`, paces at 1.5 s, and resumes pulls that stopped early. |
+| C11 | **Laya checkpoint ships invalid temperatures** for some choice entries ("treat confidence … as uncalibrated"). | laya-serve startup warning | Don't use Laya choice `confidence` for FLAG decisions until it has been re-calibrated. Record it in the methodology card. |
+
 ---
 
 ## Phase overview
@@ -27,15 +38,15 @@
 | 0 | Setup, access, data pull | 2 d | — | ✅ Setup done (this commit) |
 | 1 | Backend skeleton | 3 d | 0 | |
 | 2 | S1 deterministic features | 2 d | 1 | |
-| 3 | S2 System One judgments | 3 d | 1 (2 in parallel) | **Go/no-go on packing** |
+| 3 | S2 System One judgments | 3 d | 1 (2 in parallel) | **Go/no-go on token cost & throughput** |
 | 4 | S3 corpus + S4 decisions | 3 d | 2, 3 | Backend end-to-end |
 | 5 | Frontend core (live grid) | 4 d | 1 (API contract); 4 for real data | |
 | 6 | Drill-downs + results | 4 d | 4, 5 | **M1: demoable MVP** (~21 d) |
 | 7 | Evaluation + benchmarks | 4 d | 6 | |
-| 8 | Laya distillation | 3 d | 7 (labels), ToS check | |
+| 8 | Laya fine-tune (non-Jev labels) | 3 d | 7 (labels) | |
 | 9 | Ship public demo | 3 d | 6 (7, 8 for full story) | **M2: public launch** (~31 d) |
 
-**Critical path:** Steam pull (start day 1) → Phase 3 packing test → Phase 4 → Phase 6. The frontend (Phase 5) can start against mocked SSE fixtures as soon as the Phase 1 API contract is frozen.
+**Critical path:** Steam pull (start day 1) → Phase 3 Jev token-cost and throughput measurement → Phase 4 → Phase 6. The frontend (Phase 5) can start against mocked SSE fixtures as soon as the Phase 1 API contract is frozen.
 
 ---
 
@@ -49,12 +60,13 @@
 - [x] Optional extras installed: `laya[serve]` 0.3.21, `typesafe-sdk` 0.7.2.
 - [x] Frontend: React 19, Vite 8, TypeScript 6, Tailwind v4, shadcn/ui, TanStack Query, Zustand, Recharts, Vitest.
 - [x] `docker-compose.yml` (api `:8001`, laya `:8000`, web `:5173`), `.env.example`, spend-guard variable.
-- [ ] Jev API key in `.env`. Smoke test passes: `uv run python ../tools/smoke_systemone.py --backend jev`.
-- [ ] `laya-serve` running on CPU and the same smoke test passes with `--backend laya`.
-- [ ] **Measured** Laya reviews/s on this CPU (6 questions per review). Record it in `docs/MEASUREMENTS.md`.
-- [ ] Packing probe run once: `--packed 5`. Record whether per-item answers differ sensibly.
-- [ ] Steam fetcher prototype started in the background for Helldivers 2 (553850), Gollum (1265780) and Cities: Skylines II (verify appid 949230), English only.
-- [ ] Jev terms checked: can outputs be used to train Laya (gates Phase 8)? Data retention / ZDR terms noted.
+- [x] `.env` created with a random `AUTHOR_HASH_SALT` (the fetcher refuses the default salt).
+- [ ] **BLOCKED on owner:** Jev API key in `.env`. Smoke test passes: `uv run python ../tools/smoke_systemone.py --backend jev`.
+- [x] `laya-serve` running on CPU; smoke test passes with `--backend laya`.
+- [x] **Measured** Laya reviews/s on this CPU with question set v1 → `docs/MEASUREMENTS.md` (C8).
+- [ ] **BLOCKED on Jev key:** packing probe `--packed 5` and Jev throughput/token measurement. Now informational (C7).
+- [x] Steam fetcher (`app/ingest/steam_fetcher.py`, tested, PII dropped at source) running for Gollum (1265780, done), Helldivers 2 (553850) and Cities: Skylines II (949230 confirmed), English only.
+- [x] Jev terms checked: **distillation prohibited** (C6). No fixed retention period; ZDR is enterprise-only.
 
 **Process**
 1. Copy `.env.example` → `.env`, add the key and a random `AUTHOR_HASH_SALT`.
@@ -113,22 +125,22 @@
 
 ## Phase 3: S2 System One judgments (core)
 
-**Goal:** six typed judgments per review from a pluggable backend, streamed with live cost, and a data-backed decision on packing.
+**Goal:** six typed judgments per review from a pluggable backend, streamed with live cost, with measured Jev token cost and throughput at pack=1 (C7, C9).
 
 **Requirements**
 - `systemone/client.py`: one `httpx.AsyncClient` for Jev and laya-serve; `aiolimiter` + `asyncio.Semaphore`; `tenacity` backoff on 429/529; parses noul / choice / score answers; records `usage.input_tokens`, latency and resolved model version (C3).
-- `systemone/questions_v1.py`: the six questions in §6.3, versioned. The verdict goes in words in `state`; no other metadata (Jev distraction weakness).
-- `systemone/packing.py`: pack-N builder + unpacker, behind a config flag.
+- `systemone/questions_v1.py` (**drafted in Phase 0**): the six questions in §6.3, versioned. Questions name state fields in backticks (`review`, `verdict`), the convention Jev and Laya both document. No other metadata in state (Jev distraction weakness).
+- `systemone/packing.py`: **only if** Jev's measured 429 rate at pack=1 makes 50K slower than ~45 min. Otherwise drop it.
 - A fixed **200-review dev set** (stratified: bomb window, pre-bomb, short, long, spammy), stored and never used for final metrics.
 - Pre-flight estimator: tokens, $, ETA, requests; blocks above `MAX_RUN_COST_USD`.
 - Streaming: `judged` + `counters` events every ~250 reviews or 200 ms.
 
 **Process**
-1. Build client + questions; run the dev set on Jev at pack=1. Eyeball 50 answers; tune instruction wording (≤ 3 iterations, each logged with its cost).
-2. **Packing experiment:** dev set at pack 1 / 5 / 10. Metric: per-question agreement with pack=1 (Spearman for scores, accuracy for choice/noul).
-3. Run the same dev set on Laya zero-shot (expected to be weak, which is fine: it is a benchmark row).
+1. Build client + questions; run the dev set on Jev at pack=1 with `tools/bench_throughput.py`. Record tokens/review, reviews/s and 429 rate.
+2. Eyeball 50 answers; tune instruction wording (≤ 3 iterations, each logged with its cost). If tokens/review × 50K × price > $2, trim criteria text and re-measure agreement against the untrimmed set.
+3. Run the same dev set on Laya zero-shot on local CPU (~40 min at the measured 0.08 reviews/s). It is a benchmark row.
 
-**Exit criteria / go-no-go:** pack-N is adopted **only if** agreement with pack=1 is ≥ 0.9 on every question; otherwise live runs use the 5K subset and the 50K run is recorded and replayed. The decision and numbers are written into `docs/MEASUREMENTS.md`. Total prompt-iteration spend is logged.
+**Exit criteria / go-no-go:** Jev 50K run projected at ≤ $2 and ≤ 45 min from measured numbers. If either fails, live runs use the 5K subset and the 50K run is recorded once and replayed. Numbers are written into `docs/MEASUREMENTS.md`. Total prompt-iteration spend is logged.
 
 ---
 
@@ -201,15 +213,23 @@
 
 ---
 
-## Phase 8: Laya distillation (Jev → Laya)
+## Phase 8: Laya fine-tune on non-Jev labels (re-scoped, C6)
 
-**Goal:** show that a free, local System One model fine-tuned on Jev labels closes most of the accuracy gap.
+**Goal:** show whether a free, local System One model fine-tuned on **legally clean labels** closes the accuracy gap with Jev on this task.
 
-**Gate:** Jev terms permit training on outputs (Phase 0 check). If not, fine-tune on human + synthetic labels only and say so.
+**Constraint:** Jev outputs must **never** enter the training set (MCA §2.3(b)). Jev appears only as an evaluation baseline. Keep a written data-lineage note for every training row.
 
-**Requirements:** Kaggle T4 notebook `notebooks/03_finetune_laya.ipynb` (~30K Jev-labelled questions, ~4–5 h per the Laya README); 50K batch inference in the same notebook with `predict_batch`; `tools/import_judgments.py` loads results as a normal `laya-ft` run; benchmark row added.
+**Label sources (no Jev):**
+| Source | Covers questions | Volume | Licence |
+|---|---|---|---|
+| Synthetic-attack injector (Phase 7) | `templated`, `spam_promo`, `campaign_language` | exact labels, as many as needed | own data |
+| Deterministic weak labels (MinHash dup groups, promo regex) | `templated`, `spam_promo` | thousands | own data |
+| Expanded hand labels (`tools/label_cli.py`, ~1–2K reviews, 2 raters on a 300 overlap) | `informativeness`, `rating_support`, `topic` | ~6–12K questions | own data |
+| Salminen Fake Reviews (40K) / AiGen-FoodReview (20K) | `templated` (generated text) | large | CC BY 4.0 / MIT |
 
-**Exit criteria:** the fine-tuned model has a benchmark row on the same held-out sets as Jev (never trained on the dev or eval sets); checkpoint versioned.
+**Requirements:** Kaggle T4 notebook `notebooks/03_finetune_laya.ipynb` (~30K questions, ~4–5 h per the Laya README); 50K batch inference in the same notebook with `predict_batch` (C8: CPU is too slow); `tools/import_judgments.py` loads results as a normal `laya-ft` run; benchmark row added.
+
+**Exit criteria:** the fine-tuned model has a benchmark row on the same held-out sets as Jev (never trained on the dev or eval sets); lineage note shows zero Jev-derived rows; checkpoint versioned. Hand-labelling time (~2–3 d) is the real cost here; if it doesn't fit, fine-tune only the three questions with synthetic/weak labels and say so.
 
 ---
 

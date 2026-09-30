@@ -77,6 +77,7 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--backend", choices=["jev", "laya"], default="jev")
     parser.add_argument("--packed", type=int, default=0, help="pack N reviews into one request")
+    parser.add_argument("--raw", action="store_true", help="print full answer JSON")
     args = parser.parse_args()
 
     if args.backend == "jev":
@@ -87,7 +88,7 @@ def main() -> None:
     else:
         base, model, headers = settings.laya_base_url, settings.laya_model, {}
 
-    with httpx.Client(base_url=base, headers=headers, timeout=60) as client:
+    with httpx.Client(base_url=base, headers=headers, timeout=300) as client:
         if args.packed:
             items, questions = build_packed(args.packed)
             payloads = [{"model": model, "state": {"reviews": items}, "questions": questions}]
@@ -102,8 +103,14 @@ def main() -> None:
             ms = (time.perf_counter() - t0) * 1000
             r.raise_for_status()
             body = r.json()
-            print(f"--- {ms:.0f} ms  usage={body.get('usage')}")
-            print(json.dumps(body["answers"], indent=2)[:2000])
+            print(f"--- {ms:.0f} ms  usage={body.get('usage')}  model={body.get('model')}")
+            if args.raw:
+                print(json.dumps(body["answers"], indent=2))
+                continue
+            for qid, a in body["answers"].items():
+                value = a.get("noul", a.get("score", a.get("choice")))
+                conf = a.get("confidence")
+                print(f"  {qid:<24} {a['type']:<6} {value}  conf={conf}")
 
 
 if __name__ == "__main__":
