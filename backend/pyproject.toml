@@ -31,6 +31,7 @@ dependencies = [
     "scikit-learn>=1.5",
     "umap-learn>=0.5.6",
     "ruptures>=1.1.9",
+    "pytz>=2024.1",
 ]
 
 [project.optional-dependencies]
@@ -63,6 +64,9 @@ target-version = "py312"
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP", "SIM", "ASYNC", "RUF"]
 ignore = ["E501"]  # ruff format owns line length; long prompt strings stay intact
+
+[tool.ruff.lint.flake8-bugbear]
+extend-immutable-calls = ["fastapi.Depends", "fastapi.File", "fastapi.Form", "fastapi.Query"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

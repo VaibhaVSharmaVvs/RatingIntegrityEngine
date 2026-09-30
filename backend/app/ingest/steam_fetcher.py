@@ -12,7 +12,6 @@ Usage (from backend/):
 """
 
 import argparse
-import hashlib
 import json
 import logging
 import time
@@ -25,6 +24,7 @@ import polars as pl
 from tenacity import retry, retry_if_exception, stop_after_delay, wait_exponential
 
 from app.core.config import settings
+from app.ingest.normalize import hash_author
 
 log = logging.getLogger("steam_fetcher")
 
@@ -88,10 +88,6 @@ class PullState:
     oldest_ts: int | None = None
     done: bool = False
     end_reason: str | None = None  # 'past_window' | 'exhausted'
-
-
-def hash_author(steamid: str, salt: str) -> str:
-    return hashlib.sha256(f"{salt}{steamid}".encode()).hexdigest()
 
 
 def to_record(raw: dict, salt: str) -> dict:
@@ -264,7 +260,7 @@ def main() -> None:
         to_ts=parse_date(args.to, end_of_day=True),
         language=args.language,
     )
-    out_dir = settings.data_dir / "raw" / "steam" / f"{args.appid}_{args.from_}_{args.to}"
+    out_dir = settings.steam_pulls_dir / f"{args.appid}_{args.from_}_{args.to}"
     fetcher = SteamFetcher.resume_or_new(state, out_dir, settings.author_hash_salt)
     fetcher.rate_s = args.rate
     fetcher.run()

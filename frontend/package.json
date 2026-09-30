@@ -10,7 +10,8 @@
     "preview": "vite preview",
     "test": "vitest run",
     "build:static": "tsc -b && vite build --mode static",
-    "format": "prettier --write src"
+    "format": "prettier --write src",
+    "gen:types": "json2ts -i src/data/api.schema.json -o src/data/api.ts --no-additionalProperties --unreachableDefinitions --bannerComment \"/* Generated from backend/app/models.py by tools/export_types.py. Do not edit. */\""
   },
   "dependencies": {
     "@base-ui/react": "^1.8.0",
@@ -38,6 +39,7 @@
     "@types/react-dom": "^19.2.7",
     "@vitejs/plugin-react": "^6.1.1",
     "jsdom": "^30.1.1",
+    "json-schema-to-typescript": "^16.0.0",
     "oxlint": "^1.81.0",
     "prettier": "^3.9.9",
     "tailwindcss": "^4.3.3",

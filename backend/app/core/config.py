@@ -16,11 +16,23 @@ class Settings(BaseSettings):
     laya_model: str = "english"
 
     data_dir: Path = REPO_ROOT / "data"
-    duckdb_path: Path = REPO_ROOT / "data" / "rie.duckdb"
+    duckdb_path: Path | None = None  # defaults to data_dir / "rie.duckdb"
     author_hash_salt: str = "change-me"
 
     max_run_cost_usd: float = 2.0
     cors_origins: list[str] = ["http://localhost:5173"]
+
+    @property
+    def db_path(self) -> Path:
+        return self.duckdb_path or self.data_dir / "rie.duckdb"
+
+    @property
+    def replays_dir(self) -> Path:
+        return self.data_dir / "replays"
+
+    @property
+    def steam_pulls_dir(self) -> Path:
+        return self.data_dir / "raw" / "steam"
 
 
 settings = Settings()

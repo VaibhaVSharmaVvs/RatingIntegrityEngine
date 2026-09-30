@@ -1,0 +1,1198 @@
+{
+  "$defs": {
+    "ActionWeights-Input": {
+      "properties": {
+        "KEEP": {
+          "default": 1.0,
+          "type": "number"
+        },
+        "DOWNWEIGHT": {
+          "default": 0.25,
+          "type": "number"
+        },
+        "FLAG": {
+          "default": 1.0,
+          "type": "number"
+        },
+        "EXCLUDE": {
+          "default": 0.0,
+          "type": "number"
+        }
+      },
+      "title": "ActionWeights",
+      "type": "object"
+    },
+    "ActionWeights-Output": {
+      "properties": {
+        "KEEP": {
+          "default": 1.0,
+          "type": "number"
+        },
+        "DOWNWEIGHT": {
+          "default": 0.25,
+          "type": "number"
+        },
+        "FLAG": {
+          "default": 1.0,
+          "type": "number"
+        },
+        "EXCLUDE": {
+          "default": 0.0,
+          "type": "number"
+        }
+      },
+      "required": [
+        "KEEP",
+        "DOWNWEIGHT",
+        "FLAG",
+        "EXCLUDE"
+      ],
+      "title": "ActionWeights",
+      "type": "object"
+    },
+    "ClusterEvent": {
+      "properties": {
+        "type": {
+          "const": "cluster",
+          "default": "cluster",
+          "type": "string"
+        },
+        "cid": {
+          "type": "integer"
+        },
+        "kind": {
+          "enum": [
+            "semantic",
+            "duplicate",
+            "burst"
+          ],
+          "type": "string"
+        },
+        "size": {
+          "type": "integer"
+        },
+        "suspicion": {
+          "type": "number"
+        },
+        "caption": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "cid",
+        "kind",
+        "size",
+        "suspicion",
+        "caption"
+      ],
+      "title": "ClusterEvent",
+      "type": "object"
+    },
+    "CountersEvent": {
+      "properties": {
+        "type": {
+          "const": "counters",
+          "default": "counters",
+          "type": "string"
+        },
+        "keep": {
+          "type": "integer"
+        },
+        "down": {
+          "type": "integer"
+        },
+        "flag": {
+          "type": "integer"
+        },
+        "exclude": {
+          "type": "integer"
+        },
+        "processed": {
+          "type": "integer"
+        },
+        "total": {
+          "type": "integer"
+        },
+        "rps": {
+          "type": "number"
+        },
+        "cost_usd": {
+          "type": "number"
+        },
+        "elapsed_s": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "type",
+        "keep",
+        "down",
+        "flag",
+        "exclude",
+        "processed",
+        "total",
+        "rps",
+        "cost_usd",
+        "elapsed_s"
+      ],
+      "title": "CountersEvent",
+      "type": "object"
+    },
+    "CsvPreview": {
+      "properties": {
+        "columns": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "n_rows": {
+          "type": "integer"
+        },
+        "rows": {
+          "items": {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "rating_scale_guesses": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        }
+      },
+      "required": [
+        "columns",
+        "n_rows",
+        "rows",
+        "rating_scale_guesses"
+      ],
+      "title": "CsvPreview",
+      "type": "object"
+    },
+    "DatasetDetail": {
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "source": {
+          "type": "string"
+        },
+        "rating_scale": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        },
+        "error": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "n_reviews": {
+          "type": "integer"
+        },
+        "created_at": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "source_params": {
+          "additionalProperties": true,
+          "type": "object"
+        },
+        "histogram": {
+          "items": {
+            "$ref": "#/$defs/HistogramBin"
+          },
+          "type": "array"
+        },
+        "timeline": {
+          "items": {
+            "$ref": "#/$defs/TimelineBucket"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "source",
+        "rating_scale",
+        "status",
+        "error",
+        "n_reviews",
+        "created_at",
+        "source_params",
+        "histogram",
+        "timeline"
+      ],
+      "title": "DatasetDetail",
+      "type": "object"
+    },
+    "DatasetOut": {
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "source": {
+          "type": "string"
+        },
+        "rating_scale": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        },
+        "error": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "n_reviews": {
+          "type": "integer"
+        },
+        "created_at": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "source_params": {
+          "additionalProperties": true,
+          "type": "object"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "source",
+        "rating_scale",
+        "status",
+        "error",
+        "n_reviews",
+        "created_at",
+        "source_params"
+      ],
+      "title": "DatasetOut",
+      "type": "object"
+    },
+    "DoneEvent": {
+      "properties": {
+        "type": {
+          "const": "done",
+          "default": "done",
+          "type": "string"
+        },
+        "summary": {
+          "$ref": "#/$defs/RunSummary"
+        }
+      },
+      "required": [
+        "type",
+        "summary"
+      ],
+      "title": "DoneEvent",
+      "type": "object"
+    },
+    "ErrorEvent": {
+      "properties": {
+        "type": {
+          "const": "error",
+          "default": "error",
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        },
+        "retryable": {
+          "default": false,
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "type",
+        "message",
+        "retryable"
+      ],
+      "title": "ErrorEvent",
+      "type": "object"
+    },
+    "FeaturesDoneEvent": {
+      "properties": {
+        "type": {
+          "const": "features_done",
+          "default": "features_done",
+          "type": "string"
+        },
+        "counts": {
+          "additionalProperties": {
+            "type": "integer"
+          },
+          "type": "object"
+        }
+      },
+      "required": [
+        "type",
+        "counts"
+      ],
+      "title": "FeaturesDoneEvent",
+      "type": "object"
+    },
+    "HistogramBin": {
+      "properties": {
+        "rating": {
+          "type": "number"
+        },
+        "count": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "rating",
+        "count"
+      ],
+      "title": "HistogramBin",
+      "type": "object"
+    },
+    "JudgedEvent": {
+      "description": "Provisional per-review actions. Decoding: indices = Uint32Array (little-endian)\nfrom base64 `indices_b64`; actions = Uint8Array from `actions_b64`; same length.",
+      "properties": {
+        "type": {
+          "const": "judged",
+          "default": "judged",
+          "type": "string"
+        },
+        "indices_b64": {
+          "type": "string"
+        },
+        "actions_b64": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "indices_b64",
+        "actions_b64"
+      ],
+      "title": "JudgedEvent",
+      "type": "object"
+    },
+    "PolicyThresholds-Input": {
+      "description": "Every number the decision policy uses (MVP_SPEC \u00a76.5). Nothing is hard-coded.",
+      "properties": {
+        "downweight_below": {
+          "default": 0.55,
+          "type": "number"
+        },
+        "low_confidence": {
+          "default": 0.5,
+          "type": "number"
+        },
+        "low_confidence_min_questions": {
+          "default": 2,
+          "type": "integer"
+        },
+        "spam_exclude": {
+          "default": 0.9,
+          "type": "number"
+        },
+        "w_informativeness": {
+          "default": 0.3,
+          "type": "number"
+        },
+        "w_rating_support": {
+          "default": 0.25,
+          "type": "number"
+        },
+        "w_spam": {
+          "default": 0.2,
+          "type": "number"
+        },
+        "w_templated": {
+          "default": 0.15,
+          "type": "number"
+        },
+        "w_offtopic": {
+          "default": 0.1,
+          "type": "number"
+        },
+        "reason_min_contribution": {
+          "default": 0.05,
+          "type": "number"
+        }
+      },
+      "title": "PolicyThresholds",
+      "type": "object"
+    },
+    "PolicyThresholds-Output": {
+      "description": "Every number the decision policy uses (MVP_SPEC \u00a76.5). Nothing is hard-coded.",
+      "properties": {
+        "downweight_below": {
+          "default": 0.55,
+          "type": "number"
+        },
+        "low_confidence": {
+          "default": 0.5,
+          "type": "number"
+        },
+        "low_confidence_min_questions": {
+          "default": 2,
+          "type": "integer"
+        },
+        "spam_exclude": {
+          "default": 0.9,
+          "type": "number"
+        },
+        "w_informativeness": {
+          "default": 0.3,
+          "type": "number"
+        },
+        "w_rating_support": {
+          "default": 0.25,
+          "type": "number"
+        },
+        "w_spam": {
+          "default": 0.2,
+          "type": "number"
+        },
+        "w_templated": {
+          "default": 0.15,
+          "type": "number"
+        },
+        "w_offtopic": {
+          "default": 0.1,
+          "type": "number"
+        },
+        "reason_min_contribution": {
+          "default": 0.05,
+          "type": "number"
+        }
+      },
+      "required": [
+        "downweight_below",
+        "low_confidence",
+        "low_confidence_min_questions",
+        "spam_exclude",
+        "w_informativeness",
+        "w_rating_support",
+        "w_spam",
+        "w_templated",
+        "w_offtopic",
+        "reason_min_contribution"
+      ],
+      "title": "PolicyThresholds",
+      "type": "object"
+    },
+    "RatingEvent": {
+      "properties": {
+        "type": {
+          "const": "rating",
+          "default": "rating",
+          "type": "string"
+        },
+        "raw": {
+          "type": "number"
+        },
+        "adjusted": {
+          "type": "number"
+        },
+        "ci": {
+          "anyOf": [
+            {
+              "maxItems": 2,
+              "minItems": 2,
+              "type": "array",
+              "items": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "number"
+                }
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "n_eff": {
+          "type": "number"
+        },
+        "final": {
+          "default": false,
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "type",
+        "raw",
+        "adjusted",
+        "ci",
+        "n_eff",
+        "final"
+      ],
+      "title": "RatingEvent",
+      "type": "object"
+    },
+    "ReplayLine": {
+      "description": "One line of `replay.jsonl.gz`: seconds since run start + the event.",
+      "properties": {
+        "t": {
+          "type": "number"
+        },
+        "event": {
+          "discriminator": {
+            "mapping": {
+              "cluster": "#/$defs/ClusterEvent",
+              "counters": "#/$defs/CountersEvent",
+              "done": "#/$defs/DoneEvent",
+              "error": "#/$defs/ErrorEvent",
+              "features_done": "#/$defs/FeaturesDoneEvent",
+              "judged": "#/$defs/JudgedEvent",
+              "rating": "#/$defs/RatingEvent",
+              "stage": "#/$defs/StageEvent"
+            },
+            "propertyName": "type"
+          },
+          "oneOf": [
+            {
+              "$ref": "#/$defs/StageEvent"
+            },
+            {
+              "$ref": "#/$defs/FeaturesDoneEvent"
+            },
+            {
+              "$ref": "#/$defs/JudgedEvent"
+            },
+            {
+              "$ref": "#/$defs/CountersEvent"
+            },
+            {
+              "$ref": "#/$defs/RatingEvent"
+            },
+            {
+              "$ref": "#/$defs/ClusterEvent"
+            },
+            {
+              "$ref": "#/$defs/DoneEvent"
+            },
+            {
+              "$ref": "#/$defs/ErrorEvent"
+            }
+          ]
+        }
+      },
+      "required": [
+        "t",
+        "event"
+      ],
+      "title": "ReplayLine",
+      "type": "object"
+    },
+    "RunCreate-Input": {
+      "properties": {
+        "dataset_id": {
+          "type": "string"
+        },
+        "backend": {
+          "default": "mock",
+          "enum": [
+            "jev",
+            "laya",
+            "laya-ft",
+            "heuristic",
+            "mock"
+          ],
+          "type": "string"
+        },
+        "model": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "pack_size": {
+          "default": 1,
+          "maximum": 20,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "question_set": {
+          "const": "v1",
+          "default": "v1",
+          "type": "string"
+        },
+        "concurrency": {
+          "default": 8,
+          "maximum": 64,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "weights": {
+          "$ref": "#/$defs/ActionWeights-Input",
+          "default": {
+            "KEEP": 1.0,
+            "DOWNWEIGHT": 0.25,
+            "FLAG": 1.0,
+            "EXCLUDE": 0.0
+          }
+        },
+        "thresholds": {
+          "$ref": "#/$defs/PolicyThresholds-Input",
+          "default": {
+            "downweight_below": 0.55,
+            "low_confidence": 0.5,
+            "low_confidence_min_questions": 2,
+            "spam_exclude": 0.9,
+            "w_informativeness": 0.3,
+            "w_rating_support": 0.25,
+            "w_spam": 0.2,
+            "w_templated": 0.15,
+            "w_offtopic": 0.1,
+            "reason_min_contribution": 0.05
+          }
+        },
+        "bootstrap_resamples": {
+          "default": 1000,
+          "maximum": 10000,
+          "minimum": 100,
+          "type": "integer"
+        },
+        "seed": {
+          "default": 7,
+          "type": "integer"
+        },
+        "mock_latency_ms": {
+          "default": 0,
+          "description": "mock backend only: delay per batch",
+          "maximum": 1000,
+          "minimum": 0,
+          "type": "number"
+        }
+      },
+      "required": [
+        "dataset_id"
+      ],
+      "title": "RunCreate",
+      "type": "object"
+    },
+    "RunCreate-Output": {
+      "properties": {
+        "dataset_id": {
+          "type": "string"
+        },
+        "backend": {
+          "default": "mock",
+          "enum": [
+            "jev",
+            "laya",
+            "laya-ft",
+            "heuristic",
+            "mock"
+          ],
+          "type": "string"
+        },
+        "model": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "pack_size": {
+          "default": 1,
+          "maximum": 20,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "question_set": {
+          "const": "v1",
+          "default": "v1",
+          "type": "string"
+        },
+        "concurrency": {
+          "default": 8,
+          "maximum": 64,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "weights": {
+          "$ref": "#/$defs/ActionWeights-Output",
+          "default": {
+            "KEEP": 1.0,
+            "DOWNWEIGHT": 0.25,
+            "FLAG": 1.0,
+            "EXCLUDE": 0.0
+          }
+        },
+        "thresholds": {
+          "$ref": "#/$defs/PolicyThresholds-Output",
+          "default": {
+            "downweight_below": 0.55,
+            "low_confidence": 0.5,
+            "low_confidence_min_questions": 2,
+            "spam_exclude": 0.9,
+            "w_informativeness": 0.3,
+            "w_rating_support": 0.25,
+            "w_spam": 0.2,
+            "w_templated": 0.15,
+            "w_offtopic": 0.1,
+            "reason_min_contribution": 0.05
+          }
+        },
+        "bootstrap_resamples": {
+          "default": 1000,
+          "maximum": 10000,
+          "minimum": 100,
+          "type": "integer"
+        },
+        "seed": {
+          "default": 7,
+          "type": "integer"
+        },
+        "mock_latency_ms": {
+          "default": 0,
+          "description": "mock backend only: delay per batch",
+          "maximum": 1000,
+          "minimum": 0,
+          "type": "number"
+        }
+      },
+      "required": [
+        "dataset_id",
+        "backend",
+        "model",
+        "pack_size",
+        "question_set",
+        "concurrency",
+        "weights",
+        "thresholds",
+        "bootstrap_resamples",
+        "seed",
+        "mock_latency_ms"
+      ],
+      "title": "RunCreate",
+      "type": "object"
+    },
+    "RunOut": {
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "dataset_id": {
+          "type": "string"
+        },
+        "backend": {
+          "type": "string"
+        },
+        "model_version": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "status": {
+          "type": "string"
+        },
+        "error": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "config": {
+          "$ref": "#/$defs/RunCreate-Output"
+        },
+        "started_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "finished_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "summary": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RunSummary"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "cost_usd": {
+          "type": "number"
+        },
+        "tokens_in": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "id",
+        "dataset_id",
+        "backend",
+        "model_version",
+        "status",
+        "error",
+        "config",
+        "started_at",
+        "finished_at",
+        "summary",
+        "cost_usd",
+        "tokens_in"
+      ],
+      "title": "RunOut",
+      "type": "object"
+    },
+    "RunSummary": {
+      "properties": {
+        "n_reviews": {
+          "type": "integer"
+        },
+        "counts": {
+          "additionalProperties": {
+            "type": "integer"
+          },
+          "propertyNames": {
+            "enum": [
+              "KEEP",
+              "DOWNWEIGHT",
+              "FLAG",
+              "EXCLUDE"
+            ]
+          },
+          "type": "object"
+        },
+        "raw": {
+          "type": "number"
+        },
+        "adjusted": {
+          "type": "number"
+        },
+        "ci": {
+          "maxItems": 2,
+          "minItems": 2,
+          "type": "array",
+          "items": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            }
+          ]
+        },
+        "n_eff": {
+          "type": "number"
+        },
+        "rating_scale": {
+          "type": "string"
+        },
+        "steam_label_raw": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "steam_label_adjusted": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "cost_usd": {
+          "type": "number"
+        },
+        "tokens_in": {
+          "type": "integer"
+        },
+        "elapsed_s": {
+          "type": "number"
+        },
+        "reviews_per_s": {
+          "type": "number"
+        },
+        "model_version": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "n_reviews",
+        "counts",
+        "raw",
+        "adjusted",
+        "ci",
+        "n_eff",
+        "rating_scale",
+        "steam_label_raw",
+        "steam_label_adjusted",
+        "cost_usd",
+        "tokens_in",
+        "elapsed_s",
+        "reviews_per_s",
+        "model_version"
+      ],
+      "title": "RunSummary",
+      "type": "object"
+    },
+    "StageEvent": {
+      "properties": {
+        "type": {
+          "const": "stage",
+          "default": "stage",
+          "type": "string"
+        },
+        "name": {
+          "enum": [
+            "ingest",
+            "features",
+            "systemone",
+            "corpus",
+            "decide"
+          ],
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "started",
+            "done",
+            "skipped"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "name",
+        "status"
+      ],
+      "title": "StageEvent",
+      "type": "object"
+    },
+    "SteamFetchRequest": {
+      "properties": {
+        "appid": {
+          "type": "integer"
+        },
+        "from": {
+          "description": "YYYY-MM-DD, UTC inclusive",
+          "type": "string"
+        },
+        "to": {
+          "type": "string"
+        },
+        "language": {
+          "default": "english",
+          "type": "string"
+        },
+        "sample_n": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "appid",
+        "from",
+        "to"
+      ],
+      "title": "SteamFetchRequest",
+      "type": "object"
+    },
+    "TimelineBucket": {
+      "properties": {
+        "day": {
+          "type": "string"
+        },
+        "count": {
+          "type": "integer"
+        },
+        "mean_rating": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "day",
+        "count",
+        "mean_rating"
+      ],
+      "title": "TimelineBucket",
+      "type": "object"
+    },
+    "ActionCode": {
+      "title": "ActionCode",
+      "description": "Grid byte per review: 0=PENDING, 1=KEEP, 2=DOWNWEIGHT, 3=FLAG, 4=EXCLUDE",
+      "type": "integer",
+      "enum": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ]
+    }
+  },
+  "title": "RIE API",
+  "type": "object",
+  "properties": {
+    "ActionWeights-Input": {
+      "$ref": "#/$defs/ActionWeights-Input"
+    },
+    "ActionWeights-Output": {
+      "$ref": "#/$defs/ActionWeights-Output"
+    },
+    "ClusterEvent": {
+      "$ref": "#/$defs/ClusterEvent"
+    },
+    "CountersEvent": {
+      "$ref": "#/$defs/CountersEvent"
+    },
+    "CsvPreview": {
+      "$ref": "#/$defs/CsvPreview"
+    },
+    "DatasetDetail": {
+      "$ref": "#/$defs/DatasetDetail"
+    },
+    "DatasetOut": {
+      "$ref": "#/$defs/DatasetOut"
+    },
+    "DoneEvent": {
+      "$ref": "#/$defs/DoneEvent"
+    },
+    "ErrorEvent": {
+      "$ref": "#/$defs/ErrorEvent"
+    },
+    "FeaturesDoneEvent": {
+      "$ref": "#/$defs/FeaturesDoneEvent"
+    },
+    "HistogramBin": {
+      "$ref": "#/$defs/HistogramBin"
+    },
+    "JudgedEvent": {
+      "$ref": "#/$defs/JudgedEvent"
+    },
+    "PolicyThresholds-Input": {
+      "$ref": "#/$defs/PolicyThresholds-Input"
+    },
+    "PolicyThresholds-Output": {
+      "$ref": "#/$defs/PolicyThresholds-Output"
+    },
+    "RatingEvent": {
+      "$ref": "#/$defs/RatingEvent"
+    },
+    "ReplayLine": {
+      "$ref": "#/$defs/ReplayLine"
+    },
+    "RunCreate-Input": {
+      "$ref": "#/$defs/RunCreate-Input"
+    },
+    "RunCreate-Output": {
+      "$ref": "#/$defs/RunCreate-Output"
+    },
+    "RunOut": {
+      "$ref": "#/$defs/RunOut"
+    },
+    "RunSummary": {
+      "$ref": "#/$defs/RunSummary"
+    },
+    "StageEvent": {
+      "$ref": "#/$defs/StageEvent"
+    },
+    "SteamFetchRequest": {
+      "$ref": "#/$defs/SteamFetchRequest"
+    },
+    "TimelineBucket": {
+      "$ref": "#/$defs/TimelineBucket"
+    },
+    "ActionCode": {
+      "$ref": "#/$defs/ActionCode"
+    }
+  },
+  "additionalProperties": false
+}

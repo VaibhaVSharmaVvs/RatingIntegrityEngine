@@ -104,6 +104,21 @@
 
 **Compliance flag (SOC2 / ISO 27001):** review text can contain names, emails and handles. Add a PII-scrub pass (emails, URLs with usernames, phone numbers) in `normalize.py` **before** text is sent to Jev, and record in the methodology that it happens.
 
+**✅ Delivered (2026-09-30, branch `phase-1-backend-skeleton`).** 55 backend tests. Exit criteria verified: a 5K-review mock run over live HTTP/SSE emitted every event type, finished in 1.1 s, and wrote a 13 KB replay. Tests assert that the replay matches the stream and that no raw author ID is stored.
+
+Deviations from the spec, all deliberate:
+| Area | Spec | Built | Why |
+|---|---|---|---|
+| Review IDs | global `reviews.id` + a `grid_order` array | `reviews.id` = chronological position in its dataset; PK `(dataset_id, id)` | Grid cell *i* is review *i*; no order array to ship or keep in sync |
+| EXCLUDE on spam | `spam_promo > 0.9` alone | EXCLUDE only when a deterministic promo signal agrees; otherwise FLAG | System One alone must never EXCLUDE (research §9, CLAUDE.md). Guarded by a test |
+| `judged` event | `{grid_idx, actions}` | `{indices_b64 (Uint32 LE), actions_b64 (Uint8)}` | Batches complete out of order; explicit indices are required |
+| `rating` event | `{raw, adjusted, ci}` | adds `n_eff`, `final`; `ci` is null on live updates | Bootstrap runs once at the end; live ticker needs no CI |
+| Fake backend | `heuristic` | `mock` | `heuristic` is the real heuristics-only baseline in Phase 2 |
+| `clusters` | no caption column | `caption` column | Caption is generated from data once and served as-is |
+| Dependencies | — | `pytz` | DuckDB needs it to return `TIMESTAMPTZ`; sessions are pinned to UTC |
+
+Not built yet, on purpose: `S1` features (Phase 2), real backends and spend guard (Phase 3), real clustering and bursts (S3 is a labelled busiest-hour placeholder), `/clusters`, `/reviews`, `/export`, `/benchmarks` (Phases 4–7).
+
 ---
 
 ## Phase 2: S1 deterministic features
