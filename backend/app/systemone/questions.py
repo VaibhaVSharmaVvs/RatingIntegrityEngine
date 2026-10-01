@@ -10,7 +10,7 @@ QUESTION_SETS: dict[str, ModuleType] = {
     "v3": questions_v3,
     "v4": questions_v4,
 }
-DEFAULT_QUESTION_SET = "v2"
+DEFAULT_QUESTION_SET = "v4"
 
 
 def get(version: str) -> dict[str, dict]:

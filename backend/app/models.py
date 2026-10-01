@@ -186,7 +186,7 @@ class RunCreate(Contract):
     # Required when the pre-flight estimate exceeds MAX_RUN_COST_USD.
     confirm_cost: bool = False
     # v2 is the default after dev-set review (MEASUREMENTS M8); v1 stays for comparison.
-    question_set: Literal["v1", "v2", "v3", "v4"] = "v2"
+    question_set: Literal["v1", "v2", "v3", "v4"] = "v4"
     concurrency: int = Field(8, ge=1, le=64)
     weights: ActionWeights = ActionWeights()
     thresholds: PolicyThresholds = PolicyThresholds()
