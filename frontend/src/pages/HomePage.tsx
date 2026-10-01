@@ -2,7 +2,7 @@ import { useMutation, useQuery } from '@tanstack/react-query'
 import { AlertTriangle, CircleHelp, FileUp, Play } from 'lucide-react'
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { CsvDatasetSheet } from '@/components/runs/CsvDatasetSheet'
+import { UploadDatasetSheet } from '@/components/runs/UploadDatasetSheet'
 import { RailLegend, RatingRail } from '@/components/shared/RatingRail'
 import { ThemeToggle } from '@/components/ThemeToggle'
 import { Button, buttonVariants } from '@/components/ui/button'
@@ -67,7 +67,7 @@ export function HomePage() {
       .map((d) => ({
         key: d.id,
         title: `${d.name} (your upload)`,
-        detail: `CSV upload · ${formatInt(d.n_reviews)} reviews`,
+        detail: `Your upload · ${formatInt(d.n_reviews)} reviews`,
         datasetId: d.id,
         runId: (runs.data ?? []).filter((r) => r.dataset_id === d.id && r.status === 'done' && r.backend === 'jev')[0]?.id,
       })),
@@ -136,7 +136,7 @@ export function HomePage() {
                   className="inline-flex items-center gap-1 rounded-sm text-[11px] text-muted-foreground underline-offset-2 outline-none hover:text-foreground hover:underline focus-visible:ring-2 focus-visible:ring-ring"
                 >
                   <FileUp className="size-3" aria-hidden />
-                  Upload your own reviews (CSV)
+                  Upload your own reviews (CSV or Excel)
                 </button>
               )}
             </div>
@@ -235,7 +235,7 @@ export function HomePage() {
         )}
       </main>
       {source.canStartRuns && (
-        <CsvDatasetSheet
+        <UploadDatasetSheet
           open={uploading}
           onOpenChange={setUploading}
           onImported={(d) => {

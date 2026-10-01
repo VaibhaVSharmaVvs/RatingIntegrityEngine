@@ -32,6 +32,7 @@ dependencies = [
     "umap-learn>=0.5.6",
     "ruptures>=1.1.9",
     "pytz>=2024.1",
+    "fastexcel>=0.21.0",
 ]
 
 [project.optional-dependencies]
@@ -48,6 +49,7 @@ dev = [
     "respx>=0.21",
     "ruff>=0.6",
     "mypy>=1.11",
+    "xlsxwriter>=3.2.9",
 ]
 notebooks = [
     "jupyterlab>=4.2",

@@ -27,8 +27,8 @@ const SCALES = [
   { value: '1-10', label: '1–10' },
 ]
 
-/** CSV upload with a column mapper: preview first, then map text / rating / time / author. */
-export function CsvDatasetSheet({
+/** CSV or Excel (.xlsx, first sheet) upload with a column mapper: preview first, then map text / rating / time / author. */
+export function UploadDatasetSheet({
   open,
   onOpenChange,
   onImported,
@@ -94,8 +94,8 @@ export function CsvDatasetSheet({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="w-full gap-0 overflow-y-auto p-0 data-[side=right]:sm:max-w-[520px]">
         <SheetHeader className="border-b border-border">
-          <SheetTitle className="text-sm">Upload reviews (CSV)</SheetTitle>
-          <SheetDescription className="text-xs">One row per review: text and rating are required; a timestamp enables bursts and the timeline.</SheetDescription>
+          <SheetTitle className="text-sm">Upload reviews (CSV or Excel)</SheetTitle>
+          <SheetDescription className="text-xs">One row per review, with a header row; for Excel, the first sheet. Text and rating are required; a timestamp enables bursts and the timeline.</SheetDescription>
         </SheetHeader>
         <form
           id="csv-upload"
@@ -108,14 +108,14 @@ export function CsvDatasetSheet({
           <Field label="File">
             <input
               type="file"
-              accept=".csv,text/csv"
+              accept=".csv,text/csv,.xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
               className="block w-full text-xs file:mr-3 file:h-8 file:rounded-md file:border file:border-input file:bg-background file:px-3 file:text-xs file:font-medium"
               onChange={(e) => {
                 const f = e.target.files?.[0] ?? null
                 setFile(f)
                 setPreview(null)
                 if (f) {
-                  setName((n) => n || f.name.replace(/\.csv$/i, ''))
+                  setName((n) => n || f.name.replace(/\.(csv|xlsx)$/i, ''))
                   inspect.mutate(f)
                 }
               }}

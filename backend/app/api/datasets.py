@@ -83,7 +83,7 @@ async def preview_csv(file: UploadFile = File(...)) -> CsvPreview:
     try:
         return CsvPreview(**csv_loader.preview(await file.read()))
     except Exception as exc:
-        raise HTTPException(422, f"could not read CSV: {exc}") from exc
+        raise HTTPException(422, f"could not read the file (CSV or XLSX): {exc}") from exc
 
 
 @router.post("/csv", response_model=DatasetOut, status_code=201)

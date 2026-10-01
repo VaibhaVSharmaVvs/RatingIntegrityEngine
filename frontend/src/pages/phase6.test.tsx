@@ -83,7 +83,7 @@ it('shows the pre-flight estimate before a live Jev run starts', async () => {
   )
 })
 
-it('uploads a CSV from the home page and offers it for a live run', async () => {
+it('uploads a file from the home page and offers it for a live run', async () => {
   const source = renderAt('/')
   fireEvent.click(screen.getByRole('button', { name: /Upload your own reviews/ }))
   const sheet = await screen.findByRole('dialog')
@@ -98,4 +98,12 @@ it('uploads a CSV from the home page and offers it for a live run', async () => 
   await waitFor(() => expect(product.selectedOptions[0].textContent).toMatch(/your upload/))
   const run = screen.getByRole('combobox', { name: /^Run/ }) as HTMLSelectElement
   expect([...run.options].map((o) => o.value)).toEqual(['live'])
+})
+
+it('accepts Excel workbooks as well as CSV', async () => {
+  renderAt('/')
+  fireEvent.click(screen.getByRole('button', { name: /Upload your own reviews/ }))
+  const input = (await screen.findByRole('dialog')).querySelector('input[type=file]') as HTMLInputElement
+  expect(input.accept).toContain('.xlsx')
+  expect(input.accept).toContain('.csv')
 })

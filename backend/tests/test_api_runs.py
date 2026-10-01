@@ -6,6 +6,7 @@ from pathlib import Path
 
 import httpx
 import numpy as np
+import polars as pl
 import pytest
 from fastapi.testclient import TestClient
 
@@ -180,6 +181,36 @@ def test_csv_preview_endpoint(client: TestClient) -> None:
     body = r.json()
     assert body["n_rows"] == 20 and len(body["rows"]) == 10
     assert body["rating_scale_guesses"]["stars"] == "1-5"
+
+
+def test_xlsx_upload_through_the_api(client: TestClient) -> None:
+    from tests.test_ingest_store import xlsx_bytes
+
+    rows = [line.split(",") for line in csv_bytes(30).decode().splitlines()[1:]]
+    df = pl.DataFrame(
+        {
+            "text": [r[0] for r in rows],
+            "stars": [int(r[1]) for r in rows],
+            "when": [r[2] for r in rows],
+        }
+    )
+    data = xlsx_bytes(df)
+    xlsx = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    r = client.post("/datasets/csv/preview", files={"file": ("r.xlsx", data, xlsx)})
+    assert r.status_code == 200, r.text
+    assert r.json()["n_rows"] == 30
+    mapping = {"text": "text", "rating": "stars", "timestamp": "when"}
+    r = client.post(
+        "/datasets/csv",
+        files={"file": ("r.xlsx", data, xlsx)},
+        data={"name": "from excel", "mapping": json.dumps(mapping)},
+    )
+    assert r.status_code == 201, r.text
+    assert r.json()["n_reviews"] == 30 and r.json()["rating_scale"] == "1-5"
+    bad = client.post(
+        "/datasets/csv/preview", files={"file": ("r.xlsx", b"PK not a workbook", xlsx)}
+    )
+    assert bad.status_code == 422 and "CSV or XLSX" in bad.json()["detail"]
 
 
 def upload_texts(client: TestClient, texts: list[str]) -> str:
