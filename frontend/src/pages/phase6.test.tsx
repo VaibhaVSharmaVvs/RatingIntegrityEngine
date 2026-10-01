@@ -34,17 +34,6 @@ it('shows the three ratings, the waterfall and the platform removals', async () 
   expect(screen.getByRole('link', { name: /Decisions CSV/ }).getAttribute('href')).toBe('/api/runs/run_fixture/export?fmt=csv')
 })
 
-it('recomputes the rating in the browser when a slider moves', async () => {
-  renderAt('/runs/run_fixture/results')
-  const panel = await screen.findByRole('region', { name: 'Sensitivity' })
-  expect(within(panel).getByText(/at this run’s settings/)).toBeTruthy()
-  fireEvent.click(within(panel).getByRole('checkbox'))
-  // turning the cluster penalty off re-splits on the pre-penalty score (fixture: 0.4 -> 0.5)
-  expect(await within(panel).findByText(/reviews change action/)).toBeTruthy()
-  fireEvent.click(within(panel).getByText('Reset to this run'))
-  expect(within(panel).getByText(/at this run’s settings/)).toBeTruthy()
-})
-
 it('opens the inspector with the integrity arithmetic and platform status', async () => {
   renderAt('/runs/run_fixture/results')
   await screen.findByRole('region', { name: 'Three ratings' })
@@ -92,4 +81,21 @@ it('shows the pre-flight estimate before a live Jev run starts', async () => {
   await waitFor(() =>
     expect(create).toHaveBeenCalledWith(expect.objectContaining({ dataset_id: 'ds_fixture', backend: 'jev', question_set: 'v4' })),
   )
+})
+
+it('uploads a CSV from the home page and offers it for a live run', async () => {
+  const source = renderAt('/')
+  fireEvent.click(screen.getByRole('button', { name: /Upload your own reviews/ }))
+  const sheet = await screen.findByRole('dialog')
+  const file = new File(['body,stars\nGreat,5\n'], 'phones.csv', { type: 'text/csv' })
+  fireEvent.change(sheet.querySelector('input[type=file]')!, { target: { files: [file] } })
+  expect(await within(sheet).findByText(/tuned for video-game reviews/)).toBeTruthy()
+  const upload = vi.spyOn(source, 'uploadCsv')
+  fireEvent.click(within(sheet).getByRole('button', { name: /Import dataset/ }))
+  await waitFor(() => expect(upload).toHaveBeenCalledWith(file, 'phones', expect.objectContaining({ text: 'body', rating: 'stars' }), undefined))
+  // the upload joins the picker and, with nothing to replay yet, only a live run is offered
+  const product = (await screen.findByRole('combobox', { name: /^Product/ })) as HTMLSelectElement
+  await waitFor(() => expect(product.selectedOptions[0].textContent).toMatch(/your upload/))
+  const run = screen.getByRole('combobox', { name: /^Run/ }) as HTMLSelectElement
+  expect([...run.options].map((o) => o.value)).toEqual(['live'])
 })

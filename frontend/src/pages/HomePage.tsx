@@ -1,7 +1,8 @@
 import { useMutation, useQuery } from '@tanstack/react-query'
-import { AlertTriangle, CircleHelp, Play } from 'lucide-react'
+import { AlertTriangle, CircleHelp, FileUp, Play } from 'lucide-react'
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { CsvDatasetSheet } from '@/components/runs/CsvDatasetSheet'
 import { RailLegend, RatingRail } from '@/components/shared/RatingRail'
 import { ThemeToggle } from '@/components/ThemeToggle'
 import { Button, buttonVariants } from '@/components/ui/button'
@@ -12,12 +13,41 @@ import { formatDuration, formatInt, formatRating, formatUsd } from '@/lib/format
 
 type Mode = 'replay' | 'live'
 
+interface Product {
+  key: string
+  title: string
+  detail: string
+  /** finished run to replay, if any */
+  runId?: string
+  /** known up front for uploads; for showcase games it comes from the recorded run */
+  datasetId?: string
+}
+
+// Uploads made in this browser. Other CSV datasets (test data) stay unlisted.
+const UPLOADS_KEY = 'rie.uploads'
+function readUploads(): string[] {
+  try {
+    const v = JSON.parse(localStorage.getItem(UPLOADS_KEY) ?? '[]')
+    return Array.isArray(v) ? v.filter((x) => typeof x === 'string') : []
+  } catch {
+    return []
+  }
+}
+function rememberUpload(id: string) {
+  try {
+    localStorage.setItem(UPLOADS_KEY, JSON.stringify([...new Set([...readUploads(), id])]))
+  } catch {
+    /* storage unavailable: the upload still works for this visit */
+  }
+}
+
 const field =
   'h-9 w-full rounded-md border border-input bg-background px-2.5 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50'
 
 /**
- * Pick a game, then replay its recorded run ($0) or analyse it again live with Jev.
- * Only the curated games are offered; test runs stay in the database, unlisted.
+ * Pick a product, then replay its recorded run ($0) or analyse it live with Jev.
+ * Offered: the curated showcase games and this browser's own CSV uploads. Test runs and
+ * datasets stay in the database, unlisted.
  */
 export function HomePage() {
   const source = useDataSource()
@@ -25,11 +55,34 @@ export function HomePage() {
   const [key, setKey] = useState(SHOWCASE[0].key)
   const [mode, setMode] = useState<Mode>('replay')
   const [confirmedFor, setConfirmedFor] = useState('')
-  const game = SHOWCASE.find((g) => g.key === key) ?? SHOWCASE[0]
-  const live = mode === 'live' && source.canStartRuns
+  const [uploading, setUploading] = useState(false)
+  const [uploads, setUploads] = useState(readUploads)
 
-  const recorded = useQuery({ queryKey: ['run', game.runId], queryFn: () => source.getRun(game.runId), staleTime: 60_000 })
-  const datasetId = recorded.data?.dataset_id
+  const datasets = useQuery({ queryKey: ['datasets'], queryFn: () => source.listDatasets(), enabled: uploads.length > 0 })
+  const runs = useQuery({ queryKey: ['runs'], queryFn: () => source.listRuns(), enabled: uploads.length > 0 })
+  const products: Product[] = [
+    ...SHOWCASE.map((g) => ({ key: g.key, title: `${g.title}: ${g.story}`, detail: g.window, runId: g.runId })),
+    ...(datasets.data ?? [])
+      .filter((d) => uploads.includes(d.id) && d.status === 'ready')
+      .map((d) => ({
+        key: d.id,
+        title: `${d.name} (your upload)`,
+        detail: `CSV upload · ${formatInt(d.n_reviews)} reviews`,
+        datasetId: d.id,
+        runId: (runs.data ?? []).filter((r) => r.dataset_id === d.id && r.status === 'done' && r.backend === 'jev')[0]?.id,
+      })),
+  ]
+  const product = products.find((g) => g.key === key) ?? products[0]
+  const canReplay = !!product.runId
+  const live = source.canStartRuns && (mode === 'live' || !canReplay)
+
+  const recorded = useQuery({
+    queryKey: ['run', product.runId],
+    queryFn: () => source.getRun(product.runId!),
+    enabled: canReplay,
+    staleTime: 60_000,
+  })
+  const datasetId = product.datasetId ?? recorded.data?.dataset_id
   const pf = useQuery({
     queryKey: ['preflight', datasetId, 'jev', 'v4'],
     queryFn: () => source.preflight({ dataset_id: datasetId!, backend: 'jev', question_set: 'v4' }),
@@ -37,16 +90,16 @@ export function HomePage() {
     staleTime: 60_000,
   })
   const needsConfirm = !!pf.data?.needs_confirmation
-  const confirmed = confirmedFor === game.key
+  const confirmed = confirmedFor === product.key
   const start = useMutation({
     mutationFn: () =>
       source.createRun({ dataset_id: datasetId!, backend: 'jev', question_set: 'v4', confirm_cost: needsConfirm ? confirmed : undefined }),
     onSuccess: (run) => navigate(`/runs/${run.id}`),
   })
 
-  const s = recorded.data?.summary
+  const s = canReplay ? recorded.data?.summary : undefined
   const blocked = live ? !pf.data || (needsConfirm && !confirmed) || start.isPending : !recorded.data
-  const go = () => (live ? start.mutate() : navigate(`/runs/${game.runId}`))
+  const go = () => (live ? start.mutate() : navigate(`/runs/${product.runId}`))
 
   return (
     <div className="flex min-h-dvh flex-col bg-background text-foreground">
@@ -71,27 +124,43 @@ export function HomePage() {
             if (!blocked) go()
           }}
         >
-          <label className="block space-y-1.5">
-            <span className="text-xs font-medium">Game</span>
-            <select className={field} value={key} onChange={(e) => setKey(e.target.value)}>
-              {SHOWCASE.map((g) => (
+          <div className="space-y-1.5">
+            <div className="flex items-baseline justify-between">
+              <label htmlFor="product" className="text-xs font-medium">
+                Product
+              </label>
+              {source.canStartRuns && (
+                <button
+                  type="button"
+                  onClick={() => setUploading(true)}
+                  className="inline-flex items-center gap-1 rounded-sm text-[11px] text-muted-foreground underline-offset-2 outline-none hover:text-foreground hover:underline focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  <FileUp className="size-3" aria-hidden />
+                  Upload your own reviews (CSV)
+                </button>
+              )}
+            </div>
+            <select id="product" className={field} value={product.key} onChange={(e) => setKey(e.target.value)}>
+              {products.map((g) => (
                 <option key={g.key} value={g.key}>
-                  {g.title}: {g.story}
+                  {g.title}
                 </option>
               ))}
             </select>
-            <span className="block text-[11px] text-muted-foreground">{game.window}</span>
-          </label>
+            <p className="text-[11px] text-muted-foreground">{product.detail}</p>
+          </div>
 
           <label className="block space-y-1.5">
             <span className="text-xs font-medium">Run</span>
             <select className={field} value={live ? 'live' : 'replay'} onChange={(e) => setMode(e.target.value as Mode)}>
-              <option value="replay">Replay the recorded run ($0)</option>
+              {canReplay && <option value="replay">Replay the recorded run ($0)</option>}
               {source.canStartRuns && <option value="live">Live run with Jev{pf.data ? ` (≈ ${formatUsd(pf.data.est_cost_usd)})` : ''}</option>}
             </select>
             <span className="block text-[11px] text-muted-foreground">
               {live
-                ? 'Every review is judged again by Jev, one call each. It costs money and takes a few minutes; Jev is not deterministic, so about 2.6% of decisions can differ from the recording.'
+                ? canReplay
+                  ? 'Every review is judged again by Jev, one call each. It costs money and takes a few minutes; Jev is not deterministic, so about 2.6% of decisions can differ from the recording.'
+                  : 'Not analysed yet: every review is judged by Jev, one call each. It costs money and takes a few minutes.'
                 : 'Plays back the recorded analysis: the same judgments and timeline, at no cost.'}
             </span>
           </label>
@@ -114,7 +183,7 @@ export function HomePage() {
                       <input
                         type="checkbox"
                         checked={confirmed}
-                        onChange={(e) => setConfirmedFor(e.target.checked ? game.key : '')}
+                        onChange={(e) => setConfirmedFor(e.target.checked ? product.key : '')}
                         className="mt-0.5 size-3.5 accent-foreground"
                       />
                       <span>
@@ -165,6 +234,18 @@ export function HomePage() {
           </section>
         )}
       </main>
+      {source.canStartRuns && (
+        <CsvDatasetSheet
+          open={uploading}
+          onOpenChange={setUploading}
+          onImported={(d) => {
+            rememberUpload(d.id)
+            setUploads(readUploads())
+            setKey(d.id)
+            setMode('live')
+          }}
+        />
+      )}
     </div>
   )
 }
