@@ -545,3 +545,20 @@ Reference levels (English, from our pulls): HD2 pre-bomb April 2024 88–91%, so
 **Steam's written rules and Valve's decisions differ.** By the policy's own wording (account requirements are DRM-like, EULA changes are named), HD2 May 2024 and BL2 June 2025 qualify, but HD2 was never flagged. The demo can say exactly that.
 
 Spend this round (v3 + v4): HD2/CS2/Gollum v3 $0.59, BL2 v3 $0.73, dev-set v3/v4 $0.05, v4 five games $2.41 → **≈ $3.78**. Credits then ran out.
+
+### M11d. Metro 2033 Redux (after a credit top-up) and the English reference comparison
+
+Metro (2,444 reviews, Dec 2018 – Mar 2019, v4, $0.154): raw 48.8% → **integrity-adjusted 62.9% (60.8–64.9)** → platform policy 61.5% (58.9–64.2). The emulation removed 2019-01-30 20h → 02-01 05h (420 reviews, 82% off-topic), 02-01 14–19h (47, 85%) and 02-02 16h → 02-03 22h (282, 82%), plus 370 key activations. Metro's bomb was about a *different* game's (Metro Exodus) Epic exclusivity, so per-review `about_game` catches it directly: the engine's largest move.
+
+English reference levels, from our own pulls (the earlier histogram figures were all-language, M11b):
+
+| Game | Reference window (English) | Reference | Raw | Engine | Platform policy | Gap closed: engine / platform |
+|---|---|---|---|---|---|---|
+| Helldivers 2 | 2024-04-01 → 05-02 (49,273 reviews) | 88.0% | 76.4% | 77.6% | 89.0% | 10% / **≈ 100%** |
+| Borderlands 2 | 2025-01-01 → 03-31 (1,858) | 91.1% (Steam purchasers 91.4%) | 33.8% | 37.4% | 50.7% | 6% / 29% |
+| Metro 2033 Redux | 2018-09-01 → 11-30 (566) | 93.8% (Steam purchasers 94.4%) | 48.8% | **62.9%** | 61.5% | **31%** / 28% |
+| Cities: Skylines II, Gollum, FM26 | genuine reception, no reference needed | | | ± 1 pp | ± 1 pp | stay put ✅ |
+
+"Gap closed" = (rating − raw) / (reference − raw). **Caveat:** the reference assumes the game did not change. That is true for Metro (the bomb was about another game). It is false for Borderlands 2, where the EULA change was a real change to the product, so a buyer-facing rating *should* stay below the pre-change level. This is why the engine (which counts product terms as on-topic) moves BL2 less than Steam's rules do.
+
+All 39 runs of 2026-09-30/10-01 keep their replays (`data/replays/`, gitignored); `docs/RUNS.md` indexes them (`tools/run_index.py`). Phase 4–6 spend total: ≈ $3.93.
