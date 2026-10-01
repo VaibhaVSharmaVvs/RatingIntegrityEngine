@@ -1,4 +1,6 @@
+import io
 import json
+from datetime import date, datetime
 from pathlib import Path
 
 import polars as pl
@@ -126,5 +128,41 @@ def test_csv_preview_guesses_scales() -> None:
 
 
 def test_csv_load_rejects_unknown_columns() -> None:
-    with pytest.raises(ValueError, match="not in CSV"):
+    with pytest.raises(ValueError, match="not in the file"):
         csv_loader.load(b"a,b\nx,1\n", ColumnMapping(text="nope", rating="b"), SALT)
+
+
+def xlsx_bytes(df: pl.DataFrame) -> bytes:
+    buf = io.BytesIO()
+    df.write_excel(buf)
+    return buf.getvalue()
+
+
+def test_xlsx_load_matches_csv_with_native_excel_dates() -> None:
+    """An Excel sheet maps like a CSV; date and date-time cells become UTC timestamps."""
+    data = xlsx_bytes(
+        pl.DataFrame(
+            {
+                "body": ["Great food and fast service", "meh"],
+                "stars": [5, 1],
+                "when": [datetime(2024, 5, 1, 10), datetime(2024, 5, 2, 11)],
+                "day": [date(2024, 5, 1), date(2024, 5, 2)],
+                "user": ["alice", "bob"],
+            }
+        )
+    )
+    assert csv_loader.is_xlsx(data)
+    p = csv_loader.preview(data)
+    assert p["columns"] == ["body", "stars", "when", "day", "user"]
+    assert p["rating_scale_guesses"]["stars"] == "1-5"
+    mapping = ColumnMapping(text="body", rating="stars", timestamp="when", author="user")
+    df, scale = csv_loader.load(data, mapping, SALT)
+    assert scale == "1-5"
+    assert df["rating_norm"].to_list() == [1.0, 0.0]
+    assert "alice" not in df["author_hash"].to_list()[0]
+    assert df["created_at"].dtype == pl.Datetime("us", "UTC")
+    assert df["created_at"][0] == datetime(2024, 5, 1, 10, tzinfo=df["created_at"][0].tzinfo)
+    by_day, _ = csv_loader.load(
+        data, ColumnMapping(text="body", rating="stars", timestamp="day"), SALT
+    )
+    assert by_day["created_at"].dtype == pl.Datetime("us", "UTC")

@@ -7,66 +7,44 @@ import { buttonVariants } from '@/components/ui/button'
 import { useDataSource } from '@/data/source'
 import { cn } from '@/lib/utils'
 
-/** Shared top bar of the three run views: live analysis, results, reviews table. */
+/** Shared top bar of the three run views: tabs left, run stages centre, help and theme right. */
 export function RunHeader({ runId, children }: { runId: string; children?: ReactNode }) {
   const source = useDataSource()
   const run = useQuery({ queryKey: ['run', runId], queryFn: () => source.getRun(runId) })
-  const datasetId = run.data?.dataset_id
-  const dataset = useQuery({
-    queryKey: ['dataset', datasetId],
-    queryFn: () => source.getDataset(datasetId!),
-    enabled: !!datasetId,
-    staleTime: Infinity,
-  })
   const done = run.data?.status === 'done'
   const tab = ({ isActive }: { isActive: boolean }) =>
     cn(
-      'relative px-2.5 py-1 text-xs font-medium text-muted-foreground transition-colors outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring rounded-sm',
+      'relative rounded-sm px-2.5 py-1 text-xs font-medium text-muted-foreground transition-colors outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring',
       isActive && 'text-foreground after:absolute after:inset-x-2.5 after:-bottom-[11px] after:h-0.5 after:bg-foreground',
     )
-  const off = 'px-2.5 py-1 text-xs font-medium text-muted-foreground/50 cursor-not-allowed'
+  const off = 'cursor-not-allowed px-2.5 py-1 text-xs font-medium text-muted-foreground/50'
   return (
     <header className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-border px-4 py-2.5">
-      <Link to="/" aria-label="All runs" className={buttonVariants({ variant: 'ghost', size: 'icon-sm' })}>
+      <Link to="/" aria-label="Choose another game" title="Choose another game" className={buttonVariants({ variant: 'ghost', size: 'icon-sm' })}>
         <ArrowLeft />
       </Link>
-      <div className="min-w-0">
-        <h1 className="truncate text-sm font-semibold">{dataset.data?.name ?? 'Loading run…'}</h1>
-        <p className="num truncate font-mono text-[11px] text-muted-foreground">
-          {runId} · {run.data?.backend ?? '…'}
-          {run.data?.model_version ? ` · ${run.data.model_version}` : ''}
-          {run.data ? ` · question set ${run.data.config.question_set}` : ''}
-        </p>
-      </div>
       <nav aria-label="Run views" className="flex items-center">
         <NavLink end to={`/runs/${runId}`} className={tab}>
           Live
         </NavLink>
-        {done ? (
-          <>
-            <NavLink to={`/runs/${runId}/results`} className={tab}>
-              Results
+        {(['results', 'reviews'] as const).map((v) =>
+          done ? (
+            <NavLink key={v} to={`/runs/${runId}/${v}`} className={tab}>
+              {v === 'results' ? 'Results' : 'Reviews'}
             </NavLink>
-            <NavLink to={`/runs/${runId}/reviews`} className={tab}>
-              Reviews
-            </NavLink>
-          </>
-        ) : (
-          <>
-            <span className={off} title="Available when the run is done">
-              Results
+          ) : (
+            <span key={v} className={off} title="Available when the run is done">
+              {v === 'results' ? 'Results' : 'Reviews'}
             </span>
-            <span className={off} title="Available when the run is done">
-              Reviews
-            </span>
-          </>
+          ),
         )}
       </nav>
-      <div className="mx-auto min-w-0">{children}</div>
-      <div className="flex items-center gap-1">
-        <Link to="/help" className={buttonVariants({ variant: 'ghost', size: 'sm' })}>
+      {/* stages: centred on wide screens, their own row on narrow ones */}
+      <div className="order-last w-full min-w-0 overflow-x-auto lg:order-none lg:mx-auto lg:w-auto">{children}</div>
+      <div className="ml-auto flex items-center gap-1 lg:ml-0">
+        <Link to="/help" aria-label="How it works" className={buttonVariants({ variant: 'ghost', size: 'sm' })}>
           <CircleHelp />
-          How it works
+          <span className="hidden sm:inline">How it works</span>
         </Link>
         <ThemeToggle />
       </div>

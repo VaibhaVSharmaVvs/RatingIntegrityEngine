@@ -1,21 +1,19 @@
 import { useQuery } from '@tanstack/react-query'
 import { Download } from 'lucide-react'
-import { useMemo, useState, type ReactNode } from 'react'
+import { useMemo, type ReactNode } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { ActionBar } from '@/components/clusters/ClusterDrawer'
-import { Swatch } from '@/components/live/ActionChip'
 import { Drilldowns } from '@/components/shared/Drilldowns'
 import { RailLegend, RatingRail } from '@/components/shared/RatingRail'
 import { ReasonChip } from '@/components/shared/ReasonChip'
 import { RunHeader } from '@/components/shared/RunHeader'
 import { buttonVariants } from '@/components/ui/button'
-import { Slider } from '@/components/ui/slider'
 import type { RunOut, RunScores, RunSummary } from '@/data/api'
 import { useDataSource } from '@/data/source'
 import { formatDelta, formatHour, formatInt, formatRating, formatRatingRange, formatUsd, ratingValue } from '@/lib/format'
 import { reasonLabel } from '@/lib/methodology'
 import { actionName } from '@/lib/palette'
-import { resimulate, waterfall, type WaterfallStep } from '@/lib/scores'
+import { waterfall, type WaterfallStep } from '@/lib/scores'
 import { cn } from '@/lib/utils'
 
 export function ResultsPage() {
@@ -58,10 +56,7 @@ export function ResultsPage() {
             <Waterfall scores={scores.data} s={s} scale={scale} pending={scores.isPending} />
             <PlatformRemovals s={s} scale={scale} />
           </div>
-          <div className="grid gap-10 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
-            {scores.data ? <Sensitivity scores={scores.data} s={s} scale={scale} run={run.data} /> : <div />}
-            <Methodology run={run.data} s={s} exportUrl={(f) => source.exportUrl(runId, f)} />
-          </div>
+          <Methodology run={run.data} s={s} exportUrl={(f) => source.exportUrl(runId, f)} />
         </main>
       )}
       <Drilldowns runId={runId} scale={scale} />
@@ -253,91 +248,6 @@ function PlatformRemovals({ s, scale }: { s: RunSummary; scale: string }) {
         </Link>
       </p>
     </section>
-  )
-}
-
-function Sensitivity({ scores, s, scale, run }: { scores: RunScores; s: RunSummary; scale: string; run: RunOut }) {
-  const [below, setBelow] = useState(scores.downweight_below)
-  const [weight, setWeight] = useState(scores.weights.DOWNWEIGHT)
-  const [penalty, setPenalty] = useState(true)
-  const r = useMemo(
-    () => resimulate(scores, { downweightBelow: below, downweightWeight: weight, clusterPenalty: penalty }),
-    [scores, below, weight, penalty],
-  )
-  const moved = below !== scores.downweight_below || weight !== scores.weights.DOWNWEIGHT || !penalty
-  const one = (v: number | readonly number[]) => (Array.isArray(v) ? v[0] : (v as number))
-  return (
-    <section aria-label="Sensitivity" className="space-y-4">
-      <div className="flex items-baseline justify-between">
-        <Label>Sensitivity</Label>
-        {moved && (
-          <button
-            type="button"
-            className="text-[11px] text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
-            onClick={() => {
-              setBelow(scores.downweight_below)
-              setWeight(scores.weights.DOWNWEIGHT)
-              setPenalty(true)
-            }}
-          >
-            Reset to this run
-          </button>
-        )}
-      </div>
-      <div className="flex items-baseline gap-3">
-        <span className="num text-3xl font-semibold tracking-tight">{formatRating(r.rating, scale)}</span>
-        <span className="num text-xs text-muted-foreground">
-          {moved ? (
-            <>
-              {formatDelta(s.adjusted, r.rating ?? s.adjusted, scale)} vs this run · {formatInt(r.changed)} reviews change action
-            </>
-          ) : (
-            'at this run’s settings'
-          )}
-        </span>
-      </div>
-      <Control
-        label="Downweight line"
-        hint="integrity below this is downweighted"
-        value={below.toFixed(2)}
-      >
-        <Slider min={0.2} max={0.9} step={0.01} value={[below]} onValueChange={(v) => setBelow(one(v))} aria-label="Downweight line" />
-      </Control>
-      <Control label="Downweight weight" hint="how much a downweighted review still counts" value={weight.toFixed(2)}>
-        <Slider min={0} max={1} step={0.05} value={[weight]} onValueChange={(v) => setWeight(one(v))} aria-label="Downweight weight" />
-      </Control>
-      <label className="flex items-center gap-2 text-xs">
-        <input type="checkbox" checked={penalty} onChange={(e) => setPenalty(e.target.checked)} className="size-3.5 accent-foreground" />
-        Apply the cluster penalty (×(1 − {run.config.thresholds.cluster_penalty_strength} × suspicion) above {run.config.thresholds.cluster_penalty_threshold})
-      </label>
-      <ul className="num flex flex-wrap gap-x-4 gap-y-1 text-[11px]">
-        {(['KEEP', 'DOWNWEIGHT', 'FLAG', 'EXCLUDE'] as const).map((a, i) => (
-          <li key={a} className="flex items-center gap-1.5">
-            <Swatch action={a} />
-            {formatInt(r.counts[i + 1])}
-          </li>
-        ))}
-      </ul>
-      <p className="text-[11px] leading-relaxed text-muted-foreground">
-        Computed in the browser from each review's stored integrity score. Only the keep / downweight split moves; FLAG, EXCLUDE and the later-copy floor stay as decided. An exact
-        re-run with other settings costs $0: <code className="font-mono">POST /runs</code> with backend <code className="font-mono">cached</code> and{' '}
-        <code className="font-mono">reuse_judgments_from={run.id}</code>.
-      </p>
-    </section>
-  )
-}
-
-function Control({ label, hint, value, children }: { label: string; hint: string; value: string; children: ReactNode }) {
-  return (
-    <div className="space-y-2">
-      <div className="flex items-baseline justify-between text-xs">
-        <span>
-          {label} <span className="text-muted-foreground">· {hint}</span>
-        </span>
-        <span className="num font-mono">{value}</span>
-      </div>
-      {children}
-    </div>
   )
 }
 

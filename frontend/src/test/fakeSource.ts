@@ -197,6 +197,7 @@ export class FakeSource implements DataSource {
     limit_usd: 2,
     needs_confirmation: false,
   })
+  getUploadLimits = async () => ({ max_mb: 50, max_rows: 200_000 })
   previewCsv = async () => ({
     columns: ['body', 'stars', 'date'],
     n_rows: 3,

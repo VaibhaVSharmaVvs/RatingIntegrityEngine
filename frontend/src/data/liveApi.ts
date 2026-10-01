@@ -12,6 +12,7 @@ import type {
   RunCreate,
   RunOut,
   RunScores,
+  UploadLimits,
 } from './api'
 import {
   ApiError,
@@ -119,6 +120,8 @@ export class LiveApi implements DataSource {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(req),
     })
+
+  getUploadLimits = () => this.json<UploadLimits>('/datasets/upload-limits')
 
   previewCsv = (file: File) => {
     const body = new FormData()

@@ -1,12 +1,24 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { ShieldCheck, Upload } from 'lucide-react'
-import { useState } from 'react'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { AlertTriangle, ShieldCheck, Upload } from 'lucide-react'
+import { useState, type ReactNode } from 'react'
 import { Button } from '@/components/ui/button'
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from '@/components/ui/sheet'
-import type { CsvPreview } from '@/data/api'
+import type { CsvPreview, DatasetOut } from '@/data/api'
 import { useDataSource } from '@/data/source'
 import { formatInt } from '@/lib/format'
-import { Field, fieldClass } from './NewRunSheet'
+
+const fieldClass =
+  'h-8 w-full rounded-md border border-input bg-background px-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50'
+
+function Field({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) {
+  return (
+    <label className="block space-y-1.5">
+      <span className="text-xs font-medium">{label}</span>
+      {children}
+      {hint && <span className="block text-[11px] leading-snug text-muted-foreground">{hint}</span>}
+    </label>
+  )
+}
 
 const SCALES = [
   { value: '', label: 'Detect from the column' },
@@ -15,8 +27,17 @@ const SCALES = [
   { value: '1-10', label: '1–10' },
 ]
 
-/** CSV upload with a column mapper: preview first, then map text / rating / time / author. */
-export function CsvDatasetSheet({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
+/** CSV or Excel (.xlsx, first sheet) upload with a column mapper: preview first, then map text / rating / time / author. */
+export function UploadDatasetSheet({
+  open,
+  onOpenChange,
+  onImported,
+}: {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  /** the new dataset, ready to analyse */
+  onImported?: (dataset: DatasetOut) => void
+}) {
   const source = useDataSource()
   const qc = useQueryClient()
   const [file, setFile] = useState<File | null>(null)
@@ -24,6 +45,8 @@ export function CsvDatasetSheet({ open, onOpenChange }: { open: boolean; onOpenC
   const [name, setName] = useState('')
   const [map, setMap] = useState({ text: '', rating: '', timestamp: '', author: '' })
   const [scale, setScale] = useState('')
+  const [tooBig, setTooBig] = useState('')
+  const limits = useQuery({ queryKey: ['upload-limits'], queryFn: () => source.getUploadLimits(), enabled: open, staleTime: Infinity })
 
   const inspect = useMutation({
     mutationFn: (f: File) => source.previewCsv(f),
@@ -47,8 +70,9 @@ export function CsvDatasetSheet({ open, onOpenChange }: { open: boolean; onOpenC
         { text: map.text, rating: map.rating, timestamp: map.timestamp || null, author: map.author || null },
         scale || undefined,
       ),
-    onSuccess: () => {
+    onSuccess: (dataset) => {
       qc.invalidateQueries({ queryKey: ['datasets'] })
+      onImported?.(dataset)
       onOpenChange(false)
       setFile(null)
       setPreview(null)
@@ -72,8 +96,8 @@ export function CsvDatasetSheet({ open, onOpenChange }: { open: boolean; onOpenC
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="w-full gap-0 overflow-y-auto p-0 data-[side=right]:sm:max-w-[520px]">
         <SheetHeader className="border-b border-border">
-          <SheetTitle className="text-sm">Add a CSV dataset</SheetTitle>
-          <SheetDescription className="text-xs">One row per review: text and rating are required; a timestamp enables bursts and the timeline.</SheetDescription>
+          <SheetTitle className="text-sm">Upload reviews (CSV or Excel)</SheetTitle>
+          <SheetDescription className="text-xs">One row per review, with a header row; for Excel, the first sheet. Text and rating are required; a timestamp enables bursts and the timeline.</SheetDescription>
         </SheetHeader>
         <form
           id="csv-upload"
@@ -83,22 +107,37 @@ export function CsvDatasetSheet({ open, onOpenChange }: { open: boolean; onOpenC
             if (file && name.trim() && map.text && map.rating) upload.mutate()
           }}
         >
-          <Field label="File">
+          <Field
+            label="File"
+            hint={limits.data ? `CSV or .xlsx, up to ${limits.data.max_mb} MB and ${formatInt(limits.data.max_rows)} rows.` : undefined}
+          >
             <input
               type="file"
-              accept=".csv,text/csv"
+              accept=".csv,text/csv,.xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
               className="block w-full text-xs file:mr-3 file:h-8 file:rounded-md file:border file:border-input file:bg-background file:px-3 file:text-xs file:font-medium"
               onChange={(e) => {
                 const f = e.target.files?.[0] ?? null
-                setFile(f)
                 setPreview(null)
+                setTooBig('')
+                // Checked here as well as on the server, so an oversized file is never sent.
+                if (f && limits.data && f.size > limits.data.max_mb * 2 ** 20) {
+                  setFile(null)
+                  setTooBig(`${f.name} is ${(f.size / 2 ** 20).toFixed(1)} MB; the limit is ${limits.data.max_mb} MB.`)
+                  return
+                }
+                setFile(f)
                 if (f) {
-                  setName((n) => n || f.name.replace(/\.csv$/i, ''))
+                  setName((n) => n || f.name.replace(/\.(csv|xlsx)$/i, ''))
                   inspect.mutate(f)
                 }
               }}
             />
           </Field>
+          {tooBig && (
+            <p role="alert" className="text-xs text-destructive">
+              {tooBig}
+            </p>
+          )}
           {inspect.isPending && <div className="h-24 animate-pulse rounded-md bg-muted" />}
           {inspect.isError && <p className="text-xs text-destructive">{inspect.error.message}</p>}
           {preview && (
@@ -128,7 +167,7 @@ export function CsvDatasetSheet({ open, onOpenChange }: { open: boolean; onOpenC
                 </table>
               </div>
               <p className="num -mt-3 text-[11px] text-muted-foreground">{formatInt(preview.n_rows)} rows</p>
-              <Field label="Name">
+              <Field label="Product name" hint="Shown in the picker and given to System One as what the reviews are about.">
                 <input className={fieldClass} value={name} onChange={(e) => setName(e.target.value)} required />
               </Field>
               <div className="grid gap-4 sm:grid-cols-2">
@@ -148,6 +187,11 @@ export function CsvDatasetSheet({ open, onOpenChange }: { open: boolean; onOpenC
                   ))}
                 </select>
               </Field>
+              <p className="flex gap-2 rounded-md border border-action-downweight/50 bg-action-downweight/10 p-2.5 text-[11px] leading-relaxed">
+                <AlertTriangle className="size-3.5 shrink-0 translate-y-0.5" aria-hidden />
+                The questions System One answers are worded and tuned for video-game reviews. Reviews of other products are judged against
+                game wording until a product-neutral question set exists, so treat their integrity weights as provisional.
+              </p>
               <p className="flex gap-2 rounded-md bg-muted/50 p-2.5 text-[11px] leading-relaxed text-muted-foreground">
                 <ShieldCheck className="size-3.5 shrink-0 translate-y-0.5" aria-hidden />
                 The author column is hashed with a salt at import and the raw value is never stored. Review text may still contain personal data: anonymise it

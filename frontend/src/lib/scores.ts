@@ -1,9 +1,6 @@
 import type { RunScores } from '@/data/api'
 
 /** ActionCode bytes (grid order): 0 PENDING, 1 KEEP, 2 DOWNWEIGHT, 3 FLAG, 4 EXCLUDE. */
-const KEEP = 1
-const DOWNWEIGHT = 2
-
 export interface Weights {
   KEEP: number
   DOWNWEIGHT: number
@@ -77,44 +74,4 @@ export function waterfall(s: RunScores): WaterfallStep[] {
     prev = after
   }
   return steps
-}
-
-export interface Sensitivity {
-  downweightBelow: number
-  downweightWeight: number
-  /** false: split on integrity before the cluster penalty */
-  clusterPenalty: boolean
-}
-
-export interface Resimulated {
-  rating: number | null
-  /** reviews whose action differs from the run's */
-  changed: number
-  counts: [number, number, number, number, number]
-}
-
-/**
- * Re-derive the KEEP / DOWNWEIGHT split from the stored integrity scores under other
- * settings. FLAG and EXCLUDE stay as decided, and so does a later copy's DOWNWEIGHT floor:
- * those come from rules the scores alone cannot replay. An exact re-run is free with the
- * "cached" backend (POST /runs, reuse_judgments_from).
- */
-export function resimulate(s: RunScores, o: Sensitivity): Resimulated {
-  const n = s.rating_norm.length
-  const copy = s.reason_codes.indexOf('NEAR_DUPLICATE')
-  const actions = new Uint8Array(n)
-  const counts: Resimulated['counts'] = [0, 0, 0, 0, 0]
-  let changed = 0
-  for (let i = 0; i < n; i++) {
-    let a = s.action[i]
-    const score = o.clusterPenalty ? s.integrity[i] : s.base_integrity[i]
-    if ((a === KEEP || a === DOWNWEIGHT) && score != null && s.primary_reason[i] !== copy) {
-      a = score < o.downweightBelow ? DOWNWEIGHT : KEEP
-    }
-    actions[i] = a
-    counts[a]++
-    if (a !== s.action[i]) changed++
-  }
-  const w = { ...s.weights, DOWNWEIGHT: o.downweightWeight }
-  return { rating: weightedRating(s.rating_norm, (i) => weightOf(w, actions[i])), changed, counts }
 }

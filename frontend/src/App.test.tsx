@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { DataSourceProvider } from '@/data/DataSourceProvider'
+import { SHOWCASE } from '@/data/showcase'
 import { useRunStore } from '@/state/runStore'
 import { useViewStore } from '@/state/viewStore'
 import { FakeSource } from '@/test/fakeSource'
@@ -24,12 +25,15 @@ function renderAt(path: string, source = new FakeSource()) {
 /** Let the per-frame batcher flush. */
 const nextFrame = () => act(() => new Promise<void>((r) => requestAnimationFrame(() => r())))
 
-it('lists runs with their rating change', async () => {
+it('offers only the curated games and replays the chosen one', async () => {
   renderAt('/')
-  expect(await screen.findByText('Fixture game, May 2024')).toBeTruthy()
-  expect(screen.getByText(/70\.0%/)).toBeTruthy()
-  expect(screen.getByText('66.0%')).toBeTruthy()
-  expect(screen.getByText('−4.0 pp')).toBeTruthy()
+  const game = screen.getByRole('combobox', { name: /^Product/ }) as HTMLSelectElement
+  expect(game.options).toHaveLength(SHOWCASE.length)
+  expect(screen.queryByText('Fixture game, May 2024')).toBeNull() // runs and datasets are not listed
+  fireEvent.change(game, { target: { value: 'metro' } })
+  expect(await screen.findByText('66.0%')).toBeTruthy() // the recorded result
+  fireEvent.click(screen.getByRole('button', { name: /Play the replay/ }))
+  expect(await screen.findByText(/Integrity grid/)).toBeTruthy()
 })
 
 it('folds the live stream into the counters, ticker, stepper and cluster feed', async () => {

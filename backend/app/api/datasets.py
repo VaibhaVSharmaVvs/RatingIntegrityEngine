@@ -11,7 +11,14 @@ from app.ingest import csv_loader
 from app.ingest.steam_fetcher import PullState, SteamFetcher, parse_date
 from app.ingest.steam_import import import_pull
 from app.ingest.store import create_dataset, insert_reviews, set_dataset_status
-from app.models import CsvPreview, DatasetDetail, DatasetOut, HourIndex, SteamFetchRequest
+from app.models import (
+    CsvPreview,
+    DatasetDetail,
+    DatasetOut,
+    HourIndex,
+    SteamFetchRequest,
+    UploadLimits,
+)
 
 router = APIRouter(prefix="/datasets", tags=["datasets"])
 log = logging.getLogger("datasets")
@@ -31,6 +38,30 @@ def fetch_dataset(state: AppState, dataset_id: str) -> DatasetOut:
     if row is None:
         raise HTTPException(404, f"dataset {dataset_id} not found")
     return _row_to_dataset(row)
+
+
+def _limits(state: AppState) -> csv_loader.Limits:
+    s = state.settings
+    return csv_loader.Limits(
+        max_rows=s.max_upload_rows, max_expanded_bytes=int(s.max_upload_expanded_mb * 2**20)
+    )
+
+
+async def _read_upload(file: UploadFile, state: AppState) -> bytes:
+    """Read at most the cap plus one byte: an oversized file is never held whole."""
+    cap = int(state.settings.max_upload_mb * 2**20)
+    data = await file.read(cap + 1)
+    if len(data) > cap:
+        raise HTTPException(
+            413, f"file is over the {state.settings.max_upload_mb:g} MB upload limit"
+        )
+    return data
+
+
+@router.get("/upload-limits", response_model=UploadLimits)
+def upload_limits(state: AppState = Depends(get_state)) -> UploadLimits:
+    s = state.settings
+    return UploadLimits(max_mb=s.max_upload_mb, max_rows=s.max_upload_rows)
 
 
 @router.get("", response_model=list[DatasetOut])
@@ -79,11 +110,16 @@ def get_hours(dataset_id: str, state: AppState = Depends(get_state)) -> HourInde
 
 
 @router.post("/csv/preview", response_model=CsvPreview)
-async def preview_csv(file: UploadFile = File(...)) -> CsvPreview:
+async def preview_csv(
+    file: UploadFile = File(...), state: AppState = Depends(get_state)
+) -> CsvPreview:
+    data = await _read_upload(file, state)
     try:
-        return CsvPreview(**csv_loader.preview(await file.read()))
+        return CsvPreview(**csv_loader.preview(data, _limits(state)))
+    except csv_loader.UploadTooLarge as exc:
+        raise HTTPException(413, str(exc)) from exc
     except Exception as exc:
-        raise HTTPException(422, f"could not read CSV: {exc}") from exc
+        raise HTTPException(422, f"could not read the file (CSV or XLSX): {exc}") from exc
 
 
 @router.post("/csv", response_model=DatasetOut, status_code=201)
@@ -100,11 +136,18 @@ async def upload_csv(
         raise HTTPException(422, f"bad mapping: {exc}") from exc
     if rating_scale not in (None, "binary", "1-5", "1-10"):
         raise HTTPException(422, "rating_scale must be binary, 1-5 or 1-10")
-    data = await file.read()
+    data = await _read_upload(file, state)
     try:
         df, scale = await asyncio.to_thread(
-            csv_loader.load, data, cols, state.settings.author_hash_salt, rating_scale
+            csv_loader.load,
+            data,
+            cols,
+            state.settings.author_hash_salt,
+            rating_scale,
+            _limits(state),
         )
+    except csv_loader.UploadTooLarge as exc:
+        raise HTTPException(413, str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(422, str(exc)) from exc
     dataset_id = create_dataset(

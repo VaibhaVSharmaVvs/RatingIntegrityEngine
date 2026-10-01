@@ -14,6 +14,7 @@ import type {
   RunCreate,
   RunOut,
   RunScores,
+  UploadLimits,
 } from './api'
 import type { RunEvent } from './events'
 
@@ -76,6 +77,8 @@ export interface DataSource {
   exportUrl(runId: string, fmt: 'csv' | 'json'): string | null
   /** cost and time estimate for a run before it starts */
   preflight(req: RunCreate): Promise<PreflightOut>
+  /** size and row caps for CSV / XLSX uploads */
+  getUploadLimits(): Promise<UploadLimits>
   previewCsv(file: File): Promise<CsvPreview>
   uploadCsv(file: File, name: string, mapping: ColumnMapping, ratingScale?: string): Promise<DatasetOut>
   /** the recorded event stream of a finished run */

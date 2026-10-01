@@ -56,6 +56,7 @@ export interface RIEAPI {
   "SuspicionConfig-Input"?: SuspicionConfig2;
   "SuspicionConfig-Output"?: SuspicionConfig3;
   TimelineBucket?: TimelineBucket;
+  UploadLimits?: UploadLimits;
   ActionCode?: ActionCode;
 }
 /**
@@ -1028,4 +1029,12 @@ export interface SuspicionConfig3 {
   null_samples: number;
   null_floor: number;
   max_cluster_events: number;
+}
+/**
+ * This interface was referenced by `RIEAPI`'s JSON-Schema
+ * via the `definition` "UploadLimits".
+ */
+export interface UploadLimits {
+  max_mb: number;
+  max_rows: number;
 }
