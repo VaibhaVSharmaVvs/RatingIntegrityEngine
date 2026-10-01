@@ -2,9 +2,14 @@
 
 from types import ModuleType
 
-from app.systemone import questions_v1, questions_v2
+from app.systemone import questions_v1, questions_v2, questions_v3, questions_v4
 
-QUESTION_SETS: dict[str, ModuleType] = {"v1": questions_v1, "v2": questions_v2}
+QUESTION_SETS: dict[str, ModuleType] = {
+    "v1": questions_v1,
+    "v2": questions_v2,
+    "v3": questions_v3,
+    "v4": questions_v4,
+}
 DEFAULT_QUESTION_SET = "v2"
 
 

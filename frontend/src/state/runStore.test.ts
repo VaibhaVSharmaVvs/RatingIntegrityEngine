@@ -68,6 +68,8 @@ describe('reduceEvents', () => {
       raw: 0.5,
       adjusted: i / 1000,
       ci: null,
+      platform: null,
+      platform_ci: null,
       n_eff: i,
       final: false,
       t: i,

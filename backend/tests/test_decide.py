@@ -8,10 +8,24 @@ from app.models import ActionCode, PolicyThresholds
 LEVELS = {"informativeness": 4, "rating_support": 4}
 
 
-def answers(inf=3.0, sup=3.0, spam=0.01, templated=0.01, offtopic=0.0, conf=0.9) -> dict:
-    return {
+def answers(
+    inf=3.0,
+    sup=3.0,
+    spam=0.01,
+    templated=0.01,
+    offtopic=0.0,
+    conf=0.9,
+    contradicts=0.0,
+    about_game=None,
+) -> dict:
+    a = {
         "informativeness": {"type": "score", "score": inf, "confidence": conf},
-        "rating_support": {"type": "score", "score": sup, "confidence": conf},
+        "rating_support": {
+            "type": "score",
+            "score": sup,
+            "probabilities": {"0": contradicts, "1": 0.0, "2": 0.0, "3": 1.0 - contradicts},
+            "confidence": conf,
+        },
         "topic": {
             "type": "choice",
             "choice": "gameplay",
@@ -22,6 +36,9 @@ def answers(inf=3.0, sup=3.0, spam=0.01, templated=0.01, offtopic=0.0, conf=0.9)
         "templated": {"type": "noul", "noul": templated},
         "campaign_language": {"type": "noul", "noul": 0.01},
     }
+    if about_game is not None:
+        a["about_game"] = {"type": "noul", "noul": about_game}
+    return a
 
 
 T = PolicyThresholds()
@@ -34,10 +51,41 @@ def test_specific_on_topic_review_is_kept() -> None:
     assert d.reasons == []
 
 
-def test_low_information_unsupported_review_is_downweighted() -> None:
-    d = decide(answers(inf=0.0, sup=0.3), T, score_levels=LEVELS)
+def test_short_review_is_not_penalised_for_brevity() -> None:
+    """Option B: "good game" is a real verdict. Low information is shown, not weighted."""
+    d = decide(answers(inf=0.0, sup=0.5), T, score_levels=LEVELS)
+    assert d.action is ActionCode.KEEP
+    assert d.integrity_score == pytest.approx(1.0, abs=0.01)
+    assert "LOW_INFO" not in d.reasons and "UNSUPPORTED_VERDICT" not in d.reasons
+
+
+def test_text_contradicting_its_verdict_is_downweighted() -> None:
+    d = decide(answers(sup=0.1, contradicts=0.95), T, score_levels=LEVELS)
     assert d.action is ActionCode.DOWNWEIGHT
-    assert d.reasons[:2] == ["LOW_INFO", "UNSUPPORTED_VERDICT"]
+    assert d.reasons[0] == "CONTRADICTS_VERDICT"
+
+
+def test_review_only_about_the_company_is_downweighted() -> None:
+    d = decide(answers(about_game=0.05), T, score_levels=LEVELS)
+    assert d.action is ActionCode.DOWNWEIGHT
+    assert d.reasons[0] == "OFF_TOPIC"
+    assert decide(answers(about_game=0.95), T, score_levels=LEVELS).action is ActionCode.KEEP
+
+
+def test_low_playtime_only_counts_with_an_off_game_verdict() -> None:
+    """Quitting a bad game early is valid evidence (Gollum: 49% of negatives < 2 h)."""
+    on_topic = decide(answers(about_game=0.95), T, score_levels=LEVELS, low_playtime=True)
+    assert on_topic.action is ActionCode.KEEP and "LOW_EXPERIENCE" not in on_topic.reasons
+    off = decide(answers(about_game=0.4), T, score_levels=LEVELS, low_playtime=True)
+    off_played = decide(answers(about_game=0.4), T, score_levels=LEVELS, low_playtime=False)
+    assert off.integrity_score < off_played.integrity_score
+    assert "LOW_EXPERIENCE" in off.reasons
+
+
+def test_about_game_replaces_the_topic_fallback() -> None:
+    """With v3's about_game, the legacy topic-based off-topic signal is not double counted."""
+    d = decide(answers(offtopic=1.0, about_game=0.95), T, score_levels=LEVELS)
+    assert d.action is ActionCode.KEEP
 
 
 def test_system_one_alone_never_excludes() -> None:
@@ -58,8 +106,14 @@ def test_low_confidence_on_two_questions_flags() -> None:
 
 
 def test_thresholds_come_from_config() -> None:
+    spec = PolicyThresholds(w_informativeness=0.30, w_rating_support=0.25)  # the spec's weights
+    assert (
+        decide(answers(inf=0.0, sup=0.3), spec, score_levels=LEVELS).action is ActionCode.DOWNWEIGHT
+    )
     strict = PolicyThresholds(downweight_below=0.99)
-    assert decide(answers(inf=2.5), strict, score_levels=LEVELS).action is ActionCode.DOWNWEIGHT
+    assert (
+        decide(answers(templated=0.2), strict, score_levels=LEVELS).action is ActionCode.DOWNWEIGHT
+    )
 
 
 def test_later_copy_rule_keeps_first_and_exempts_short_texts() -> None:

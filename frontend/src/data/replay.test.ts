@@ -124,7 +124,7 @@ describe('createCellDrip', () => {
   it('holds counters and rating until their batch is on screen', () => {
     const s = setup()
     s.drip.push(encodeJudged([0, 1, 2, 3], [2, 2, 2, 2]), 200)
-    s.drip.push({ type: 'rating', raw: 0.7, adjusted: 0.6, ci: null, n_eff: 3, final: false })
+    s.drip.push({ type: 'rating', raw: 0.7, adjusted: 0.6, ci: null, n_eff: 3, final: false, platform: null, platform_ci: null })
     s.clock.frame(50)
     expect(s.state.rating).toBeNull() // batch still dripping
     s.clock.frame(200)

@@ -26,12 +26,16 @@ export interface RIEAPI {
   DatasetOut?: DatasetOut;
   DoneEvent?: DoneEvent;
   ErrorEvent?: ErrorEvent;
+  ExcludedWindowOut?: ExcludedWindowOut;
   "FeatureConfig-Input"?: FeatureConfig;
   "FeatureConfig-Output"?: FeatureConfig1;
   FeaturesDoneEvent?: FeaturesDoneEvent;
   HistogramBin?: HistogramBin;
   HourIndex?: HourIndex;
   JudgedEvent?: JudgedEvent;
+  "PlatformPolicyConfig-Input"?: PlatformPolicyConfig;
+  "PlatformPolicyConfig-Output"?: PlatformPolicyConfig1;
+  PlatformSummary?: PlatformSummary;
   "PolicyThresholds-Input"?: PolicyThresholds;
   "PolicyThresholds-Output"?: PolicyThresholds1;
   PreflightOut?: PreflightOut;
@@ -350,6 +354,7 @@ export interface RunSummary {
   latency_p95_ms: number | null;
   embedding_cache_hit: boolean | null;
   corpus: CorpusSummary1;
+  platform: PlatformSummary | null;
 }
 export interface CorpusSummary1 {
   clusters: {
@@ -359,6 +364,30 @@ export interface CorpusSummary1 {
   change_points: string[];
   penalised_reviews: number;
   actions_changed_by_clusters: number;
+}
+/**
+ * This interface was referenced by `RIEAPI`'s JSON-Schema
+ * via the `definition` "PlatformSummary".
+ */
+export interface PlatformSummary {
+  rating: number | null;
+  ci: [number, number] | null;
+  counted: number;
+  key_activations_removed: number;
+  windows: ExcludedWindowOut[];
+  basis: string;
+  steam_label: string | null;
+}
+/**
+ * This interface was referenced by `RIEAPI`'s JSON-Schema
+ * via the `definition` "ExcludedWindowOut".
+ */
+export interface ExcludedWindowOut {
+  start: string;
+  end: string;
+  negatives: number;
+  offtopic_share: number;
+  reviews_removed: number;
 }
 /**
  * This interface was referenced by `RIEAPI`'s JSON-Schema
@@ -444,6 +473,28 @@ export interface JudgedEvent {
   actions_b64: string;
 }
 /**
+ * Steam's review-score rules, emulated (app/decide/platform.py).
+ *
+ * This interface was referenced by `RIEAPI`'s JSON-Schema
+ * via the `definition` "PlatformPolicyConfig-Input".
+ */
+export interface PlatformPolicyConfig {
+  purchasers_only?: boolean;
+  offtopic_window_share?: number;
+  min_judged_negatives?: number;
+}
+/**
+ * Steam's review-score rules, emulated (app/decide/platform.py).
+ *
+ * This interface was referenced by `RIEAPI`'s JSON-Schema
+ * via the `definition` "PlatformPolicyConfig-Output".
+ */
+export interface PlatformPolicyConfig1 {
+  purchasers_only: boolean;
+  offtopic_window_share: number;
+  min_judged_negatives: number;
+}
+/**
  * Every number the decision policy uses (MVP_SPEC §6.5). Nothing is hard-coded.
  *
  * This interface was referenced by `RIEAPI`'s JSON-Schema
@@ -459,6 +510,9 @@ export interface PolicyThresholds {
   w_spam?: number;
   w_templated?: number;
   w_offtopic?: number;
+  w_offgame?: number;
+  w_contradiction?: number;
+  w_low_experience?: number;
   reason_min_contribution?: number;
   duplicate_action?: "EXCLUDE" | "DOWNWEIGHT";
   cluster_penalty_threshold?: number;
@@ -483,6 +537,9 @@ export interface PolicyThresholds1 {
   w_spam: number;
   w_templated: number;
   w_offtopic: number;
+  w_offgame: number;
+  w_contradiction: number;
+  w_low_experience: number;
   reason_min_contribution: number;
   duplicate_action: "EXCLUDE" | "DOWNWEIGHT";
   cluster_penalty_threshold: number;
@@ -516,6 +573,8 @@ export interface RatingEvent {
   ci: [number, number] | null;
   n_eff: number;
   final: boolean;
+  platform: number | null;
+  platform_ci: [number, number] | null;
 }
 /**
  * One line of `replay.jsonl.gz`: seconds since run start + the event.
@@ -567,7 +626,7 @@ export interface RunCreate {
   reuse_identical_inputs?: boolean;
   reuse_judgments_from?: string | null;
   confirm_cost?: boolean;
-  question_set?: "v1" | "v2";
+  question_set?: "v1" | "v2" | "v3" | "v4";
   concurrency?: number;
   weights?: ActionWeights2;
   thresholds?: PolicyThresholds2;
@@ -575,6 +634,7 @@ export interface RunCreate {
   bursts?: BurstConfig2;
   clusters?: ClusterConfig2;
   suspicion?: SuspicionConfig;
+  platform?: PlatformPolicyConfig2;
   bootstrap_resamples?: number;
   seed?: number;
   /**
@@ -601,6 +661,9 @@ export interface PolicyThresholds2 {
   w_spam?: number;
   w_templated?: number;
   w_offtopic?: number;
+  w_offgame?: number;
+  w_contradiction?: number;
+  w_low_experience?: number;
   reason_min_contribution?: number;
   duplicate_action?: "EXCLUDE" | "DOWNWEIGHT";
   cluster_penalty_threshold?: number;
@@ -669,6 +732,14 @@ export interface SuspicionConfig {
   max_cluster_events?: number;
 }
 /**
+ * Steam's review-score rules, emulated (app/decide/platform.py).
+ */
+export interface PlatformPolicyConfig2 {
+  purchasers_only?: boolean;
+  offtopic_window_share?: number;
+  min_judged_negatives?: number;
+}
+/**
  * This interface was referenced by `RIEAPI`'s JSON-Schema
  * via the `definition` "RunCreate-Output".
  */
@@ -681,7 +752,7 @@ export interface RunCreate1 {
   reuse_identical_inputs: boolean;
   reuse_judgments_from: string | null;
   confirm_cost: boolean;
-  question_set: "v1" | "v2";
+  question_set: "v1" | "v2" | "v3" | "v4";
   concurrency: number;
   weights: ActionWeights3;
   thresholds: PolicyThresholds3;
@@ -689,6 +760,7 @@ export interface RunCreate1 {
   bursts: BurstConfig3;
   clusters: ClusterConfig3;
   suspicion: SuspicionConfig1;
+  platform: PlatformPolicyConfig3;
   bootstrap_resamples: number;
   seed: number;
   /**
@@ -715,6 +787,9 @@ export interface PolicyThresholds3 {
   w_spam: number;
   w_templated: number;
   w_offtopic: number;
+  w_offgame: number;
+  w_contradiction: number;
+  w_low_experience: number;
   reason_min_contribution: number;
   duplicate_action: "EXCLUDE" | "DOWNWEIGHT";
   cluster_penalty_threshold: number;
@@ -781,6 +856,14 @@ export interface SuspicionConfig1 {
   null_samples: number;
   null_floor: number;
   max_cluster_events: number;
+}
+/**
+ * Steam's review-score rules, emulated (app/decide/platform.py).
+ */
+export interface PlatformPolicyConfig3 {
+  purchasers_only: boolean;
+  offtopic_window_share: number;
+  min_judged_negatives: number;
 }
 /**
  * This interface was referenced by `RIEAPI`'s JSON-Schema

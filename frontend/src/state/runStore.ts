@@ -22,6 +22,8 @@ export interface RatingPoint {
   t: number
   raw: number
   adjusted: number
+  /** Platform-policy rating (Steam's rules emulated); null when not computable. */
+  platform: number | null
 }
 
 export interface RunViewState {
@@ -105,7 +107,7 @@ export function reduceEvents(state: RunViewState, events: TimedEvent[], now: num
         break
       case 'rating': {
         next.rating = e
-        const point = { t: e.t ?? next.t, raw: e.raw, adjusted: e.adjusted }
+        const point = { t: e.t ?? next.t, raw: e.raw, adjusted: e.adjusted, platform: e.platform ?? null }
         const trail = next.ratingTrail.length >= RATING_TRAIL_MAX ? thin(next.ratingTrail) : next.ratingTrail
         next.ratingTrail = [...trail, point]
         break

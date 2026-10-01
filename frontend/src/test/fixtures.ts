@@ -28,6 +28,15 @@ export const summaryFor = (n: number, counts: number[]): RunSummary => ({
   retries: 0,
   latency_p50_ms: null,
   latency_p95_ms: null,
+  platform: {
+    rating: 0.75,
+    ci: [0.73, 0.77],
+    counted: Math.round(n * 0.9),
+    key_activations_removed: Math.round(n * 0.05),
+    windows: [],
+    basis: 'verdict_basis',
+    steam_label: 'Mostly Positive',
+  },
   embedding_cache_hit: null,
   corpus: {
     clusters: { burst: 1 },
@@ -81,7 +90,7 @@ export function recordedRun(n: number, batch = 100, seconds = 2): ReplayLine[] {
       cost_usd: 0,
       elapsed_s: t,
     })
-    at(t, { type: 'rating', raw: 0.7, adjusted: 0.7 - (0.04 * processed) / n, ci: null, n_eff: processed, final: false })
+    at(t, { type: 'rating', raw: 0.7, adjusted: 0.7 - (0.04 * processed) / n, ci: null, n_eff: processed, final: false, platform: 0.7 + (0.05 * processed) / n, platform_ci: null })
   }
   at(seconds - 0.25, { type: 'stage', name: 'systemone', status: 'done' })
   at(seconds - 0.2, { type: 'stage', name: 'corpus', status: 'started' })
@@ -99,7 +108,7 @@ export function recordedRun(n: number, batch = 100, seconds = 2): ReplayLine[] {
   at(seconds - 0.05, encodeJudged([0], [4]))
   counts[fixtureAction(0, n)]--
   counts[4]++
-  at(seconds - 0.04, { type: 'rating', raw: 0.7, adjusted: 0.66, ci: [0.64, 0.68], n_eff: n * 0.8, final: true })
+  at(seconds - 0.04, { type: 'rating', raw: 0.7, adjusted: 0.66, ci: [0.64, 0.68], n_eff: n * 0.8, final: true, platform: 0.75, platform_ci: [0.73, 0.77] })
   at(seconds - 0.02, { type: 'stage', name: 'decide', status: 'done' })
   at(seconds, { type: 'done', summary: summaryFor(n, counts) })
   return lines

@@ -107,9 +107,17 @@ def test_transient_empty_page_is_retried_not_treated_as_end(tmp_path: Path) -> N
 
 def test_resume_continues_a_pull_that_ended_early(tmp_path: Path) -> None:
     early = PullState(appid=1, from_ts=0, to_ts=10, language="english", cursor="1", pages=1)
-    early.done, early.end_reason = True, "exhausted"
+    early.done, early.end_reason = True, None  # legacy: no end reason recorded
     (tmp_path / "state.json").write_text(json.dumps(early.__dict__))
     fresh = PullState(appid=1, from_ts=0, to_ts=10, language="english")
     fetcher = SteamFetcher.resume_or_new(fresh, tmp_path, SALT)
     assert fetcher.state.done is False
     assert fetcher.state.cursor == "1"
+
+
+def test_resume_trusts_a_recorded_exhausted_end(tmp_path: Path) -> None:
+    done = PullState(appid=1, from_ts=0, to_ts=10, language="english", cursor="1", pages=3)
+    done.done, done.end_reason = True, "exhausted"
+    (tmp_path / "state.json").write_text(json.dumps(done.__dict__))
+    fresh = PullState(appid=1, from_ts=0, to_ts=10, language="english")
+    assert SteamFetcher.resume_or_new(fresh, tmp_path, SALT).state.done is True

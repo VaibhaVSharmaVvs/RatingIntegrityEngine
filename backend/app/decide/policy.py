@@ -85,21 +85,32 @@ def decide(
     *,
     score_levels: dict[str, int],
     has_promo: bool = False,
+    low_playtime: bool = False,
 ) -> Decision:
     t = thresholds
     informativeness = _norm_score(answers["informativeness"], score_levels["informativeness"])
-    support = _norm_score(answers["rating_support"], score_levels["rating_support"])
+    support_answer = answers["rating_support"]
+    support = _norm_score(support_answer, score_levels["rating_support"])
+    # P("contradicts the verdict"): the lowest rating_support level.
+    contradiction = float(support_answer.get("probabilities", {}).get("0", 0.0))
     spam = float(answers["spam_promo"]["noul"])
     templated = float(answers["templated"]["noul"])
-    topic_probs = answers["topic"].get("probabilities", {})
-    offtopic = float(sum(topic_probs.get(k, 0.0) for k in OFFTOPIC_TOPICS))
+    if "about_game" in answers:
+        offgame = 1.0 - float(answers["about_game"]["noul"])
+        offgame_weight = t.w_offgame
+    else:  # v1 / v2: fall back to the topic choice
+        topic_probs = answers["topic"].get("probabilities", {})
+        offgame = float(sum(topic_probs.get(k, 0.0) for k in OFFTOPIC_TOPICS))
+        offgame_weight = t.w_offtopic
 
     contributions = {
         "LOW_INFO": t.w_informativeness * (1 - informativeness),
         "UNSUPPORTED_VERDICT": t.w_rating_support * (1 - support),
+        "CONTRADICTS_VERDICT": t.w_contradiction * contradiction,
         "SPAM": t.w_spam * spam,
         "TEMPLATED": t.w_templated * templated,
-        "OFF_TOPIC": t.w_offtopic * offtopic,
+        "OFF_TOPIC": offgame_weight * offgame,
+        "LOW_EXPERIENCE": t.w_low_experience * offgame * float(low_playtime),
     }
     score = max(0.0, 1.0 - sum(contributions.values()))
     reasons = [
@@ -108,12 +119,18 @@ def decide(
         if c >= t.reason_min_contribution
     ][:3]
 
+    # Only questions that move the weight may send a review to a human.
+    weighted = {
+        "informativeness": t.w_informativeness,
+        "rating_support": t.w_rating_support + t.w_contradiction,
+        "topic": t.w_offtopic if "about_game" not in answers else 0.0,
+    }
     low_conf = sum(
         1
-        for a in answers.values()
-        if a.get("confidence") is not None
+        for qid, a in answers.items()
+        if weighted.get(qid, 0.0) > 0
+        and a.get("confidence") is not None
         and a["confidence"] < t.low_confidence
-        and a["type"] != "noul"
     )
     if spam > t.spam_exclude and has_promo:
         return Decision(

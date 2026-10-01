@@ -452,3 +452,96 @@ Chrome 154, dev laptop (12 logical cores), DPR 1.25, grid canvas 1412 × 568 dev
 
 Dripping removed the whole-grid fade frames, so the worst paint went from 6.1 to 2.4 ms. **Heuristic recordings show a flat live rating** (75.4% from the first event). `_decide_heuristic` filled the whole grid before emitting, so every live rating already covered all 50K decisions. Fixed in `pipeline.py` (grid filled per emitted chunk; test `test_heuristic_live_rating_covers_only_reviews_decided_so_far`). Runs recorded before the fix keep the flat rating, so re-run to get a moving one ($0, ~1 min).
 - Rendering design: one pixel per review in an offscreen `ImageData`, scaled up crisp (`imageSmoothingEnabled = false`) with a pre-drawn gap overlay. Only changed and still-fading cells are repainted. SSE events are batched into one store update per animation frame.
+
+---
+
+## M10. Methodology v3: the length bias, and what can justifiably move a rating (2026-10-01)
+
+### M10a. The spec's weights penalised brevity, and brevity tracks positive verdicts
+
+Phase 4 runs, question set v2, spec weights (informativeness 0.30, rating support 0.25):
+
+| Corpus | Negatives downweighted | Positives downweighted | Median length neg / pos |
+|---|---|---|---|
+| HD2 5K | 19.5% | **38.7%** | 105 / 53 chars |
+| CS2 5K | 3.5% | **7.4%** | 257 / 152 chars |
+| Gollum | 8.4% | **15.1%** | 259 / 277 chars |
+
+Same Jev answers (cached backend, $0), with informativeness and rating-support weights set to 0:
+
+| Corpus | Raw | Adjusted, spec weights | Adjusted, those two weights off |
+|---|---|---|---|
+| HD2 5K | 76.4% | 72.9% | **76.4%** |
+| CS2 5K | 59.6% | 58.8% | **59.5%** |
+| Gollum | 35.7% | 34.4% | **35.7%** |
+
+**Nearly all the downward movement reported in M8/M9 was a verbosity adjustment, not integrity.** The owner chose option B: evidence quality is shown, not weighted.
+
+### M10b. Alternatives the owner proposed, measured before deciding (v2 answers, $0)
+
+| Idea | HD2 | CS2 | Gollum | Verdict |
+|---|---|---|---|---|
+| Upweight informative reviews (weight 1 + informativeness, 1x–2x) | −2.5 pp | −1.6 pp | −0.3 pp | Same bias from the other side: a weighted mean only sees *relative* weights. Negatives are more informative (HD2 mean 0.52 vs 0.32) |
+| Playtime buckets (<2 h ×0.5, <10 h ×0.75, <50 h ×1, 50 h+ ×1.25) | +0.7 pp | +1.8 pp | **+2.4 pp** | Survivorship bias: inflates the known-bad control. 49% of Gollum's negatives (34% of CS2's) were written under 2 h |
+
+Both rejected as weights. Effort is shown as an evidence badge; playtime is used only as an experience floor combined with an off-game verdict.
+
+HD2 bomb reviewers were real players (full pull): median playtime at review for negatives was 76 h before the bomb, **56 h during** (May 3–5) and 61 h after. Free copies 1.5–2.0% throughout, and first reviews 7–15%. **No playtime- or incentive-based rule should move HD2.**
+
+### M10c. Question set v3 (`about_game`) on the dev set
+
+Two runs, $0.023, 1,395 tokens per review (+131 over v2). `about_game` mean 0.77; 16.5% of dev reviews < 0.5; test-retest mean |Δ| 0.010 (max 0.08). Share "not about the game": HD2 bomb 27%, counter-wave 20%, short 27%, **Gollum 0%**. Lowest scores: "F*CK SONY" 0.06, "♥♥♥♥ sony" 0.08, "Arrowhead" 0.08, political asides 0.06, developer-doxxing complaints 0.09–0.15, "Freedom, Good. Sony, Bad." 0.23. Symmetric: positive company-aimed reviews too ("Sony actually pulled back, WE DID IT" 0.21). Game-lore memes ("FOR DEMOCRACY!!!") 0.62–0.69 count as about the game. One iteration was enough.
+
+### M10d. Policy v3 (option B + off-game 0.6 + contradiction 0.5 + experience floor 0.2), live Jev runs
+
+| Run | KEEP / DOWN / FLAG / EXCL | Raw → adjusted (95% CI) | Downweighted neg / pos | Cost |
+|---|---|---|---|---|
+| **HD2 5K** | 4,041 / 789 / 165 / 4 | 76.4% → **77.7% (76.5–78.9)** | 22.5% / 13.8% | $0.280 |
+| CS2 5K control | 4,873 / 127 / 0 / 0 | 59.6% → 59.2% (57.8–60.6); raw inside CI ✅ | 1.3% / 3.4% | $0.292 |
+| Gollum control | 281 / 16 / 0 / 0 | 35.7% → 34.3% (29.0–39.9); raw inside CI ✅ | 2.6% / 10.4% | $0.018 |
+
+Top reasons: HD2 OFF_TOPIC (402 positives such as "democracy", 215 negatives such as "Review redacted for potential treason"), COORDINATED_CLUSTER 58, CONTRADICTS_VERDICT 63. Gollum's dip comes from ironic "Recommended" reviews of a bad game ("And we wept, Precious…"), which is justified. **Known false positives for the contradiction rule:** mixed reviews ("cool game, but connecting to friends' squads is virtually impossible", Recommended). Measure its precision with the Phase 7 hand labels. FLAG fell from 301 to 165 on HD2 because low confidence now only counts on questions that carry weight.
+
+**Live ticker:** raw and adjusted are now computed over the reviews decided so far (chronological batches), so both trace the rating through time (`test_live_rating_moves_through_time`).
+
+---
+
+## M11. Three ratings: raw, integrity-adjusted, platform policy (2026-10-01)
+
+**Owner decision:** report three ratings side by side.
+- **Raw**: every review as Steam reports it today.
+- **Integrity-adjusted (engine)**: per-review judgment. Option B, `about_game` (terms and requirements that change the product count as about the game), contradiction, coordination, copies.
+- **Platform policy (Steam's rules emulated)**: (1) key activations don't count (Valve, Sept 2016); (2) a negative spike whose negatives are mostly off-topic is removed **as a whole window**, positives included (Valve, Mar 2019, which explicitly lists DRM and EULA changes as off-topic). Our burst detector stands in for Steam's spike detection. Valve's manual review is replaced by `verdict_basis` (question set v4): the window is removed when > 50% of its judged negatives have a verdict not based on playing.
+
+Sources: Valve's 2016 key-activation change (TechRaptor, store.steampowered.com/oldnews/24155) and the 2019 off-topic review-bomb policy (TechRaptor, The Next Web, Gamereactor).
+
+### M11a. `verdict_basis` on the dev set (question set v4)
+
+Two runs, $0.026, **1,528 tokens per review** (+133 over v3). Share "verdict not based on playing": HD2 bomb 71%, counter-wave 37%, pre-bomb 23%, **Gollum 5%**. Test-retest mean |Δ| 0.010. It adds what `about_game` let through: "Trying to force their playerbase to make a PlayStation Network account…" (verdict_basis 0.05, about_game 0.95), "not reinstalling until the Region restriction is lifted" (0.06), "horrible patches and now PSN linking" (0.23). Positive memes also score low; that is harmless here, because only negatives inside negative spikes are used.
+
+### M11b. Results (Jev v4, one call per review)
+
+| Game (window) | Raw | Integrity-adjusted (95% CI) | **Platform policy** (95% CI) | Windows removed by the emulation | Key activations removed | Cost |
+|---|---|---|---|---|---|---|
+| **Helldivers 2** (5K, Apr–Jun 2024) | 76.4% | 77.6% (76.4–78.8) | **89.0% (87.4–90.5)** | 2024-05-03 08h → 05-06 07h: 2,117 reviews, 78% of judged negatives off-topic | 1,175 | $0.307 |
+| **Borderlands 2** (12,981, Apr–Aug 2025) | 33.8% | 37.4% (36.6–38.3) | **50.7% (49.1–52.3)** | 2025-04-25 (40); **05-19 → 05-22** (250 + 328, 90%); **06-05 → 06-11** EULA (3,834 at 84%, + 30) | 4,935 | $0.801 |
+| Cities: Skylines II control (5K, Oct–Dec 2023) | 59.6% | 59.2% (57.8–60.6) | 59.9% (58.4–61.4) | **none** ✅ | 1,126 | $0.319 |
+| Gollum control (297) | 35.7% | 34.3% (29.1–39.9) | 34.4% (27.9–41.4) | none ✅ | 111 | $0.019 |
+| **Football Manager 26** (15,348, launch → now) | 38.0% | 37.2% (36.4–38.0) | 38.4% (37.4–39.3) | **none**: the launch backlash is genuine | 6,058 | $0.967 |
+| Metro 2033 Redux (2,444, Dec 2018–Mar 2019) | — | — | — | **not run: TypeSafe returned HTTP 402 "no available API credits"** | | |
+
+Reference levels (English, from our pulls): HD2 pre-bomb April 2024 88–91%, so **the Steam-policy rating lands on it**. BL2 and Metro English baselines are being pulled (Jan–Mar 2025; Sep–Nov 2018). **Correction:** the earlier "92–95%" (BL2) and "~90%" (Metro) came from Steam's review histogram, which counts **all languages**: its `l=english` parameter is the UI language, not a filter. Metro: 36,820 English reviews vs 103,493 in the histogram.
+
+### M11c. What Valve actually did (all languages, `filter_offtopic_activity` 0 vs 1 totals)
+
+| Game | Reviews / positive, including off-topic | Steam score view (off-topic removed) | Valve flagged an off-topic window? |
+|---|---|---|---|
+| Helldivers 2 | 1,164,767 / 880,895 | identical | **No.** The 2024 PSN bomb counts fully in Steam's score |
+| Borderlands 2 | 320,304 / 283,697 | 312,660 / 279,932 | **Yes**: 7,644 reviews excluded, 49% positive. Positive share suggests the 2019 Epic window rather than the 2025 EULA bomb [unverified: windows aren't exposed] |
+| Metro 2033 Redux | 142,391 / 131,422 | identical | No (its bomb predates the March 2019 policy) |
+| Cities: Skylines II | 94,290 / 52,049 | 92,411 / 51,723 | Yes: 1,879 excluded (outside our Oct–Dec 2023 window or not; unknown) |
+| FM26, Gollum | | identical | No |
+
+**Steam's written rules and Valve's decisions differ.** By the policy's own wording (account requirements are DRM-like, EULA changes are named), HD2 May 2024 and BL2 June 2025 qualify, but HD2 was never flagged. The demo can say exactly that.
+
+Spend this round (v3 + v4): HD2/CS2/Gollum v3 $0.59, BL2 v3 $0.73, dev-set v3/v4 $0.05, v4 five games $2.41 → **≈ $3.78**. Credits then ran out.
