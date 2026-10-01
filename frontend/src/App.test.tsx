@@ -71,7 +71,7 @@ it('shows the selected review', async () => {
   await waitFor(() => expect(source.handlers).not.toBeNull())
   act(() => useViewStore.getState().select(42))
   expect(await screen.findByText(/Review 42: the matchmaking is broken/)).toBeTruthy()
-  expect(screen.getByText('LOW_INFORMATIVENESS')).toBeTruthy()
+  expect(screen.getByRole('link', { name: 'Not about the game' }).getAttribute('href')).toBe('/help#reason-off-topic')
   fireEvent.click(screen.getByLabelText('Clear selection'))
   expect(useViewStore.getState().selected).toBeNull()
 })

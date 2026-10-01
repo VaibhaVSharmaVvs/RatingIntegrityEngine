@@ -3,13 +3,17 @@
 import type {
   ClusterDetail,
   ClusterOut,
+  CsvPreview,
   DatasetDetail,
   DatasetOut,
   HourIndex,
+  PreflightOut,
   ReplayLine,
   ReviewDetail,
+  ReviewPage,
   RunCreate,
   RunOut,
+  RunScores,
 } from './api'
 import type { RunEvent } from './events'
 
@@ -27,6 +31,28 @@ export interface RunStreamHandlers {
   onError?: (message: string) => void
 }
 
+/** Filters for the reviews table (GET /runs/{id}/reviews). */
+export interface ReviewFilter {
+  action?: 'KEEP' | 'DOWNWEIGHT' | 'FLAG' | 'EXCLUDE'
+  reason?: string
+  cluster?: number
+  verdict?: 'positive' | 'negative'
+  q?: string
+  sort?: 'time' | 'integrity'
+  limit?: number
+  offset?: number
+}
+
+/** The CSV column mapper's output (backend csv_loader.ColumnMapping). */
+export interface ColumnMapping {
+  text: string
+  rating: string
+  timestamp?: string | null
+  author?: string | null
+  ext_id?: string | null
+  extras?: string[]
+}
+
 export interface DataSource {
   readonly mode: DataSourceMode
   /** false in the static build: no uploads, fetches or new runs */
@@ -40,8 +66,18 @@ export interface DataSource {
   /** Uint8 action codes in grid order */
   getGrid(runId: string): Promise<Uint8Array>
   getClusters(runId: string, kind?: ClusterOut['kind']): Promise<ClusterOut[]>
-  getCluster(runId: string, cid: number): Promise<ClusterDetail>
+  /** `sample`: how many member reviews to include with text (0 = ids only) */
+  getCluster(runId: string, cid: number, sample?: number): Promise<ClusterDetail>
   getReview(runId: string, reviewId: number): Promise<ReviewDetail>
+  listReviews(runId: string, filter?: ReviewFilter): Promise<ReviewPage>
+  /** per-review arrays of a finished run, for the results-page sliders and waterfall */
+  getScores(runId: string): Promise<RunScores>
+  /** download link for a run's decisions; null where export is not offered */
+  exportUrl(runId: string, fmt: 'csv' | 'json'): string | null
+  /** cost and time estimate for a run before it starts */
+  preflight(req: RunCreate): Promise<PreflightOut>
+  previewCsv(file: File): Promise<CsvPreview>
+  uploadCsv(file: File, name: string, mapping: ColumnMapping, ratingScale?: string): Promise<DatasetOut>
   /** the recorded event stream of a finished run */
   getReplay(runId: string): Promise<ReplayLine[]>
   /** live events (history first); returns an unsubscribe function */

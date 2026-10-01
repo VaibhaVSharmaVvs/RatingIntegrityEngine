@@ -21,11 +21,17 @@ interface ViewStore {
   brush: Brush | null
   /** a brushed cluster stays on after the pointer leaves */
   pinnedCid: number | null
+  /** review open in the inspector drawer */
+  inspecting: number | null
+  /** cluster open in the cluster drawer */
+  openCid: number | null
   setHovered: (i: number | null) => void
   select: (i: number | null) => void
   setHoverRange: (r: IndexRange | null) => void
   setBrush: (b: Brush | null) => void
   pin: (cid: number | null) => void
+  inspect: (i: number | null) => void
+  openCluster: (cid: number | null) => void
   clear: () => void
 }
 
@@ -41,6 +47,8 @@ export const useViewStore = create<ViewStore>()((set) => ({
   hoverRange: null,
   brush: null,
   pinnedCid: null,
+  inspecting: null,
+  openCid: null,
   setHovered: (hovered) => set((s) => (s.hovered === hovered ? s : { hovered })),
   select: (selected) => set({ selected }),
   setHoverRange: (hoverRange) =>
@@ -49,5 +57,8 @@ export const useViewStore = create<ViewStore>()((set) => ({
     ),
   setBrush: (brush) => set({ brush }),
   pin: (pinnedCid) => set({ pinnedCid }),
-  clear: () => set({ hovered: null, selected: null, hoverRange: null, brush: null, pinnedCid: null }),
+  inspect: (inspecting) => set({ inspecting }),
+  openCluster: (openCid) => set({ openCid }),
+  clear: () =>
+    set({ hovered: null, selected: null, hoverRange: null, brush: null, pinnedCid: null, inspecting: null, openCid: null }),
 }))

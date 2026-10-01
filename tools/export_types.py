@@ -28,6 +28,8 @@ EXPORTED = [
     models.ClusterOut,
     models.ClusterDetail,
     models.ReviewDetail,
+    models.ReviewPage,
+    models.RunScores,
     models.CsvPreview,
     models.SteamFetchRequest,
     models.ReplayLine,

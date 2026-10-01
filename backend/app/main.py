@@ -6,7 +6,7 @@ import httpx
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import datasets, runs
+from app.api import datasets, inspect, runs
 from app.api.deps import AppState
 from app.core.config import Settings, settings
 from app.core.db import Database
@@ -44,6 +44,7 @@ def create_app(
     )
     app.include_router(datasets.router)
     app.include_router(runs.router)
+    app.include_router(inspect.router)
 
     @app.get("/health")
     def health() -> dict[str, str]:

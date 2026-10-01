@@ -42,9 +42,14 @@ export interface RIEAPI {
   RatingEvent?: RatingEvent;
   ReplayLine?: ReplayLine;
   ReviewDetail?: ReviewDetail;
+  ReviewMeta?: ReviewMeta;
+  ReviewPage?: ReviewPage;
+  ReviewRow?: ReviewRow;
+  ReviewSignals?: ReviewSignals;
   "RunCreate-Input"?: RunCreate;
   "RunCreate-Output"?: RunCreate1;
   RunOut?: RunOut;
+  RunScores?: RunScores;
   RunSummary?: RunSummary;
   StageEvent?: StageEvent;
   SteamFetchRequest?: SteamFetchRequest;
@@ -612,6 +617,75 @@ export interface ReviewDetail {
   weight: number | null;
   integrity_score: number | null;
   reasons: string[];
+  base_integrity: number | null;
+  cluster_id: number | null;
+  cluster_suspicion: number | null;
+  cluster_kind: string | null;
+  cluster_caption: string | null;
+  answers: {
+    [k: string]: {
+      [k: string]: unknown;
+    };
+  };
+  signals: ReviewSignals | null;
+  meta: ReviewMeta | null;
+  counts_in_platform_rating: boolean | null;
+}
+/**
+ * Deterministic S1 signals for one review.
+ *
+ * This interface was referenced by `RIEAPI`'s JSON-Schema
+ * via the `definition` "ReviewSignals".
+ */
+export interface ReviewSignals {
+  n_tokens: number | null;
+  has_url: boolean;
+  has_promo: boolean;
+  promo_hits: string[];
+  duplicate_of: number | null;
+  duplicate_score: number | null;
+  nearest_review_id: number | null;
+  nearest_cosine: number | null;
+  low_playtime: boolean | null;
+  single_review_account: boolean | null;
+  received_for_free: boolean | null;
+  key_activation: boolean | null;
+}
+/**
+ * This interface was referenced by `RIEAPI`'s JSON-Schema
+ * via the `definition` "ReviewMeta".
+ */
+export interface ReviewMeta {
+  playtime_hours: number | null;
+  author_num_reviews: number | null;
+  steam_purchase: boolean | null;
+  received_for_free: boolean | null;
+  votes_up: number | null;
+  edited: boolean;
+  updated_at: string | null;
+}
+/**
+ * This interface was referenced by `RIEAPI`'s JSON-Schema
+ * via the `definition` "ReviewPage".
+ */
+export interface ReviewPage {
+  total: number;
+  offset: number;
+  items: ReviewRow[];
+}
+/**
+ * This interface was referenced by `RIEAPI`'s JSON-Schema
+ * via the `definition` "ReviewRow".
+ */
+export interface ReviewRow {
+  review_id: number;
+  created_at: string | null;
+  rating_norm: number | null;
+  action: string | null;
+  weight: number | null;
+  integrity_score: number | null;
+  reasons: string[];
+  snippet: string;
 }
 /**
  * This interface was referenced by `RIEAPI`'s JSON-Schema
@@ -882,6 +956,23 @@ export interface RunOut {
   summary: RunSummary | null;
   cost_usd: number;
   tokens_in: number;
+}
+/**
+ * Per-review arrays in grid order, for client-side sliders and the waterfall.
+ *
+ * This interface was referenced by `RIEAPI`'s JSON-Schema
+ * via the `definition` "RunScores".
+ */
+export interface RunScores {
+  rating_norm: (number | null)[];
+  integrity: (number | null)[];
+  base_integrity: (number | null)[];
+  action: number[];
+  primary_reason: number[];
+  reason_codes: string[];
+  counts_in_platform: boolean[];
+  weights: ActionWeights1;
+  downweight_below: number;
 }
 /**
  * This interface was referenced by `RIEAPI`'s JSON-Schema

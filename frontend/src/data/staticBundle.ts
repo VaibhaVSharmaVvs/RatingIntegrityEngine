@@ -19,6 +19,12 @@ export class StaticBundle implements DataSource {
   getClusters = notYet('getClusters')
   getCluster = notYet('getCluster')
   getReview = notYet('getReview')
+  listReviews = notYet('listReviews')
+  getScores = notYet('getScores')
+  exportUrl = () => null
+  preflight = () => Promise.reject(new Error('The public demo plays pre-recorded runs only.'))
+  previewCsv = () => Promise.reject(new Error('The public demo cannot upload data.'))
+  uploadCsv = () => Promise.reject(new Error('The public demo cannot upload data.'))
   getReplay = notYet('getReplay')
   subscribe(): () => void {
     throw new Error('StaticBundle.subscribe: the public demo uses getReplay, not a live stream')

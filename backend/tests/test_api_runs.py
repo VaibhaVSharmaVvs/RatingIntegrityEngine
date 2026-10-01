@@ -586,3 +586,79 @@ def test_live_rating_moves_through_time(client: TestClient) -> None:
     assert live[0]["raw"] == pytest.approx(1.0)  # only early (positive) reviews decided yet
     assert live[-1]["raw"] == pytest.approx(0.5)
     assert len({round(e["raw"], 3) for e in live}) > 1  # it moved
+
+
+def _finished_run(client: TestClient) -> tuple[str, str, list[str]]:
+    texts = organic(60)
+    texts[10:10] = [COPY] * 12
+    ds = upload_texts(client, texts)
+    run_id = client.post("/runs", json={"dataset_id": ds, "bootstrap_resamples": 100}).json()["id"]
+    read_sse(client, run_id)
+    return ds, run_id, texts
+
+
+def test_review_detail_has_answers_signals_and_meta(client: TestClient) -> None:
+    _, run_id, _texts = _finished_run(client)
+    d = client.get(f"/runs/{run_id}/reviews/12").json()  # a later copy of COPY
+    assert d["text"] == COPY
+    assert set(d["answers"]) >= {
+        "informativeness",
+        "rating_support",
+        "topic",
+        "spam_promo",
+        "templated",
+    }
+    assert d["signals"]["duplicate_of"] == 10 and d["signals"]["n_tokens"] >= 8
+    assert d["meta"]["edited"] is False
+    assert "NEAR_DUPLICATE" in d["reasons"]
+    first = client.get(f"/runs/{run_id}/reviews/10").json()
+    assert first["signals"]["duplicate_of"] is None  # the first copy is not "a copy of" itself
+    assert client.get(f"/runs/{run_id}/reviews/9999").status_code == 404
+
+
+def test_review_list_filters_and_pages(client: TestClient) -> None:
+    _, run_id, texts = _finished_run(client)
+    everything = client.get(f"/runs/{run_id}/reviews", params={"limit": 500}).json()
+    assert everything["total"] == len(texts)
+    assert [r["review_id"] for r in everything["items"]] == list(range(len(texts)))
+    copies = client.get(f"/runs/{run_id}/reviews", params={"reason": "NEAR_DUPLICATE"}).json()
+    assert copies["total"] == 11 and all("NEAR_DUPLICATE" in r["reasons"] for r in copies["items"])
+    page = client.get(f"/runs/{run_id}/reviews", params={"limit": 5, "offset": 5}).json()
+    assert [r["review_id"] for r in page["items"]] == [5, 6, 7, 8, 9]
+    text_hit = client.get(f"/runs/{run_id}/reviews", params={"q": "total scam"}).json()
+    assert text_hit["total"] == 12
+    pos = client.get(f"/runs/{run_id}/reviews", params={"verdict": "positive"}).json()["total"]
+    neg = client.get(f"/runs/{run_id}/reviews", params={"verdict": "negative"}).json()["total"]
+    assert pos + neg == len(texts)
+    dup = next(c for c in client.get(f"/runs/{run_id}/clusters").json() if c["kind"] == "duplicate")
+    members = client.get(f"/runs/{run_id}/reviews", params={"cluster": dup["cluster_id"]}).json()
+    assert members["total"] == dup["size"]
+
+
+def test_scores_reproduce_the_adjusted_rating(client: TestClient) -> None:
+    """The client recomputes the rating from /scores for the sliders: with the run's own
+    weights it must land exactly on the summary's adjusted rating."""
+    _, run_id, texts = _finished_run(client)
+    s = client.get(f"/runs/{run_id}/scores").json()
+    summary = client.get(f"/runs/{run_id}").json()["summary"]
+    assert len(s["rating_norm"]) == len(texts) == len(s["action"]) == len(s["counts_in_platform"])
+    w = s["weights"]
+    weight_of = {1: w["KEEP"], 2: w["DOWNWEIGHT"], 3: w["FLAG"], 4: w["EXCLUDE"]}
+    ws = np.array([weight_of[a] for a in s["action"]])
+    r = np.array(s["rating_norm"], dtype=float)
+    assert (r * ws).sum() / ws.sum() == pytest.approx(summary["adjusted"])
+    assert all(-1 <= i < len(s["reason_codes"]) for i in s["primary_reason"])
+
+
+def test_export_has_decisions_but_no_identifiers(client: TestClient) -> None:
+    _, run_id, texts = _finished_run(client)
+    csv_text = client.get(f"/runs/{run_id}/export", params={"fmt": "csv"}).text
+    header = csv_text.splitlines()[0]
+    assert header.startswith("review_id,created_at,rating_raw")
+    assert "ext_id" not in header and "author_hash" not in header
+    assert len(csv_text.strip().splitlines()) >= len(texts) + 1
+    body = client.get(f"/runs/{run_id}/export", params={"fmt": "json"}).json()
+    assert len(body["decisions"]) == len(texts)
+    assert "not the 'true' rating" in body["methodology_note"].lower()
+    assert "ext_id" not in json.dumps(body["decisions"]) and "author_hash" not in json.dumps(body)
+    assert client.get(f"/runs/{run_id}/export", params={"fmt": "xml"}).status_code == 422

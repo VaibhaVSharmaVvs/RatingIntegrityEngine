@@ -1,14 +1,15 @@
 import { useQuery } from '@tanstack/react-query'
-import { X } from 'lucide-react'
+import { PanelRightOpen, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useDataSource } from '@/data/source'
 import { formatHour, verdictWords } from '@/lib/format'
 import { actionName } from '@/lib/palette'
 import { useRunStore } from '@/state/runStore'
 import { useViewStore } from '@/state/viewStore'
+import { ReasonChip } from '@/components/shared/ReasonChip'
 import { ActionChip } from './ActionChip'
 
-/** Compact read-out of the clicked review. The full inspector (System One answers) is Phase 6. */
+/** Compact read-out of the clicked review; "Inspect" opens the full inspector drawer. */
 export function SelectedReview({ runId, ratingScale }: { runId: string; ratingScale: string }) {
   const source = useDataSource()
   const selected = useViewStore((s) => s.selected)
@@ -29,9 +30,17 @@ export function SelectedReview({ runId, ratingScale }: { runId: string; ratingSc
         <span className="num font-mono text-[11px] text-muted-foreground">#{selected}</span>
         {r?.created_at && <span className="num text-[11px] text-muted-foreground">{formatHour(r.created_at)}</span>}
         <Button
+          variant="outline"
+          size="xs"
+          className="ml-auto"
+          onClick={() => useViewStore.getState().inspect(selected)}
+        >
+          <PanelRightOpen />
+          Inspect
+        </Button>
+        <Button
           variant="ghost"
           size="icon-xs"
-          className="ml-auto"
           aria-label="Clear selection"
           onClick={() => useViewStore.getState().select(null)}
         >
@@ -60,8 +69,8 @@ export function SelectedReview({ runId, ratingScale }: { runId: string; ratingSc
                 <div className="flex flex-wrap gap-1">
                   <dt className="sr-only">Reasons</dt>
                   {r.reasons.map((code) => (
-                    <dd key={code} className="rounded-sm bg-muted px-1.5 py-0.5 font-mono text-[10px]">
-                      {code}
+                    <dd key={code}>
+                      <ReasonChip code={code} />
                     </dd>
                   ))}
                 </div>
