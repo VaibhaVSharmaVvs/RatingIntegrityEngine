@@ -243,7 +243,7 @@ Deviations and findings:
 - Zustand store for run state; events batched into one render per animation frame.
 - Dark-first theme with a light toggle.
 
-**Process:** build against **recorded SSE fixtures** from Phase 1 first (no backend needed), then switch to the live API. Low-fi Figma wireframes for screens 4–7 before styling (Solulever guidance: wireframes only).
+**Process:** build against **recorded SSE fixtures** from Phase 1 first (no backend needed), then switch to the live API. ~~Low-fi Figma wireframes for screens 4–7 before styling~~ *(waived by the owner, 2026-10-01: the screens are designed in code and checked in the browser).*
 
 **Exit criteria:** a 50K replay renders at ≥ 50 fps on a mid laptop (Chrome performance panel); hover tooltip and click-to-select work; Vitest covers the store reducers and the grid colour mapping.
 
@@ -264,9 +264,9 @@ Deviations and findings:
 | Fade | 150 ms from pending | **Flash, then settle over 320 ms** (ease-out); rating number tweens | A 150 ms fade on a 4 px cell read as an instant switch. Reduced motion still snaps |
 | Heuristic live rating | — | `pipeline.py` fills the grid per emitted chunk | Live ratings were already final on the first event (M10) |
 | Starting runs | Phase 6 drawer | Runs page can start **$0 runs only** (heuristic, mock) | Exercises the live SSE path; Jev runs wait for the pre-flight drawer |
-| Wireframes | Low-fi Figma for screens 4–7 before styling | **Not done** | Figma was not connected in this session. Owner decision: wireframe retroactively or waive for screen 4 |
+| Wireframes | Low-fi Figma for screens 4–7 before styling | **Waived** (owner, 2026-10-01) | Screens are designed in code and verified in the browser |
 
-Open items: the color-mode toggle (informativeness/topic/cluster) and the "Compare backends" view are not built. The runs page hint text contains the string `8001`, which a Phase 9 `dist/` grep should allow or which should be dropped from the static build.
+Open items: the color-mode toggle (informativeness/topic/cluster) and the "Compare backends" view are not built. (The runs-page hint that named the API port was dropped, so a Phase 9 `dist/` grep for the backend URL stays clean.)
 
 ---
 

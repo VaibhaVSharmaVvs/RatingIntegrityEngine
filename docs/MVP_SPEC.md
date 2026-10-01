@@ -355,7 +355,7 @@ Side nav: Benchmarks · Flag queue · Datasets
   - Pending: neutral gray
   - Always pair colour with a legend and patterns in the inspector.
 - Motion: squares fade in over 150 ms. Respect `prefers-reduced-motion`, which snaps to the final state.
-- Wireframes: low-fidelity only (Figma, per Solulever guidance), for screens 4–7.
+- ~~Wireframes: low-fidelity only (Figma, per Solulever guidance), for screens 4–7.~~ Waived by the owner (2026-10-01); screens are designed in code.
 
 ---
 

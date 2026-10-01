@@ -141,9 +141,14 @@ export function TimelineStrip({ buckets, bursts, changePoints }: Props) {
       const hoursPerCol = Math.max(1, (buckets.t1 - buckets.t0) / HOUR_MS / W)
       ctx.textBaseline = 'top'
       ctx.fillText(`peak ${formatInt(max / hoursPerCol)}/h`, 4 * dpr, 2 * dpr)
-      for (const b of bursts) {
-        const x0 = timeToX(buckets, b.start, W)
-        ctx.fillText(b.label, Math.min(x0, W - ctx.measureText(b.label).width), 2 * dpr)
+      // Adjacent bursts would overprint each other's label; label the first of each group.
+      let labelEnd = ctx.measureText(`peak ${formatInt(max / hoursPerCol)}/h`).width + 12 * dpr
+      for (const b of [...bursts].sort((p, q) => p.start - q.start)) {
+        const w = ctx.measureText(b.label).width
+        const x = Math.min(timeToX(buckets, b.start, W), W - w)
+        if (x < labelEnd) continue
+        ctx.fillText(b.label, x, 2 * dpr)
+        labelEnd = x + w + 8 * dpr
       }
 
       // The hour of the hovered / selected grid cell.
