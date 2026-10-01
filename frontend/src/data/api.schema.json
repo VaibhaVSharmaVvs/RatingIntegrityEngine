@@ -876,6 +876,36 @@
       "title": "ErrorEvent",
       "type": "object"
     },
+    "ExcludedWindowOut": {
+      "properties": {
+        "start": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "end": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "negatives": {
+          "type": "integer"
+        },
+        "offtopic_share": {
+          "type": "number"
+        },
+        "reviews_removed": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "start",
+        "end",
+        "negatives",
+        "offtopic_share",
+        "reviews_removed"
+      ],
+      "title": "ExcludedWindowOut",
+      "type": "object"
+    },
     "FeatureConfig-Input": {
       "description": "S1 deterministic features (MVP_SPEC \u00a76.2).",
       "properties": {
@@ -1121,6 +1151,127 @@
       "title": "JudgedEvent",
       "type": "object"
     },
+    "PlatformPolicyConfig-Input": {
+      "description": "Steam's review-score rules, emulated (app/decide/platform.py).",
+      "properties": {
+        "purchasers_only": {
+          "default": true,
+          "type": "boolean"
+        },
+        "offtopic_window_share": {
+          "default": 0.5,
+          "maximum": 1,
+          "minimum": 0,
+          "type": "number"
+        },
+        "min_judged_negatives": {
+          "default": 20,
+          "minimum": 1,
+          "type": "integer"
+        }
+      },
+      "title": "PlatformPolicyConfig",
+      "type": "object"
+    },
+    "PlatformPolicyConfig-Output": {
+      "description": "Steam's review-score rules, emulated (app/decide/platform.py).",
+      "properties": {
+        "purchasers_only": {
+          "default": true,
+          "type": "boolean"
+        },
+        "offtopic_window_share": {
+          "default": 0.5,
+          "maximum": 1,
+          "minimum": 0,
+          "type": "number"
+        },
+        "min_judged_negatives": {
+          "default": 20,
+          "minimum": 1,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "purchasers_only",
+        "offtopic_window_share",
+        "min_judged_negatives"
+      ],
+      "title": "PlatformPolicyConfig",
+      "type": "object"
+    },
+    "PlatformSummary": {
+      "properties": {
+        "rating": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "ci": {
+          "anyOf": [
+            {
+              "maxItems": 2,
+              "minItems": 2,
+              "type": "array",
+              "items": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "number"
+                }
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "counted": {
+          "type": "integer"
+        },
+        "key_activations_removed": {
+          "type": "integer"
+        },
+        "windows": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/ExcludedWindowOut"
+          },
+          "type": "array"
+        },
+        "basis": {
+          "type": "string"
+        },
+        "steam_label": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "rating",
+        "ci",
+        "counted",
+        "key_activations_removed",
+        "windows",
+        "basis",
+        "steam_label"
+      ],
+      "title": "PlatformSummary",
+      "type": "object"
+    },
     "PolicyThresholds-Input": {
       "description": "Every number the decision policy uses (MVP_SPEC \u00a76.5). Nothing is hard-coded.",
       "properties": {
@@ -1141,11 +1292,11 @@
           "type": "number"
         },
         "w_informativeness": {
-          "default": 0.3,
+          "default": 0.0,
           "type": "number"
         },
         "w_rating_support": {
-          "default": 0.25,
+          "default": 0.0,
           "type": "number"
         },
         "w_spam": {
@@ -1158,6 +1309,18 @@
         },
         "w_offtopic": {
           "default": 0.1,
+          "type": "number"
+        },
+        "w_offgame": {
+          "default": 0.6,
+          "type": "number"
+        },
+        "w_contradiction": {
+          "default": 0.5,
+          "type": "number"
+        },
+        "w_low_experience": {
+          "default": 0.2,
           "type": "number"
         },
         "reason_min_contribution": {
@@ -1221,11 +1384,11 @@
           "type": "number"
         },
         "w_informativeness": {
-          "default": 0.3,
+          "default": 0.0,
           "type": "number"
         },
         "w_rating_support": {
-          "default": 0.25,
+          "default": 0.0,
           "type": "number"
         },
         "w_spam": {
@@ -1238,6 +1401,18 @@
         },
         "w_offtopic": {
           "default": 0.1,
+          "type": "number"
+        },
+        "w_offgame": {
+          "default": 0.6,
+          "type": "number"
+        },
+        "w_contradiction": {
+          "default": 0.5,
+          "type": "number"
+        },
+        "w_low_experience": {
+          "default": 0.2,
           "type": "number"
         },
         "reason_min_contribution": {
@@ -1288,6 +1463,9 @@
         "w_spam",
         "w_templated",
         "w_offtopic",
+        "w_offgame",
+        "w_contradiction",
+        "w_low_experience",
         "reason_min_contribution",
         "duplicate_action",
         "cluster_penalty_threshold",
@@ -1379,6 +1557,38 @@
         "final": {
           "default": false,
           "type": "boolean"
+        },
+        "platform": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "platform_ci": {
+          "anyOf": [
+            {
+              "maxItems": 2,
+              "minItems": 2,
+              "type": "array",
+              "items": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "number"
+                }
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
         }
       },
       "required": [
@@ -1387,7 +1597,9 @@
         "adjusted",
         "ci",
         "n_eff",
-        "final"
+        "final",
+        "platform",
+        "platform_ci"
       ],
       "title": "RatingEvent",
       "type": "object"
@@ -1598,10 +1810,12 @@
           "type": "boolean"
         },
         "question_set": {
-          "default": "v2",
+          "default": "v4",
           "enum": [
             "v1",
-            "v2"
+            "v2",
+            "v3",
+            "v4"
           ],
           "type": "string"
         },
@@ -1627,11 +1841,14 @@
             "low_confidence": 0.5,
             "low_confidence_min_questions": 2,
             "spam_exclude": 0.9,
-            "w_informativeness": 0.3,
-            "w_rating_support": 0.25,
+            "w_informativeness": 0.0,
+            "w_rating_support": 0.0,
             "w_spam": 0.2,
             "w_templated": 0.15,
             "w_offtopic": 0.1,
+            "w_offgame": 0.6,
+            "w_contradiction": 0.5,
+            "w_low_experience": 0.2,
             "reason_min_contribution": 0.05,
             "duplicate_action": "DOWNWEIGHT",
             "cluster_penalty_threshold": 0.5,
@@ -1708,6 +1925,14 @@
             "null_samples": 24,
             "null_floor": 0.5,
             "max_cluster_events": 25
+          }
+        },
+        "platform": {
+          "$ref": "#/$defs/PlatformPolicyConfig-Input",
+          "default": {
+            "purchasers_only": true,
+            "offtopic_window_share": 0.5,
+            "min_judged_negatives": 20
           }
         },
         "bootstrap_resamples": {
@@ -1794,10 +2019,12 @@
           "type": "boolean"
         },
         "question_set": {
-          "default": "v2",
+          "default": "v4",
           "enum": [
             "v1",
-            "v2"
+            "v2",
+            "v3",
+            "v4"
           ],
           "type": "string"
         },
@@ -1823,11 +2050,14 @@
             "low_confidence": 0.5,
             "low_confidence_min_questions": 2,
             "spam_exclude": 0.9,
-            "w_informativeness": 0.3,
-            "w_rating_support": 0.25,
+            "w_informativeness": 0.0,
+            "w_rating_support": 0.0,
             "w_spam": 0.2,
             "w_templated": 0.15,
             "w_offtopic": 0.1,
+            "w_offgame": 0.6,
+            "w_contradiction": 0.5,
+            "w_low_experience": 0.2,
             "reason_min_contribution": 0.05,
             "duplicate_action": "DOWNWEIGHT",
             "cluster_penalty_threshold": 0.5,
@@ -1906,6 +2136,14 @@
             "max_cluster_events": 25
           }
         },
+        "platform": {
+          "$ref": "#/$defs/PlatformPolicyConfig-Output",
+          "default": {
+            "purchasers_only": true,
+            "offtopic_window_share": 0.5,
+            "min_judged_negatives": 20
+          }
+        },
         "bootstrap_resamples": {
           "default": 2000,
           "maximum": 10000,
@@ -1941,6 +2179,7 @@
         "bursts",
         "clusters",
         "suspicion",
+        "platform",
         "bootstrap_resamples",
         "seed",
         "mock_latency_ms"
@@ -2191,6 +2430,17 @@
             "penalised_reviews": 0,
             "actions_changed_by_clusters": 0
           }
+        },
+        "platform": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/PlatformSummary"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
         }
       },
       "required": [
@@ -2215,7 +2465,8 @@
         "latency_p50_ms",
         "latency_p95_ms",
         "embedding_cache_hit",
-        "corpus"
+        "corpus",
+        "platform"
       ],
       "title": "RunSummary",
       "type": "object"
@@ -2544,6 +2795,9 @@
     "ErrorEvent": {
       "$ref": "#/$defs/ErrorEvent"
     },
+    "ExcludedWindowOut": {
+      "$ref": "#/$defs/ExcludedWindowOut"
+    },
     "FeatureConfig-Input": {
       "$ref": "#/$defs/FeatureConfig-Input"
     },
@@ -2561,6 +2815,15 @@
     },
     "JudgedEvent": {
       "$ref": "#/$defs/JudgedEvent"
+    },
+    "PlatformPolicyConfig-Input": {
+      "$ref": "#/$defs/PlatformPolicyConfig-Input"
+    },
+    "PlatformPolicyConfig-Output": {
+      "$ref": "#/$defs/PlatformPolicyConfig-Output"
+    },
+    "PlatformSummary": {
+      "$ref": "#/$defs/PlatformSummary"
     },
     "PolicyThresholds-Input": {
       "$ref": "#/$defs/PolicyThresholds-Input"

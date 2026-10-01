@@ -30,6 +30,7 @@ from app.core.events import RunEventBus
 from app.corpus.bursts import change_points, detect_bursts
 from app.corpus.clusters import duplicate_clusters, semantic_clusters, top_phrases
 from app.corpus.suspicion import ClusterStats, NullModel, score_cluster
+from app.decide.platform import offtopic_verdicts, platform_rating
 from app.decide.policy import (
     Decision,
     apply_cluster_rules,
@@ -53,8 +54,10 @@ from app.models import (
     CountersEvent,
     DoneEvent,
     ErrorEvent,
+    ExcludedWindowOut,
     FeaturesDoneEvent,
     JudgedEvent,
+    PlatformSummary,
     RatingEvent,
     RunCreate,
     RunSummary,
@@ -140,6 +143,9 @@ class Pipeline:
         self.base_integrity: dict[int, float] = {}
         self.cluster_of = np.zeros(0, dtype=int)
         self.cluster_suspicion = np.zeros(0)
+        self.bursts: list = []
+        self.steam_purchase: np.ndarray | None = None
+        self.created_np = np.zeros(0, dtype="datetime64[us]")
         self.questions = question_sets.get(config.question_set)
         self.score_levels = question_sets.score_levels(config.question_set)
         self.cost_cap_usd: float | None = None  # set by the API from the pre-flight
@@ -264,6 +270,20 @@ class Pipeline:
 
         # Embeddings overlap S2; S3 awaits them.
         texts = self.reviews["text"].fill_null("").to_list()
+        # Bursts are deterministic and cheap: detect them in S1 so the platform-policy
+        # rating can move live during S2.
+        self.bursts = detect_bursts(
+            self.reviews.select("id", "created_at", "rating_norm"), self.config.bursts
+        )
+        self.created_np = (
+            self.reviews["created_at"]
+            .dt.replace_time_zone(None)
+            .to_numpy()
+            .astype("datetime64[us]")
+        )
+        metas = [json.loads(m or "{}") for m in self.reviews["meta"].to_list()]
+        if any("steam_purchase" in m for m in metas):
+            self.steam_purchase = np.array([bool(m.get("steam_purchase", True)) for m in metas])
         self._semantic_task = asyncio.create_task(
             asyncio.to_thread(
                 semantic_features, texts, self.embedder, self.cache_dir, self.config.dataset_id
@@ -290,6 +310,7 @@ class Pipeline:
             return
         self.bus.publish(StageEvent(name="systemone", status="started"))
         promo = self.features_frame["has_promo"].to_list()
+        low_play = self.features_frame["low_playtime"].fill_null(False).to_list()
         texts = self.reviews["text"].to_list()
         verdicts = self.reviews["rating_norm"].to_list()
         raw_ratings = self.reviews["rating_raw"].to_list()
@@ -342,6 +363,7 @@ class Pipeline:
                         self.config.thresholds,
                         score_levels=self.score_levels,
                         has_promo=promo[rid],
+                        low_playtime=low_play[rid],
                     )
                     d = self._with_copy_rule(rid, d)
                     self.answers[rid] = ans
@@ -413,12 +435,24 @@ class Pipeline:
                 elapsed_s=round(elapsed, 3),
             )
         )
-        r, w = self._ratings_and_weights(pending_weight=1.0)
+        # Live ticker: raw AND adjusted over the reviews decided so far, so both move
+        # through time as cells fill (batches run in chronological order) and the demo
+        # shows them converging or diverging (owner request 2026-10-01).
+        r, w = self._ratings_and_weights(pending_weight=1.0, decided_only=True)
+        if r.size == 0:
+            return
         self.bus.publish(
-            RatingEvent(raw=float(r.mean()), adjusted=weighted_mean(r, w), n_eff=n_eff(w))
+            RatingEvent(
+                raw=float(r.mean()),
+                adjusted=weighted_mean(r, w),
+                n_eff=n_eff(w),
+                platform=self._platform(decided_only=True).rating,
+            )
         )
 
-    def _ratings_and_weights(self, pending_weight: float) -> tuple[np.ndarray, np.ndarray]:
+    def _ratings_and_weights(
+        self, pending_weight: float, decided_only: bool = False
+    ) -> tuple[np.ndarray, np.ndarray]:
         weights = self.config.weights
         lut = np.array(
             [
@@ -432,6 +466,8 @@ class Pipeline:
         r = self.reviews["rating_norm"].fill_null(np.nan).to_numpy().astype(float)
         w = lut[self.grid]
         valid = ~np.isnan(r)
+        if decided_only:
+            valid &= self.grid > 0
         return r[valid], w[valid]
 
     def _store_judgments(self) -> None:
@@ -525,7 +561,7 @@ class Pipeline:
         stats: list[ClusterStats] = []
 
         t = time.perf_counter()
-        bursts = detect_bursts(self.reviews.select("id", "created_at", "rating_norm"), cfg.bursts)
+        bursts = self.bursts
         cps = change_points(self.reviews.select("created_at", "rating_norm"), cfg.bursts)
         for b in bursts:
             s = score_cluster(
@@ -681,7 +717,29 @@ class Pipeline:
         ci = await asyncio.to_thread(
             bootstrap_ci, r, w, self.config.bootstrap_resamples, self.config.seed
         )
-        self.bus.publish(RatingEvent(raw=raw, adjusted=adjusted, ci=ci, n_eff=neff, final=True))
+        plat = self._platform(decided_only=False)
+        plat_ci = None
+        if plat.rating is not None and plat.counted > 1:
+            mask = self._platform_mask(plat)
+            r_p = self.reviews["rating_norm"].fill_null(np.nan).to_numpy().astype(float)[mask]
+            plat_ci = await asyncio.to_thread(
+                bootstrap_ci,
+                r_p,
+                np.ones(r_p.size),
+                self.config.bootstrap_resamples,
+                self.config.seed,
+            )
+        self.bus.publish(
+            RatingEvent(
+                raw=raw,
+                adjusted=adjusted,
+                ci=ci,
+                n_eff=neff,
+                final=True,
+                platform=plat.rating,
+                platform_ci=plat_ci,
+            )
+        )
         self._store_decisions()
 
         counts = np.bincount(self.grid, minlength=len(ActionCode))
@@ -706,6 +764,17 @@ class Pipeline:
             reused_judgments=self.reused_judgments,
             **self._client_stats(),
             embedding_cache_hit=self.semantic.cache_hit if self.semantic else None,
+            platform=PlatformSummary(
+                rating=plat.rating,
+                ci=plat_ci,
+                counted=plat.counted,
+                key_activations_removed=plat.key_activations_removed,
+                windows=[ExcludedWindowOut(**w.__dict__) for w in plat.windows],
+                basis=plat.basis,
+                steam_label=steam_label(plat.rating, plat.counted)
+                if is_steam and plat.rating is not None
+                else None,
+            ),
             corpus=CorpusSummary(
                 clusters={
                     k: sum(c.kind == k for c in self.clusters)
@@ -722,6 +791,31 @@ class Pipeline:
         )
         self.bus.publish(StageEvent(name="decide", status="done"))
         return summary
+
+    def _platform(self, decided_only: bool):
+        n = self.reviews.height
+        offtopic, basis = offtopic_verdicts(self.answers, n)
+        return platform_rating(
+            rating_norm=self.reviews["rating_norm"].fill_null(np.nan).to_numpy().astype(float),
+            created_at=self.created_np,
+            steam_purchase=self.steam_purchase,
+            offtopic=offtopic,
+            basis=basis,
+            bursts=self.bursts,
+            cfg=self.config.platform,
+            decided=(self.grid > 0) if decided_only else None,
+        )
+
+    def _platform_mask(self, plat) -> np.ndarray:
+        r = self.reviews["rating_norm"].fill_null(np.nan).to_numpy().astype(float)
+        keep = ~np.isnan(r)
+        if self.config.platform.purchasers_only and self.steam_purchase is not None:
+            keep &= self.steam_purchase
+        for w in plat.windows:
+            start = np.datetime64(w.start.replace(tzinfo=None), "us")
+            end = np.datetime64(w.end.replace(tzinfo=None), "us") + np.timedelta64(1, "h")
+            keep &= ~((self.created_np >= start) & (self.created_np < end))
+        return keep
 
     def _client_stats(self) -> dict:
         client = getattr(self.backend, "client", None)

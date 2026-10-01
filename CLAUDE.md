@@ -38,7 +38,7 @@ Portfolio project. System One models (Jev hosted, Laya local) make typed judgmen
 - Never store raw author IDs (hash with salt at ingest). Never commit `data/` or `.env`.
 - UI copy: never "fake"; use "integrity weight" / "low evidential value".
 - Use the `typesafe:typesafe-ai` skill before writing Jev question/state code; check live docs at docs.typesafe.ai.
-- Question sets are versioned (`app/systemone/questions_v*.py`, registry in `questions.py`); never edit a released version, add a new one. Default is v2. Tune only on the dev set, compare with `devset_eval.py compare` against a same-version repeat (the noise floor), max 3 iterations per version.
+- Question sets are versioned (`app/systemone/questions_v*.py`, registry in `questions.py`); never edit a released version, add a new one. Default is v4 (v3 adds about_game, v4 adds verdict_basis for the platform-policy rating). Tune only on the dev set, compare with `devset_eval.py compare` against a same-version repeat (the noise floor), max 3 iterations per version.
 - To try S3/S4 settings, reuse a finished run's Jev answers: POST /runs with backend "cached" and reuse_judgments_from=<run id> ($0). Never re-pay Jev for a policy experiment.
 - Cluster suspicion factors must be judged against a null (random same-size corpus subsets), never the corpus-wide rate: clusters are subsets of the corpus.
 - Every Jev run goes through the pre-flight (`/runs/preflight`); above `MAX_RUN_COST_USD` it needs `confirm_cost: true`. Keep `preflight.MEASURED_INTERCEPTS` updated when question text changes.

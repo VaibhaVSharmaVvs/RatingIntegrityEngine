@@ -130,8 +130,10 @@ class SteamFetcher:
                 state.language,
             ):
                 raise SystemExit(f"{path} is for a different window; delete it to restart.")
-            if saved.done and saved.end_reason != "past_window":
-                # Older pulls stopped on a (likely throttled) empty page; carry on from the cursor.
+            if saved.done and saved.end_reason is None:
+                # Legacy pulls recorded no end reason and could have stopped on a throttled
+                # empty page; carry on from the cursor. "exhausted" is only recorded after
+                # the full empty-page backoff, so it is trusted.
                 log.info("previous pull ended early (%s); continuing", saved.end_reason)
                 saved.done = False
             log.info("resuming at page %d (%d stored)", saved.pages, saved.stored)

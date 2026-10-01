@@ -47,11 +47,25 @@ class PolicyThresholds(Contract):
     low_confidence: float = 0.5
     low_confidence_min_questions: int = 2
     spam_exclude: float = 0.9
-    w_informativeness: float = 0.30
-    w_rating_support: float = 0.25
+    # Option B (owner decision 2026-10-01): brevity is not an integrity problem.
+    # Informativeness and rating support are shown as evidence quality but carry no
+    # weight: with the spec's 0.30 / 0.25, positive reviews (shorter) were
+    # downweighted ~2x as often as negative ones on every corpus (MEASUREMENTS M10).
+    w_informativeness: float = 0.0
+    w_rating_support: float = 0.0
     w_spam: float = 0.20
     w_templated: float = 0.15
+    # Legacy off-topic signal from `topic` (off_topic / joke_meme), used only when the
+    # question set has no `about_game` answer (v1, v2).
     w_offtopic: float = 0.10
+    # Not about the game (v3 `about_game`): reviews aimed only at the company,
+    # politics or other products. Heavy, per owner; Steam excludes such bombs.
+    w_offgame: float = 0.60
+    # The text contradicts its own verdict (P of the lowest rating_support level).
+    w_contradiction: float = 0.50
+    # Experience floor: low playtime only counts together with an off-game verdict
+    # (low playtime alone is often a valid early-quit / won't-launch review).
+    w_low_experience: float = 0.20
     reason_min_contribution: float = 0.05
     # Later copies of an earlier review (>= dup_min_tokens). Owner decision 2026-09-30:
     # DOWNWEIGHT by default (independent reviewers do repeat generic sentences); the
@@ -147,6 +161,15 @@ class SuspicionConfig(Contract):
     max_cluster_events: int = Field(25, ge=0)
 
 
+class PlatformPolicyConfig(Contract):
+    """Steam's review-score rules, emulated (app/decide/platform.py)."""
+
+    purchasers_only: bool = True  # Valve 2016: key activations don't count
+    # Valve 2019: a negative spike whose reviews are mostly off-topic is removed whole.
+    offtopic_window_share: float = Field(0.5, ge=0, le=1)
+    min_judged_negatives: int = Field(20, ge=1)
+
+
 class RunCreate(Contract):
     dataset_id: str
     backend: Backend = "mock"
@@ -163,7 +186,7 @@ class RunCreate(Contract):
     # Required when the pre-flight estimate exceeds MAX_RUN_COST_USD.
     confirm_cost: bool = False
     # v2 is the default after dev-set review (MEASUREMENTS M8); v1 stays for comparison.
-    question_set: Literal["v1", "v2"] = "v2"
+    question_set: Literal["v1", "v2", "v3", "v4"] = "v4"
     concurrency: int = Field(8, ge=1, le=64)
     weights: ActionWeights = ActionWeights()
     thresholds: PolicyThresholds = PolicyThresholds()
@@ -171,6 +194,7 @@ class RunCreate(Contract):
     bursts: BurstConfig = BurstConfig()
     clusters: ClusterConfig = ClusterConfig()
     suspicion: SuspicionConfig = SuspicionConfig()
+    platform: PlatformPolicyConfig = PlatformPolicyConfig()
     bootstrap_resamples: int = Field(2000, ge=100, le=10_000)
     seed: int = 7
     mock_latency_ms: float = Field(
@@ -223,6 +247,9 @@ class RatingEvent(Contract):
     ci: tuple[float, float] | None = None  # 95% bootstrap CI; null on live updates
     n_eff: float
     final: bool = False
+    # Platform-policy rating (Steam's rules emulated); null when not computable.
+    platform: float | None = None
+    platform_ci: tuple[float, float] | None = None
 
 
 class ClusterEvent(Contract):
@@ -240,6 +267,24 @@ class CorpusSummary(Contract):
     change_points: list[str] = []  # ISO dates where daily % positive shifts
     penalised_reviews: int = 0
     actions_changed_by_clusters: int = 0
+
+
+class ExcludedWindowOut(Contract):
+    start: datetime
+    end: datetime
+    negatives: int  # judged negative reviews in the window
+    offtopic_share: float  # of those, share with a verdict not based on playing
+    reviews_removed: int  # all reviews (both verdicts) removed, as Steam does
+
+
+class PlatformSummary(Contract):
+    rating: float | None
+    ci: tuple[float, float] | None
+    counted: int
+    key_activations_removed: int
+    windows: list[ExcludedWindowOut] = []
+    basis: str  # verdict_basis | topic_proxy | none
+    steam_label: str | None = None
 
 
 class RunSummary(Contract):
@@ -265,6 +310,7 @@ class RunSummary(Contract):
     latency_p95_ms: float | None = None
     embedding_cache_hit: bool | None = None
     corpus: CorpusSummary = CorpusSummary()
+    platform: PlatformSummary | None = None
 
 
 class DoneEvent(Contract):

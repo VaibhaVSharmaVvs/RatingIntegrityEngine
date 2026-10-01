@@ -22,7 +22,12 @@ PACKED_TOKEN_FACTOR = 0.59  # pack=5 used 59% of single-request tokens (M4b, 5 r
 
 # Measured per question set: same 200 dev states, v1 1,018.1 vs v2 1,264.1 tokens per
 # review (M8), so v2's question text costs 246 tokens more than v1's.
-MEASURED_INTERCEPTS = {"v1": TOKENS_INTERCEPT, "v2": TOKENS_INTERCEPT + 246.0}
+MEASURED_INTERCEPTS = {
+    "v1": TOKENS_INTERCEPT,
+    "v2": TOKENS_INTERCEPT + 246.0,
+    "v3": TOKENS_INTERCEPT + 246.0 + 131.0,  # dev set: 1,395.1 vs v2 1,264.1 per review (M10)
+    "v4": TOKENS_INTERCEPT + 246.0 + 131.0 + 133.0,  # dev set: 1,528.1 per review (M11)
+}
 
 
 def question_tokens(version: str) -> float:

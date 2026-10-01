@@ -561,3 +561,28 @@ def test_hour_index_runs_list_and_review_detail(client: TestClient) -> None:
     grid = np.frombuffer(client.get(f"/runs/{run_id}/grid").content, dtype=np.uint8)
     assert ActionCode[review["action"]] == grid[5]
     assert client.get(f"/runs/{run_id}/reviews/{N}").status_code == 404
+
+
+def test_live_rating_moves_through_time(client: TestClient) -> None:
+    """Raw and adjusted are over the reviews decided so far, so the ticker traces the
+    rating through time instead of showing the final raw rating from the start."""
+    texts = organic(600)
+    lines = ["text,liked,when"] + [
+        f'"{t}",{1 if i < 300 else 0},2024-05-{1 + i // 100:02d}T{i % 24:02d}:{i % 60:02d}:00Z'
+        for i, t in enumerate(texts)
+    ]
+    r = client.post(
+        "/datasets/csv",
+        files={"file": ("r.csv", ("\n".join(lines) + "\n").encode(), "text/csv")},
+        data={
+            "name": "drift",
+            "mapping": json.dumps({"text": "text", "rating": "liked", "timestamp": "when"}),
+        },
+    )
+    ds = r.json()["id"]
+    body = {"dataset_id": ds, "concurrency": 1, "bootstrap_resamples": 100}
+    run_id = client.post("/runs", json=body).json()["id"]
+    live = [e for k, e in read_sse(client, run_id) if k == "rating" and not e["final"]]
+    assert live[0]["raw"] == pytest.approx(1.0)  # only early (positive) reviews decided yet
+    assert live[-1]["raw"] == pytest.approx(0.5)
+    assert len({round(e["raw"], 3) for e in live}) > 1  # it moved
