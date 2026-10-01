@@ -1,4 +1,4 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { AlertTriangle, ShieldCheck, Upload } from 'lucide-react'
 import { useState, type ReactNode } from 'react'
 import { Button } from '@/components/ui/button'
@@ -45,6 +45,8 @@ export function UploadDatasetSheet({
   const [name, setName] = useState('')
   const [map, setMap] = useState({ text: '', rating: '', timestamp: '', author: '' })
   const [scale, setScale] = useState('')
+  const [tooBig, setTooBig] = useState('')
+  const limits = useQuery({ queryKey: ['upload-limits'], queryFn: () => source.getUploadLimits(), enabled: open, staleTime: Infinity })
 
   const inspect = useMutation({
     mutationFn: (f: File) => source.previewCsv(f),
@@ -105,15 +107,25 @@ export function UploadDatasetSheet({
             if (file && name.trim() && map.text && map.rating) upload.mutate()
           }}
         >
-          <Field label="File">
+          <Field
+            label="File"
+            hint={limits.data ? `CSV or .xlsx, up to ${limits.data.max_mb} MB and ${formatInt(limits.data.max_rows)} rows.` : undefined}
+          >
             <input
               type="file"
               accept=".csv,text/csv,.xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
               className="block w-full text-xs file:mr-3 file:h-8 file:rounded-md file:border file:border-input file:bg-background file:px-3 file:text-xs file:font-medium"
               onChange={(e) => {
                 const f = e.target.files?.[0] ?? null
-                setFile(f)
                 setPreview(null)
+                setTooBig('')
+                // Checked here as well as on the server, so an oversized file is never sent.
+                if (f && limits.data && f.size > limits.data.max_mb * 2 ** 20) {
+                  setFile(null)
+                  setTooBig(`${f.name} is ${(f.size / 2 ** 20).toFixed(1)} MB; the limit is ${limits.data.max_mb} MB.`)
+                  return
+                }
+                setFile(f)
                 if (f) {
                   setName((n) => n || f.name.replace(/\.(csv|xlsx)$/i, ''))
                   inspect.mutate(f)
@@ -121,6 +133,11 @@ export function UploadDatasetSheet({
               }}
             />
           </Field>
+          {tooBig && (
+            <p role="alert" className="text-xs text-destructive">
+              {tooBig}
+            </p>
+          )}
           {inspect.isPending && <div className="h-24 animate-pulse rounded-md bg-muted" />}
           {inspect.isError && <p className="text-xs text-destructive">{inspect.error.message}</p>}
           {preview && (

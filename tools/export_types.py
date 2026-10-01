@@ -31,6 +31,7 @@ EXPORTED = [
     models.ReviewPage,
     models.RunScores,
     models.CsvPreview,
+    models.UploadLimits,
     models.SteamFetchRequest,
     models.ReplayLine,
     models.StageEvent,

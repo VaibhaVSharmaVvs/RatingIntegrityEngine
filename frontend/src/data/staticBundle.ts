@@ -23,6 +23,7 @@ export class StaticBundle implements DataSource {
   getScores = notYet('getScores')
   exportUrl = () => null
   preflight = () => Promise.reject(new Error('The public demo plays pre-recorded runs only.'))
+  getUploadLimits = () => Promise.reject(new Error('The public demo cannot upload data.'))
   previewCsv = () => Promise.reject(new Error('The public demo cannot upload data.'))
   uploadCsv = () => Promise.reject(new Error('The public demo cannot upload data.'))
   getReplay = notYet('getReplay')

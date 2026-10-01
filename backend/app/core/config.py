@@ -21,6 +21,11 @@ class Settings(BaseSettings):
     author_hash_salt: str = "change-me"
 
     max_run_cost_usd: float = 2.0
+    # Upload caps (CSV / XLSX). Size is checked before parsing; an XLSX is a zip, so its
+    # decompressed size is capped too (a small file can expand enormously).
+    max_upload_mb: float = 50.0
+    max_upload_expanded_mb: float = 200.0
+    max_upload_rows: int = 200_000
     cors_origins: list[str] = ["http://localhost:5173"]
 
     @property

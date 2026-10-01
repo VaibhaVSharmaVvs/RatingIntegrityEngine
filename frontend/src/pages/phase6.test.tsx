@@ -107,3 +107,17 @@ it('accepts Excel workbooks as well as CSV', async () => {
   expect(input.accept).toContain('.xlsx')
   expect(input.accept).toContain('.csv')
 })
+
+it('states the upload limits and refuses an oversized file without sending it', async () => {
+  const source = renderAt('/')
+  fireEvent.click(screen.getByRole('button', { name: /Upload your own reviews/ }))
+  const sheet = await screen.findByRole('dialog')
+  expect(await within(sheet).findByText(/up to 50 MB and 200,000 rows/)).toBeTruthy()
+  const big = new File(['x'], 'huge.csv', { type: 'text/csv' })
+  Object.defineProperty(big, 'size', { value: 60 * 2 ** 20 })
+  const preview = vi.spyOn(source, 'previewCsv')
+  fireEvent.change(sheet.querySelector('input[type=file]')!, { target: { files: [big] } })
+  expect(await within(sheet).findByRole('alert')).toBeTruthy()
+  expect(within(sheet).getByText(/huge\.csv is 60\.0 MB; the limit is 50 MB/)).toBeTruthy()
+  expect(preview).not.toHaveBeenCalled()
+})

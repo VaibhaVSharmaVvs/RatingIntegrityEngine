@@ -3224,6 +3224,22 @@
       "title": "TimelineBucket",
       "type": "object"
     },
+    "UploadLimits": {
+      "properties": {
+        "max_mb": {
+          "type": "number"
+        },
+        "max_rows": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "max_mb",
+        "max_rows"
+      ],
+      "title": "UploadLimits",
+      "type": "object"
+    },
     "ActionCode": {
       "title": "ActionCode",
       "description": "Grid byte per review: 0=PENDING, 1=KEEP, 2=DOWNWEIGHT, 3=FLAG, 4=EXCLUDE",
@@ -3380,6 +3396,9 @@
     },
     "TimelineBucket": {
       "$ref": "#/$defs/TimelineBucket"
+    },
+    "UploadLimits": {
+      "$ref": "#/$defs/UploadLimits"
     },
     "ActionCode": {
       "$ref": "#/$defs/ActionCode"

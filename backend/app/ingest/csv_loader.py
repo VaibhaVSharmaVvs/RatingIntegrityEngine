@@ -6,6 +6,7 @@ detected from the bytes (XLSX is a zip archive), not from the file name.
 
 import io
 import json
+import zipfile
 from typing import Any
 
 import polars as pl
@@ -33,21 +34,60 @@ class ColumnMapping(BaseModel):
 
 
 _ZIP = b"PK"
+_CHUNK = 1 << 20
+
+
+class UploadTooLarge(ValueError):
+    """The file is over a size, decompressed-size or row cap (HTTP 413)."""
+
+
+class Limits(BaseModel):
+    max_rows: int | None = None
+    max_expanded_bytes: int | None = None
 
 
 def is_xlsx(data: bytes) -> bool:
     return data[:4] == _ZIP
 
 
-def read_table(data: bytes) -> pl.DataFrame:
-    """CSV, or the first sheet of an XLSX workbook."""
+def _check_expanded(data: bytes, cap: int) -> None:
+    """Decompress every workbook part in chunks and stop at `cap` bytes. The sizes an
+    archive declares can be forged, so they are not trusted."""
+    total = 0
+    try:
+        with zipfile.ZipFile(io.BytesIO(data)) as zf:
+            for info in zf.infolist():
+                with zf.open(info) as part:
+                    while chunk := part.read(_CHUNK):
+                        total += len(chunk)
+                        if total > cap:
+                            raise UploadTooLarge(
+                                f"the workbook expands to more than {cap // 2**20} MB when opened"
+                            )
+    except zipfile.BadZipFile as exc:
+        raise ValueError(f"not a valid XLSX workbook: {exc}") from exc
+
+
+def read_table(data: bytes, limits: Limits | None = None) -> pl.DataFrame:
+    """CSV, or the first sheet of an XLSX workbook, within the upload caps."""
+    limits = limits or Limits()
     if is_xlsx(data):
-        return pl.read_excel(io.BytesIO(data), sheet_id=1, infer_schema_length=10_000)
-    return pl.read_csv(io.BytesIO(data), infer_schema_length=10_000, try_parse_dates=False)
+        if limits.max_expanded_bytes:
+            _check_expanded(data, limits.max_expanded_bytes)
+        df = pl.read_excel(io.BytesIO(data), sheet_id=1, infer_schema_length=10_000)
+    else:
+        # one row past the cap is enough to know it is over
+        n = limits.max_rows + 1 if limits.max_rows else None
+        df = pl.read_csv(
+            io.BytesIO(data), infer_schema_length=10_000, try_parse_dates=False, n_rows=n
+        )
+    if limits.max_rows and df.height > limits.max_rows:
+        raise UploadTooLarge(f"over the {limits.max_rows:,}-row upload limit")
+    return df
 
 
-def preview(data: bytes) -> dict[str, Any]:
-    df = read_table(data)
+def preview(data: bytes, limits: Limits | None = None) -> dict[str, Any]:
+    df = read_table(data, limits)
     guesses: dict[str, str] = {}
     for col in df.columns:
         try:
@@ -80,9 +120,13 @@ def _parse_timestamp(col: pl.Series) -> pl.Series:
 
 
 def load(
-    data: bytes, mapping: ColumnMapping, salt: str, rating_scale: RatingScale | None = None
+    data: bytes,
+    mapping: ColumnMapping,
+    salt: str,
+    rating_scale: RatingScale | None = None,
+    limits: Limits | None = None,
 ) -> tuple[pl.DataFrame, RatingScale]:
-    df = read_table(data)
+    df = read_table(data, limits)
     used = [mapping.text, mapping.rating, mapping.timestamp, mapping.author, mapping.ext_id]
     missing = [c for c in [*used, *mapping.extras] if c and c not in df.columns]
     if missing:

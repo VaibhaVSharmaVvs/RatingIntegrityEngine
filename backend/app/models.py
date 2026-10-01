@@ -520,6 +520,11 @@ class ClusterDetail(ClusterOut):
     member_ids: list[int]
 
 
+class UploadLimits(Contract):
+    max_mb: float
+    max_rows: int
+
+
 class CsvPreview(Contract):
     columns: list[str]
     n_rows: int
