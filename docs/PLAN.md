@@ -247,6 +247,27 @@ Deviations and findings:
 
 **Exit criteria:** a 50K replay renders at ≥ 50 fps on a mid laptop (Chrome performance panel); hover tooltip and click-to-select work; Vitest covers the store reducers and the grid colour mapping.
 
+**✅ Delivered (2026-10-01, branch `phase-5-frontend`).** 52 frontend tests, 143 backend tests. Measured in MEASUREMENTS M10:
+- 50K HD2 replay at **60 fps** (frame p95 16.9 ms, no frame > 20 ms); grid paint p95 0.4 ms, worst 2.4 ms (spec < 5 ms).
+- Finished runs **auto-play**: the grid fills in 30 s (10 s and real-time options, Skip to end), cell by cell, with counters and the rating moving in step.
+- Hover tooltip (verdict, 80-char snippet, hour), click-to-select, arrow-key navigation, Escape to clear. Hovering a timeline hour lights its contiguous run of cells in the grid. Hovering or pinning a cluster card dims every non-member.
+- Vitest covers the store reducers, the grid colour mapping (spec hex, dimming, fade, reduced-motion snap), layout and hit-testing, timeline binning, replay pacing, the per-frame batcher and the SSE client (closes on `done`, resets on reconnect).
+
+Deviations and findings:
+| Area | Plan | Built | Why |
+|---|---|---|---|
+| API | Phase 1 contract | Added `GET /runs`, `GET /datasets/{id}/hours` (hourly buckets as contiguous grid ranges) and a minimal `GET /runs/{id}/reviews/{rid}` | The timeline strip needs hours; the tooltip needs text; nothing listed runs. Phase 6 extends the review endpoint with judgments |
+| Palette | Spec hex in both themes | Spec hex; the grid and timeline sit on a dark **instrument surface in both themes** | Validator: in light mode teal and amber are < 3:1 on white. Darker steps of the same hues collapse amber into vermilion for deuteranopes (ΔE 0.2) |
+| Fixtures | Recorded SSE fixtures from Phase 1 | Synthetic recorded run (`src/test/fixtures.ts`) + `FakeSource`; real replays under `data/` for manual runs | `data/` is gitignored; the synthetic fixture has exact ground truth |
+| Replay | Phase 9 player | Finished runs auto-play from `/runs/{id}/replay`: **fill in 30 s** (or 10 s / real time), idle stages capped at 1.2 s, Skip to end; `?play=end` shows the final state | Owner feedback: the fill was too fast to watch. Scrub and pause stay in Phase 9 |
+| Reveal | Cells appear per SSE batch | **Cell drip**: each batch is revealed cell by cell over its window; following events (counters, rating) wait for it; live streams use the arrival rate, and backlogs catch up | Batches of 25–250 cells popped in as blocks |
+| Fade | 150 ms from pending | **Flash, then settle over 320 ms** (ease-out); rating number tweens | A 150 ms fade on a 4 px cell read as an instant switch. Reduced motion still snaps |
+| Heuristic live rating | — | `pipeline.py` fills the grid per emitted chunk | Live ratings were already final on the first event (M10) |
+| Starting runs | Phase 6 drawer | Runs page can start **$0 runs only** (heuristic, mock) | Exercises the live SSE path; Jev runs wait for the pre-flight drawer |
+| Wireframes | Low-fi Figma for screens 4–7 before styling | **Not done** | Figma was not connected in this session. Owner decision: wireframe retroactively or waive for screen 4 |
+
+Open items: the color-mode toggle (informativeness/topic/cluster) and the "Compare backends" view are not built. The runs page hint text contains the string `8001`, which a Phase 9 `dist/` grep should allow or which should be dropped from the static build.
+
 ---
 
 ## Phase 6: Drill-downs, results and export → **M1 demoable MVP**

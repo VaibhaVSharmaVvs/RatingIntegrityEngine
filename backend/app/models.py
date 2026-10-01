@@ -329,6 +329,15 @@ class DatasetDetail(DatasetOut):
     timeline: list[TimelineBucket]
 
 
+class HourIndex(Contract):
+    """Hourly buckets in grid order: reviews `starts[i] .. starts[i] + counts[i] - 1` fall in
+    `hours[i]`. Grid indices are chronological, so each bucket is one contiguous run."""
+
+    hours: list[str | None]  # ISO hour, UTC; None for reviews without a timestamp
+    starts: list[int]
+    counts: list[int]
+
+
 class RunOut(Contract):
     id: str
     dataset_id: str
@@ -374,6 +383,20 @@ class ClusterReview(Contract):
     rating_norm: float | None
     created_at: datetime | None
     action: str | None
+    reasons: list[str]
+
+
+class ReviewDetail(Contract):
+    """`GET /runs/{id}/reviews/{rid}`. Decision fields are None while the run is still deciding."""
+
+    review_id: int
+    text: str
+    rating_raw: float | None
+    rating_norm: float | None
+    created_at: datetime | None
+    action: str | None
+    weight: float | None
+    integrity_score: float | None
     reasons: list[str]
 
 

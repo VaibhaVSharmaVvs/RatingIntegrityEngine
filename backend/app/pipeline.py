@@ -373,13 +373,17 @@ class Pipeline:
             )
             d = self._with_copy_rule(rid, d)
             self.decisions[rid] = d
-            self.grid[rid] = d.action
             idx.append(rid)
             act.append(int(d.action))
+        # Fill the grid chunk by chunk as it is emitted, so each live rating covers only
+        # the reviews decided so far (as with System One), not the final answer up front.
         for start in range(0, len(idx), EMIT_EVERY_N):
-            self._emit_progress(
-                idx[start : start + EMIT_EVERY_N], act[start : start + EMIT_EVERY_N]
+            chunk_idx, chunk_act = (
+                idx[start : start + EMIT_EVERY_N],
+                act[start : start + EMIT_EVERY_N],
             )
+            self.grid[chunk_idx] = chunk_act
+            self._emit_progress(chunk_idx, chunk_act)
 
     def _with_copy_rule(self, rid: int, d: Decision) -> Decision:
         if rid in self.later_copy:

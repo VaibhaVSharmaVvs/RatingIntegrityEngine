@@ -11,7 +11,7 @@ from app.ingest import csv_loader
 from app.ingest.steam_fetcher import PullState, SteamFetcher, parse_date
 from app.ingest.steam_import import import_pull
 from app.ingest.store import create_dataset, insert_reviews, set_dataset_status
-from app.models import CsvPreview, DatasetDetail, DatasetOut, SteamFetchRequest
+from app.models import CsvPreview, DatasetDetail, DatasetOut, HourIndex, SteamFetchRequest
 
 router = APIRouter(prefix="/datasets", tags=["datasets"])
 log = logging.getLogger("datasets")
@@ -58,6 +58,23 @@ def get_dataset(dataset_id: str, state: AppState = Depends(get_state)) -> Datase
         **ds.model_dump(),
         histogram=[{"rating": r, "count": c} for r, c in hist],
         timeline=[{"day": d.isoformat(), "count": c, "mean_rating": m} for d, c, m in timeline],
+    )
+
+
+@router.get("/{dataset_id}/hours", response_model=HourIndex)
+def get_hours(dataset_id: str, state: AppState = Depends(get_state)) -> HourIndex:
+    """Hourly buckets in grid order, for the live timeline strip."""
+    fetch_dataset(state, dataset_id)
+    with state.db.cursor() as cur:
+        rows = cur.execute(
+            "SELECT date_trunc('hour', created_at) AS hour, min(id), count(*) FROM reviews "
+            "WHERE dataset_id = ? GROUP BY 1 ORDER BY 2",
+            [dataset_id],
+        ).fetchall()
+    return HourIndex(
+        hours=[h.isoformat() if h is not None else None for h, _, _ in rows],
+        starts=[s for _, s, _ in rows],
+        counts=[c for _, _, c in rows],
     )
 
 

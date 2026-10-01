@@ -15,7 +15,10 @@ export interface RIEAPI {
   "BurstConfig-Output"?: BurstConfig1;
   "ClusterConfig-Input"?: ClusterConfig;
   "ClusterConfig-Output"?: ClusterConfig1;
+  ClusterDetail?: ClusterDetail;
   ClusterEvent?: ClusterEvent;
+  ClusterOut?: ClusterOut;
+  ClusterReview?: ClusterReview;
   CorpusSummary?: CorpusSummary;
   CountersEvent?: CountersEvent;
   CsvPreview?: CsvPreview;
@@ -27,11 +30,14 @@ export interface RIEAPI {
   "FeatureConfig-Output"?: FeatureConfig1;
   FeaturesDoneEvent?: FeaturesDoneEvent;
   HistogramBin?: HistogramBin;
+  HourIndex?: HourIndex;
   JudgedEvent?: JudgedEvent;
   "PolicyThresholds-Input"?: PolicyThresholds;
   "PolicyThresholds-Output"?: PolicyThresholds1;
+  PreflightOut?: PreflightOut;
   RatingEvent?: RatingEvent;
   ReplayLine?: ReplayLine;
+  ReviewDetail?: ReviewDetail;
   "RunCreate-Input"?: RunCreate;
   "RunCreate-Output"?: RunCreate1;
   RunOut?: RunOut;
@@ -135,6 +141,46 @@ export interface ClusterConfig1 {
 }
 /**
  * This interface was referenced by `RIEAPI`'s JSON-Schema
+ * via the `definition` "ClusterDetail".
+ */
+export interface ClusterDetail {
+  cluster_id: number;
+  kind: "semantic" | "duplicate" | "burst";
+  size: number;
+  t_start: string | null;
+  t_end: string | null;
+  suspicion: number;
+  factors: {
+    [k: string]: number | null;
+  };
+  caption: string;
+  top_phrases: string[];
+  window: {
+    [k: string]: unknown;
+  };
+  hourly: {
+    [k: string]: unknown;
+  }[];
+  actions: {
+    [k: string]: number;
+  };
+  sample: ClusterReview[];
+  member_ids: number[];
+}
+/**
+ * This interface was referenced by `RIEAPI`'s JSON-Schema
+ * via the `definition` "ClusterReview".
+ */
+export interface ClusterReview {
+  review_id: number;
+  text: string;
+  rating_norm: number | null;
+  created_at: string | null;
+  action: string | null;
+  reasons: string[];
+}
+/**
+ * This interface was referenced by `RIEAPI`'s JSON-Schema
  * via the `definition` "ClusterEvent".
  */
 export interface ClusterEvent {
@@ -144,6 +190,26 @@ export interface ClusterEvent {
   size: number;
   suspicion: number;
   caption: string;
+}
+/**
+ * This interface was referenced by `RIEAPI`'s JSON-Schema
+ * via the `definition` "ClusterOut".
+ */
+export interface ClusterOut {
+  cluster_id: number;
+  kind: "semantic" | "duplicate" | "burst";
+  size: number;
+  t_start: string | null;
+  t_end: string | null;
+  suspicion: number;
+  factors: {
+    [k: string]: number | null;
+  };
+  caption: string;
+  top_phrases: string[];
+  window: {
+    [k: string]: unknown;
+  };
 }
 /**
  * This interface was referenced by `RIEAPI`'s JSON-Schema
@@ -353,6 +419,18 @@ export interface FeaturesDoneEvent {
   };
 }
 /**
+ * Hourly buckets in grid order: reviews `starts[i] .. starts[i] + counts[i] - 1` fall in
+ * `hours[i]`. Grid indices are chronological, so each bucket is one contiguous run.
+ *
+ * This interface was referenced by `RIEAPI`'s JSON-Schema
+ * via the `definition` "HourIndex".
+ */
+export interface HourIndex {
+  hours: (string | null)[];
+  starts: number[];
+  counts: number[];
+}
+/**
  * Per-review actions. Decoding: indices = Uint32Array (little-endian) from base64
  * `indices_b64`; actions = Uint8Array from `actions_b64`; same length. A review can
  * appear again later (S4 cluster rules update it): the last update wins.
@@ -415,6 +493,20 @@ export interface PolicyThresholds1 {
 }
 /**
  * This interface was referenced by `RIEAPI`'s JSON-Schema
+ * via the `definition` "PreflightOut".
+ */
+export interface PreflightOut {
+  backend: string;
+  reviews: number;
+  calls: number;
+  est_input_tokens: number;
+  est_cost_usd: number;
+  est_seconds: number;
+  limit_usd: number;
+  needs_confirmation: boolean;
+}
+/**
+ * This interface was referenced by `RIEAPI`'s JSON-Schema
  * via the `definition` "RatingEvent".
  */
 export interface RatingEvent {
@@ -444,6 +536,23 @@ export interface StageEvent {
   type: "stage";
   name: "ingest" | "features" | "systemone" | "corpus" | "decide";
   status: "started" | "done" | "skipped";
+}
+/**
+ * `GET /runs/{id}/reviews/{rid}`. Decision fields are None while the run is still deciding.
+ *
+ * This interface was referenced by `RIEAPI`'s JSON-Schema
+ * via the `definition` "ReviewDetail".
+ */
+export interface ReviewDetail {
+  review_id: number;
+  text: string;
+  rating_raw: number | null;
+  rating_norm: number | null;
+  created_at: string | null;
+  action: string | null;
+  weight: number | null;
+  integrity_score: number | null;
+  reasons: string[];
 }
 /**
  * This interface was referenced by `RIEAPI`'s JSON-Schema

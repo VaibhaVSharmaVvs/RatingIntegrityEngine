@@ -429,3 +429,26 @@ Jev spend for Phase 4: HD2 5K $0.252 + CS2 5K $0.264 + Gollum $0.016 = **$0.53**
 - UMAP (cosine, 10-D, seeded) + HDBSCAN on 50,006 × 384: **3.3 min cold** (UMAP 154 s + HDBSCAN 45 s), **54 s with UMAP cached**. 481 clusters, 56% of reviews clustered, identical clusters on rerun. **Exit criterion (< 10 min) ✅**
 - Full 50K run (heuristic backend, warm caches): **48 s end to end**. S1 8.4 s, S3 38 s (HDBSCAN 20.5 s, top phrases 3.2 s, bursts 0.4 s).
 - Embedding the 50K cold took 780 s, contended with test runs (cf. M5: 433–518 s idle).
+
+## M10. Phase 5: live analysis screen (2026-10-01)
+
+Chrome 154, dev laptop (12 logical cores), DPR 1.25, grid canvas 1412 × 568 device px. Dev overlay `?fps=1` records every rAF interval and the grid's paint + composite time per frame (`window.__rieFrames`). Single sessions; CPU timings vary about ±35% on this laptop, so treat them as ranges.
+
+| Replay | Frames | Frame interval p50 / p95 | Frames > 20 ms | Grid paint p50 / p95 / max |
+|---|---|---|---|---|
+| HD2 50K heuristic (`run_323564cc8232`), 1×, per-cell RGB blend | 990 | 16.7 / 17.0 ms | 6 (screenshots taken mid-run) | 4.5 / 11.0 / 11.0 ms (12 paint frames) |
+| **same, fade lookup table** | 418 | **16.7 / 16.9 ms (59.9 fps)** | 1 (33 ms) | **1.3 / 6.0 / 6.1 ms** (38 paint frames) |
+| HD2 5K Jev (`run_f5c957411488`), 16×, fade lookup table | — | 60 fps overlay, p95 16.9 ms | — | max ≤ 1.7 ms |
+| Mock run, live SSE (5K load test), fade lookup table | — | 60 fps overlay, p95 16.8 ms | — | max ≤ 1.0 ms |
+
+- **Exit criterion (≥ 50 fps on a 50K replay) ✅** at ~60 fps.
+- **Spec target "redraw < 5 ms at 50K": met at p50, missed at the worst frame (6.1 ms).** The worst case is every one of the 50K cells fading in the same frame. That happens because the heuristic run emits all 50K decisions at once. Jev-paced runs paint ≤ 1.7 ms. The fade lookup table (25 action pairs × 16 steps) halved the worst frame from 11 ms. Node microbench (Vitest): a whole-grid 50K fade paints in < 5 ms median.
+- **Reveal pacing (owner feedback 2026-10-01: "the cell filling is too fast").** Finished runs now auto-play with the grid filling in 30 s. Each batch drips in cell by cell. Counters and rating are released only once their batch is on screen. Cells flash and settle over 320 ms.
+
+| Replay (default 30 s fill, flash fade) | Fill time | Frame interval p95 | Frames > 20 ms | Grid paint p50 / p95 / max |
+|---|---|---|---|---|
+| HD2 5K Jev (`run_f5c957411488`) | ~30 s (pending 4,999 → 0 at ~170/s); corpus stage 87 s → ~2 s | 16.9 ms (60.0 fps) | — | — / 0.5 / 1.6 ms |
+| HD2 50K heuristic (`run_323564cc8232`) | ~31 s (~1,680/s) | 16.9 ms (60.0 fps, 2,218 frames) | 0 | 0.2 / 0.4 / **2.4 ms** (spec < 5 ms ✅) |
+
+Dripping removed the whole-grid fade frames, so the worst paint went from 6.1 to 2.4 ms. **Heuristic recordings show a flat live rating** (75.4% from the first event). `_decide_heuristic` filled the whole grid before emitting, so every live rating already covered all 50K decisions. Fixed in `pipeline.py` (grid filled per emitted chunk; test `test_heuristic_live_rating_covers_only_reviews_decided_so_far`). Runs recorded before the fix keep the flat rating, so re-run to get a moving one ($0, ~1 min).
+- Rendering design: one pixel per review in an offscreen `ImageData`, scaled up crisp (`imageSmoothingEnabled = false`) with a pre-drawn gap overlay. Only changed and still-fading cells are repainted. SSE events are batched into one store update per animation frame.

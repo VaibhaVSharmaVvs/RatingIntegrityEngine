@@ -2,12 +2,22 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 @import "@fontsource-variable/geist";
+@import "@fontsource-variable/geist-mono";
 
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
     --font-heading: var(--font-sans);
     --font-sans: 'Geist Variable', sans-serif;
+    --font-mono: 'Geist Mono Variable', ui-monospace, monospace;
+    --color-instrument: var(--instrument);
+    --color-instrument-line: var(--instrument-line);
+    --color-instrument-ink: var(--instrument-ink);
+    --color-action-pending: var(--action-pending);
+    --color-action-keep: var(--action-keep);
+    --color-action-downweight: var(--action-downweight);
+    --color-action-flag: var(--action-flag);
+    --color-action-exclude: var(--action-exclude);
     --color-sidebar-ring: var(--sidebar-ring);
     --color-sidebar-border: var(--sidebar-border);
     --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -49,24 +59,24 @@
 }
 
 :root {
-    --background: oklch(1 0 0);
-    --foreground: oklch(0.145 0 0);
+    --background: oklch(0.985 0.003 255);
+    --foreground: oklch(0.2 0.012 255);
     --card: oklch(1 0 0);
-    --card-foreground: oklch(0.145 0 0);
+    --card-foreground: oklch(0.2 0.012 255);
     --popover: oklch(1 0 0);
-    --popover-foreground: oklch(0.145 0 0);
-    --primary: oklch(0.205 0 0);
-    --primary-foreground: oklch(0.985 0 0);
-    --secondary: oklch(0.97 0 0);
-    --secondary-foreground: oklch(0.205 0 0);
-    --muted: oklch(0.97 0 0);
-    --muted-foreground: oklch(0.556 0 0);
-    --accent: oklch(0.97 0 0);
-    --accent-foreground: oklch(0.205 0 0);
+    --popover-foreground: oklch(0.2 0.012 255);
+    --primary: oklch(0.25 0.015 255);
+    --primary-foreground: oklch(0.985 0.003 255);
+    --secondary: oklch(0.955 0.005 255);
+    --secondary-foreground: oklch(0.25 0.015 255);
+    --muted: oklch(0.955 0.005 255);
+    --muted-foreground: oklch(0.5 0.014 255);
+    --accent: oklch(0.955 0.005 255);
+    --accent-foreground: oklch(0.25 0.015 255);
     --destructive: oklch(0.577 0.245 27.325);
-    --border: oklch(0.922 0 0);
-    --input: oklch(0.922 0 0);
-    --ring: oklch(0.708 0 0);
+    --border: oklch(0.2 0.02 255 / 11%);
+    --input: oklch(0.2 0.02 255 / 14%);
+    --ring: oklch(0.6 0.02 255);
     --chart-1: oklch(0.87 0 0);
     --chart-2: oklch(0.556 0 0);
     --chart-3: oklch(0.439 0 0);
@@ -84,24 +94,24 @@
 }
 
 .dark {
-    --background: oklch(0.145 0 0);
-    --foreground: oklch(0.985 0 0);
-    --card: oklch(0.205 0 0);
-    --card-foreground: oklch(0.985 0 0);
-    --popover: oklch(0.205 0 0);
-    --popover-foreground: oklch(0.985 0 0);
-    --primary: oklch(0.922 0 0);
-    --primary-foreground: oklch(0.205 0 0);
-    --secondary: oklch(0.269 0 0);
-    --secondary-foreground: oklch(0.985 0 0);
-    --muted: oklch(0.269 0 0);
-    --muted-foreground: oklch(0.708 0 0);
-    --accent: oklch(0.269 0 0);
-    --accent-foreground: oklch(0.985 0 0);
+    --background: oklch(0.165 0.008 255);
+    --foreground: oklch(0.95 0.005 255);
+    --card: oklch(0.19 0.009 255);
+    --card-foreground: oklch(0.95 0.005 255);
+    --popover: oklch(0.225 0.01 255);
+    --popover-foreground: oklch(0.95 0.005 255);
+    --primary: oklch(0.92 0.006 255);
+    --primary-foreground: oklch(0.2 0.012 255);
+    --secondary: oklch(0.24 0.01 255);
+    --secondary-foreground: oklch(0.95 0.005 255);
+    --muted: oklch(0.24 0.01 255);
+    --muted-foreground: oklch(0.68 0.012 255);
+    --accent: oklch(0.26 0.011 255);
+    --accent-foreground: oklch(0.95 0.005 255);
     --destructive: oklch(0.704 0.191 22.216);
-    --border: oklch(1 0 0 / 10%);
-    --input: oklch(1 0 0 / 15%);
-    --ring: oklch(0.556 0 0);
+    --border: oklch(1 0 0 / 8%);
+    --input: oklch(1 0 0 / 12%);
+    --ring: oklch(0.6 0.015 255);
     --chart-1: oklch(0.87 0 0);
     --chart-2: oklch(0.556 0 0);
     --chart-3: oklch(0.439 0 0);
@@ -128,11 +138,41 @@
     @apply font-sans;
     }
 }
-/* Integrity action palette (colour-blind safe, MVP_SPEC §8.3). */
+/* Integrity action palette (colour-blind safe, MVP_SPEC §8.3; validated in src/lib/palette.ts).
+   The instrument surface (grid, timeline) stays dark in both themes: that is the surface
+   the palette passes CVD and contrast checks on. Hex only: the canvas parses these. */
 :root {
   --action-keep: #2ba8a0;
   --action-downweight: #e0a030;
   --action-flag: #8b6cef;
   --action-exclude: #e4572e;
-  --action-pending: #6b7280;
+  --action-pending: #3a414c;
+  --instrument: #0f1217;
+  --instrument-line: #232a33;
+  --instrument-ink: #8d97a5;
+}
+
+@layer base {
+  html {
+    -webkit-font-smoothing: antialiased;
+    color-scheme: light;
+  }
+  html.dark {
+    color-scheme: dark;
+  }
+  h1, h2, h3 {
+    text-wrap: balance;
+  }
+}
+
+@utility num {
+  font-variant-numeric: tabular-nums;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

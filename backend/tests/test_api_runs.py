@@ -10,6 +10,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.main import create_app
+from app.models import ActionCode
 from app.systemone.mock import MockBackend
 from tests.conftest import make_settings
 from tests.fakes import HashingEmbedder
@@ -341,6 +342,23 @@ def test_heuristic_backend_runs_without_system_one(client: TestClient) -> None:
     assert all(actions[i] == "KEEP" for i in range(30))
 
 
+def test_heuristic_live_rating_covers_only_reviews_decided_so_far(client: TestClient) -> None:
+    # 3 chunks of 250; low-information "meh" (liked=1, odd rows) only in the last chunk.
+    texts = organic(750)
+    for i in range(501, 750, 2):
+        texts[i] = "meh"
+    ds = upload_texts(client, texts)
+    run_id = client.post(
+        "/runs", json={"dataset_id": ds, "backend": "heuristic", "bootstrap_resamples": 100}
+    ).json()["id"]
+    live = [e for k, e in read_sse(client, run_id) if k == "rating" and not e["final"]]
+    assert len(live) == 3
+    # Before the last chunk is emitted, its downweights must not show in the rating.
+    assert live[0]["adjusted"] == pytest.approx(live[0]["raw"])
+    assert live[1]["adjusted"] == pytest.approx(live[1]["raw"])
+    assert live[2]["adjusted"] < live[2]["raw"]
+
+
 def test_jev_run_through_the_real_client(tmp_path: Path) -> None:
     from tests.fake_systemone import FakeSystemOne
 
@@ -517,3 +535,29 @@ def test_cached_backend_replays_answers_for_free(client: TestClient) -> None:
     )
     bad = client.post("/runs", json={"dataset_id": ds, "backend": "cached"})
     assert bad.status_code == 422
+
+
+def test_hour_index_runs_list_and_review_detail(client: TestClient) -> None:
+    ds = upload(client)
+    hours = client.get(f"/datasets/{ds}/hours").json()
+    assert sum(hours["counts"]) == N
+    # Buckets tile the grid in order: each starts where the previous one ended.
+    ends = [s + c for s, c in zip(hours["starts"], hours["counts"], strict=True)]
+    assert hours["starts"] == [0, *ends[:-1]]
+    assert hours["hours"] == sorted(hours["hours"])
+    assert client.get("/datasets/nope/hours").status_code == 404
+
+    run_id = client.post("/runs", json={"dataset_id": ds, "bootstrap_resamples": 100}).json()["id"]
+    read_sse(client, run_id)
+    runs = client.get("/runs").json()
+    assert [r["id"] for r in runs] == [run_id]
+    assert client.get("/runs", params={"dataset_id": "other"}).json() == []
+
+    review = client.get(f"/runs/{run_id}/reviews/5").json()
+    assert review["review_id"] == 5
+    assert review["text"].startswith("review number")
+    assert review["action"] in {"KEEP", "DOWNWEIGHT", "FLAG", "EXCLUDE"}
+    assert 0 <= review["weight"] <= 1
+    grid = np.frombuffer(client.get(f"/runs/{run_id}/grid").content, dtype=np.uint8)
+    assert ActionCode[review["action"]] == grid[5]
+    assert client.get(f"/runs/{run_id}/reviews/{N}").status_code == 404
