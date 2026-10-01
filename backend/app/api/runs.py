@@ -15,6 +15,7 @@ from app.models import (
     ClusterOut,
     ClusterReview,
     PreflightOut,
+    ReviewDetail,
     RunCreate,
     RunOut,
     RunSummary,
@@ -171,6 +172,23 @@ async def create_run(req: RunCreate, state: AppState = Depends(get_state)) -> Ru
     return _fetch_run(state, run_id)
 
 
+@router.get("", response_model=list[RunOut])
+def list_runs(
+    dataset_id: str | None = None, limit: int = 50, state: AppState = Depends(get_state)
+) -> list[RunOut]:
+    """Most recent runs first."""
+    sql = "SELECT id FROM runs"
+    params: list = []
+    if dataset_id:
+        sql += " WHERE dataset_id = ?"
+        params.append(dataset_id)
+    sql += " ORDER BY started_at DESC NULLS FIRST, id LIMIT ?"
+    params.append(min(max(limit, 1), 500))
+    with state.db.cursor() as cur:
+        ids = [r[0] for r in cur.execute(sql, params).fetchall()]
+    return [_fetch_run(state, i) for i in ids]
+
+
 @router.get("/{run_id}", response_model=RunOut)
 def get_run(run_id: str, state: AppState = Depends(get_state)) -> RunOut:
     return _fetch_run(state, run_id)
@@ -209,6 +227,32 @@ def run_grid(run_id: str, state: AppState = Depends(get_state)) -> Response:
     for rid, action in rows:
         grid[rid] = ActionCode[action]
     return Response(grid.tobytes(), media_type="application/octet-stream")
+
+
+@router.get("/{run_id}/reviews/{review_id}", response_model=ReviewDetail)
+def get_review(run_id: str, review_id: int, state: AppState = Depends(get_state)) -> ReviewDetail:
+    run = _fetch_run(state, run_id)
+    with state.db.cursor() as cur:
+        row = cur.execute(
+            "SELECT r.text, r.rating_raw, r.rating_norm, r.created_at, d.action, d.weight, "
+            "d.integrity_score, d.reasons FROM reviews r LEFT JOIN decisions d "
+            "ON d.run_id = ? AND d.review_id = r.id WHERE r.dataset_id = ? AND r.id = ?",
+            [run_id, run.dataset_id, review_id],
+        ).fetchone()
+    if row is None:
+        raise HTTPException(404, f"review {review_id} not found")
+    text, raw, norm, created, action, weight, score, reasons = row
+    return ReviewDetail(
+        review_id=review_id,
+        text=text,
+        rating_raw=raw,
+        rating_norm=norm,
+        created_at=created,
+        action=action,
+        weight=weight,
+        integrity_score=score,
+        reasons=json.loads(reasons or "[]"),
+    )
 
 
 @router.get("/{run_id}/replay")

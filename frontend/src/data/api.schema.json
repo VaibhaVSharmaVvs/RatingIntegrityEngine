@@ -301,6 +301,118 @@
       "title": "ClusterConfig",
       "type": "object"
     },
+    "ClusterDetail": {
+      "properties": {
+        "cluster_id": {
+          "type": "integer"
+        },
+        "kind": {
+          "enum": [
+            "semantic",
+            "duplicate",
+            "burst"
+          ],
+          "type": "string"
+        },
+        "size": {
+          "type": "integer"
+        },
+        "t_start": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "t_end": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "suspicion": {
+          "type": "number"
+        },
+        "factors": {
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "type": "object"
+        },
+        "caption": {
+          "type": "string"
+        },
+        "top_phrases": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "window": {
+          "additionalProperties": true,
+          "type": "object"
+        },
+        "hourly": {
+          "items": {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "actions": {
+          "additionalProperties": {
+            "type": "integer"
+          },
+          "type": "object"
+        },
+        "sample": {
+          "items": {
+            "$ref": "#/$defs/ClusterReview"
+          },
+          "type": "array"
+        },
+        "member_ids": {
+          "items": {
+            "type": "integer"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "cluster_id",
+        "kind",
+        "size",
+        "t_start",
+        "t_end",
+        "suspicion",
+        "factors",
+        "caption",
+        "top_phrases",
+        "window",
+        "hourly",
+        "actions",
+        "sample",
+        "member_ids"
+      ],
+      "title": "ClusterDetail",
+      "type": "object"
+    },
     "ClusterEvent": {
       "properties": {
         "type": {
@@ -338,6 +450,146 @@
         "caption"
       ],
       "title": "ClusterEvent",
+      "type": "object"
+    },
+    "ClusterOut": {
+      "properties": {
+        "cluster_id": {
+          "type": "integer"
+        },
+        "kind": {
+          "enum": [
+            "semantic",
+            "duplicate",
+            "burst"
+          ],
+          "type": "string"
+        },
+        "size": {
+          "type": "integer"
+        },
+        "t_start": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "t_end": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "suspicion": {
+          "type": "number"
+        },
+        "factors": {
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "type": "object"
+        },
+        "caption": {
+          "type": "string"
+        },
+        "top_phrases": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "window": {
+          "additionalProperties": true,
+          "type": "object"
+        }
+      },
+      "required": [
+        "cluster_id",
+        "kind",
+        "size",
+        "t_start",
+        "t_end",
+        "suspicion",
+        "factors",
+        "caption",
+        "top_phrases",
+        "window"
+      ],
+      "title": "ClusterOut",
+      "type": "object"
+    },
+    "ClusterReview": {
+      "properties": {
+        "review_id": {
+          "type": "integer"
+        },
+        "text": {
+          "type": "string"
+        },
+        "rating_norm": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "created_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "action": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "reasons": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "review_id",
+        "text",
+        "rating_norm",
+        "created_at",
+        "action",
+        "reasons"
+      ],
+      "title": "ClusterReview",
       "type": "object"
     },
     "CorpusSummary": {
@@ -809,6 +1061,43 @@
       "title": "HistogramBin",
       "type": "object"
     },
+    "HourIndex": {
+      "description": "Hourly buckets in grid order: reviews `starts[i] .. starts[i] + counts[i] - 1` fall in\n`hours[i]`. Grid indices are chronological, so each bucket is one contiguous run.",
+      "properties": {
+        "hours": {
+          "items": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "type": "array"
+        },
+        "starts": {
+          "items": {
+            "type": "integer"
+          },
+          "type": "array"
+        },
+        "counts": {
+          "items": {
+            "type": "integer"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "hours",
+        "starts",
+        "counts"
+      ],
+      "title": "HourIndex",
+      "type": "object"
+    },
     "JudgedEvent": {
       "description": "Per-review actions. Decoding: indices = Uint32Array (little-endian) from base64\n`indices_b64`; actions = Uint8Array from `actions_b64`; same length. A review can\nappear again later (S4 cluster rules update it): the last update wins.",
       "properties": {
@@ -1010,6 +1299,46 @@
       "title": "PolicyThresholds",
       "type": "object"
     },
+    "PreflightOut": {
+      "properties": {
+        "backend": {
+          "type": "string"
+        },
+        "reviews": {
+          "type": "integer"
+        },
+        "calls": {
+          "type": "integer"
+        },
+        "est_input_tokens": {
+          "type": "integer"
+        },
+        "est_cost_usd": {
+          "type": "number"
+        },
+        "est_seconds": {
+          "type": "number"
+        },
+        "limit_usd": {
+          "type": "number"
+        },
+        "needs_confirmation": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "backend",
+        "reviews",
+        "calls",
+        "est_input_tokens",
+        "est_cost_usd",
+        "est_seconds",
+        "limit_usd",
+        "needs_confirmation"
+      ],
+      "title": "PreflightOut",
+      "type": "object"
+    },
     "RatingEvent": {
       "properties": {
         "type": {
@@ -1116,6 +1445,97 @@
         "event"
       ],
       "title": "ReplayLine",
+      "type": "object"
+    },
+    "ReviewDetail": {
+      "description": "`GET /runs/{id}/reviews/{rid}`. Decision fields are None while the run is still deciding.",
+      "properties": {
+        "review_id": {
+          "type": "integer"
+        },
+        "text": {
+          "type": "string"
+        },
+        "rating_raw": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "rating_norm": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "created_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "action": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "weight": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "integrity_score": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "reasons": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "review_id",
+        "text",
+        "rating_raw",
+        "rating_norm",
+        "created_at",
+        "action",
+        "weight",
+        "integrity_score",
+        "reasons"
+      ],
+      "title": "ReviewDetail",
       "type": "object"
     },
     "RunCreate-Input": {
@@ -2091,8 +2511,17 @@
     "ClusterConfig-Output": {
       "$ref": "#/$defs/ClusterConfig-Output"
     },
+    "ClusterDetail": {
+      "$ref": "#/$defs/ClusterDetail"
+    },
     "ClusterEvent": {
       "$ref": "#/$defs/ClusterEvent"
+    },
+    "ClusterOut": {
+      "$ref": "#/$defs/ClusterOut"
+    },
+    "ClusterReview": {
+      "$ref": "#/$defs/ClusterReview"
     },
     "CorpusSummary": {
       "$ref": "#/$defs/CorpusSummary"
@@ -2127,6 +2556,9 @@
     "HistogramBin": {
       "$ref": "#/$defs/HistogramBin"
     },
+    "HourIndex": {
+      "$ref": "#/$defs/HourIndex"
+    },
     "JudgedEvent": {
       "$ref": "#/$defs/JudgedEvent"
     },
@@ -2136,11 +2568,17 @@
     "PolicyThresholds-Output": {
       "$ref": "#/$defs/PolicyThresholds-Output"
     },
+    "PreflightOut": {
+      "$ref": "#/$defs/PreflightOut"
+    },
     "RatingEvent": {
       "$ref": "#/$defs/RatingEvent"
     },
     "ReplayLine": {
       "$ref": "#/$defs/ReplayLine"
+    },
+    "ReviewDetail": {
+      "$ref": "#/$defs/ReviewDetail"
     },
     "RunCreate-Input": {
       "$ref": "#/$defs/RunCreate-Input"
