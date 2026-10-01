@@ -27,7 +27,7 @@ const nextFrame = () => act(() => new Promise<void>((r) => requestAnimationFrame
 
 it('offers only the curated games and replays the chosen one', async () => {
   renderAt('/')
-  const game = screen.getByRole('combobox', { name: /^Game/ }) as HTMLSelectElement
+  const game = screen.getByRole('combobox', { name: /^Product/ }) as HTMLSelectElement
   expect(game.options).toHaveLength(SHOWCASE.length)
   expect(screen.queryByText('Fixture game, May 2024')).toBeNull() // runs and datasets are not listed
   fireEvent.change(game, { target: { value: 'metro' } })

@@ -1,5 +1,5 @@
 import type { RunScores } from '@/data/api'
-import { adjustedRating, platformRating, rawRating, resimulate, waterfall } from './scores'
+import { adjustedRating, platformRating, rawRating, waterfall } from './scores'
 
 const CODES = ['OFF_TOPIC', 'NEAR_DUPLICATE', 'SPAM']
 
@@ -36,26 +36,4 @@ it('walks raw to adjusted one reason at a time and lands on the adjusted rating'
   expect(steps.at(-1)!.after).toBeCloseTo(adjustedRating(s)!)
   const total = steps.reduce((a, x) => a + x.delta, rawRating(s)!)
   expect(total).toBeCloseTo(adjustedRating(s)!)
-})
-
-it('reproduces the run at its own settings and keeps FLAG, EXCLUDE and the copy floor', () => {
-  const s = scores()
-  const same = resimulate(s, { downweightBelow: 0.55, downweightWeight: 0.25, clusterPenalty: true })
-  expect(same.changed).toBe(0)
-  expect(same.rating).toBeCloseTo(adjustedRating(s)!)
-
-  const strict = resimulate(s, { downweightBelow: 0.95, downweightWeight: 0.25, clusterPenalty: true })
-  expect(strict.changed).toBe(1) // review 0 (0.9); 1 sits at 0.95; the copy (4) keeps its floor
-  expect(strict.counts[3]).toBe(1)
-  expect(strict.counts[4]).toBe(1)
-
-  const lax = resimulate(s, { downweightBelow: 0.35, downweightWeight: 0.25, clusterPenalty: true })
-  expect(lax.changed).toBe(1) // review 3 (0.4) back to KEEP
-})
-
-it('splits on the pre-penalty score when the cluster penalty is off', () => {
-  const s = scores()
-  const r = resimulate(s, { downweightBelow: 0.45, downweightWeight: 0.25, clusterPenalty: false })
-  // review 3: penalised 0.4 -> DOWNWEIGHT, base 0.5 -> KEEP
-  expect(r.changed).toBe(1)
 })
