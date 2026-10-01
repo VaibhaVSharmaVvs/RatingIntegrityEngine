@@ -1,8 +1,10 @@
 import { useQuery } from '@tanstack/react-query'
-import { ArrowLeft, Play, SkipForward } from 'lucide-react'
+import { Play, SkipForward } from 'lucide-react'
 import { useMemo, useState, type ReactNode } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
-import { Button, buttonVariants } from '@/components/ui/button'
+import { Button } from '@/components/ui/button'
+import { Drilldowns } from '@/components/shared/Drilldowns'
+import { RunHeader } from '@/components/shared/RunHeader'
 import { ClusterFeed } from '@/components/live/ClusterFeed'
 import { FpsMeter } from '@/components/live/FpsMeter'
 import { recordPaint } from '@/lib/frameStats'
@@ -12,7 +14,6 @@ import { ActionLegend, RunCounters } from '@/components/live/RunCounters'
 import { SelectedReview } from '@/components/live/SelectedReview'
 import { StageStepper } from '@/components/live/StageStepper'
 import { TimelineStrip, type TimeWindow } from '@/components/live/TimelineStrip'
-import { ThemeToggle } from '@/components/ThemeToggle'
 import { useDataSource } from '@/data/source'
 import { formatInt } from '@/lib/format'
 import { hourBuckets } from '@/lib/timeline'
@@ -93,23 +94,9 @@ export function LiveRunPage() {
 
   return (
     <div className="flex min-h-dvh flex-col bg-background text-foreground lg:h-dvh">
-      <header className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-border px-4 py-2.5">
-        <Link to="/" aria-label="All runs" className={buttonVariants({ variant: 'ghost', size: 'icon-sm' })}>
-          <ArrowLeft />
-        </Link>
-        <div className="min-w-0">
-          <h1 className="truncate text-sm font-semibold">{dataset.data?.name ?? 'Loading run…'}</h1>
-          <p className="num truncate font-mono text-[11px] text-muted-foreground">
-            {runId} · {run.data?.backend ?? '…'}
-            {run.data?.model_version ? ` · ${run.data.model_version}` : ''}
-            {run.data ? ` · question set ${run.data.config.question_set}` : ''}
-          </p>
-        </div>
-        <div className="mx-auto min-w-0">
-          <StageStepper timings={summary?.timings_s} />
-        </div>
-        <ThemeToggle />
-      </header>
+      <RunHeader runId={runId}>
+        <StageStepper timings={summary?.timings_s} />
+      </RunHeader>
 
       {error && (
         <div role="alert" className="border-b border-border bg-destructive/10 px-4 py-2 text-sm text-destructive">
@@ -200,6 +187,7 @@ export function LiveRunPage() {
           )}
         </aside>
       </main>
+      <Drilldowns runId={runId} scale={scale} />
       {showFps && <FpsMeter />}
     </div>
   )

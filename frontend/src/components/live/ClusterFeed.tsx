@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { Pin } from 'lucide-react'
+import { PanelRightOpen, Pin } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import type { ClusterEvent } from '@/data/api'
 import { useDataSource } from '@/data/source'
@@ -108,6 +108,14 @@ function ClusterCard({
         <span className="sr-only">
           Suspicion {c.suspicion.toFixed(2)}, penalty threshold {threshold}. {pinned ? 'Pinned.' : 'Click to pin in the grid.'}
         </span>
+      </button>
+      <button
+        type="button"
+        onClick={() => useViewStore.getState().openCluster(c.cid)}
+        className="mt-1 inline-flex items-center gap-1 rounded-sm px-1 text-[11px] text-muted-foreground transition-colors outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+      >
+        <PanelRightOpen className="size-3" aria-hidden />
+        Details <span className="sr-only">of cluster {c.cid}</span>
       </button>
     </li>
   )

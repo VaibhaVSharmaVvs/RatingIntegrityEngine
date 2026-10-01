@@ -176,3 +176,13 @@
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Help page: the section a reason chip linked to flashes once. */
+.help-target {
+  animation: help-target 1.6s cubic-bezier(0.23, 1, 0.32, 1);
+  border-radius: 0.375rem;
+}
+@keyframes help-target {
+  0%, 30% { background-color: color-mix(in oklch, var(--foreground) 8%, transparent); }
+  100% { background-color: transparent; }
+}

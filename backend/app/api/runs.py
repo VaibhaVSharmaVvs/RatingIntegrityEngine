@@ -15,7 +15,6 @@ from app.models import (
     ClusterOut,
     ClusterReview,
     PreflightOut,
-    ReviewDetail,
     RunCreate,
     RunOut,
     RunSummary,
@@ -227,32 +226,6 @@ def run_grid(run_id: str, state: AppState = Depends(get_state)) -> Response:
     for rid, action in rows:
         grid[rid] = ActionCode[action]
     return Response(grid.tobytes(), media_type="application/octet-stream")
-
-
-@router.get("/{run_id}/reviews/{review_id}", response_model=ReviewDetail)
-def get_review(run_id: str, review_id: int, state: AppState = Depends(get_state)) -> ReviewDetail:
-    run = _fetch_run(state, run_id)
-    with state.db.cursor() as cur:
-        row = cur.execute(
-            "SELECT r.text, r.rating_raw, r.rating_norm, r.created_at, d.action, d.weight, "
-            "d.integrity_score, d.reasons FROM reviews r LEFT JOIN decisions d "
-            "ON d.run_id = ? AND d.review_id = r.id WHERE r.dataset_id = ? AND r.id = ?",
-            [run_id, run.dataset_id, review_id],
-        ).fetchone()
-    if row is None:
-        raise HTTPException(404, f"review {review_id} not found")
-    text, raw, norm, created, action, weight, score, reasons = row
-    return ReviewDetail(
-        review_id=review_id,
-        text=text,
-        rating_raw=raw,
-        rating_norm=norm,
-        created_at=created,
-        action=action,
-        weight=weight,
-        integrity_score=score,
-        reasons=json.loads(reasons or "[]"),
-    )
 
 
 @router.get("/{run_id}/replay")

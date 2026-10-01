@@ -1,38 +1,54 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
+import { CircleHelp, FileUp, Plus } from 'lucide-react'
 import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link } from 'react-router-dom'
+import { CsvDatasetSheet } from '@/components/runs/CsvDatasetSheet'
+import { NewRunSheet } from '@/components/runs/NewRunSheet'
 import { ThemeToggle } from '@/components/ThemeToggle'
-import { Button } from '@/components/ui/button'
+import { Button, buttonVariants } from '@/components/ui/button'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import type { DatasetOut, RunCreate, RunOut } from '@/data/api'
+import type { DatasetOut, RunOut } from '@/data/api'
 import { useDataSource } from '@/data/source'
 import { formatDelta, formatInt, formatRating, formatUsd } from '@/lib/format'
-
-/** $0 backends only: Jev runs need the pre-flight cost drawer (Phase 6). */
-const FREE_BACKENDS: { value: RunCreate['backend']; label: string }[] = [
-  { value: 'heuristic', label: 'Heuristics only' },
-  { value: 'mock', label: 'Mock System One (paced)' },
-]
 
 export function RunsPage() {
   const source = useDataSource()
   const runs = useQuery({ queryKey: ['runs'], queryFn: () => source.listRuns(), refetchInterval: 5_000 })
   const datasets = useQuery({ queryKey: ['datasets'], queryFn: () => source.listDatasets() })
   const byId = new Map((datasets.data ?? []).map((d) => [d.id, d]))
+  const [newRun, setNewRun] = useState(false)
+  const [csv, setCsv] = useState(false)
 
   return (
     <div className="min-h-dvh bg-background text-foreground">
       <header className="flex items-center gap-3 border-b border-border px-6 py-3">
         <h1 className="text-sm font-semibold">Rating Integrity Engine</h1>
         <span className="text-xs text-muted-foreground">Runs</span>
-        <div className="ml-auto">
+        <div className="ml-auto flex items-center gap-1">
+          <Link to="/help" className={buttonVariants({ variant: 'ghost', size: 'sm' })}>
+            <CircleHelp />
+            How it works
+          </Link>
           <ThemeToggle />
         </div>
       </header>
       <main className="mx-auto max-w-6xl space-y-8 px-6 py-8">
-        {source.canStartRuns && datasets.data && datasets.data.length > 0 && <StartRun datasets={datasets.data} />}
         <section aria-label="Runs" className="space-y-3">
-          <h2 className="text-[11px] font-medium tracking-wider text-muted-foreground uppercase">Recent runs</h2>
+          <div className="flex flex-wrap items-center gap-2">
+            <h2 className="mr-auto text-[11px] font-medium tracking-wider text-muted-foreground uppercase">Recent runs</h2>
+            {source.canStartRuns && (
+              <>
+                <Button size="sm" variant="outline" onClick={() => setCsv(true)}>
+                  <FileUp />
+                  Add CSV dataset
+                </Button>
+                <Button size="sm" onClick={() => setNewRun(true)} disabled={!datasets.data?.some((d) => d.status === 'ready')}>
+                  <Plus />
+                  New run
+                </Button>
+              </>
+            )}
+          </div>
           {runs.isError ? (
             <p className="text-sm text-muted-foreground">
               Could not reach the API ({runs.error.message}). Start it with{' '}
@@ -47,6 +63,12 @@ export function RunsPage() {
           )}
         </section>
       </main>
+      {source.canStartRuns && datasets.data && (
+        <>
+          {newRun && <NewRunSheet open={newRun} onOpenChange={setNewRun} datasets={datasets.data} runs={runs.data ?? []} />}
+          <CsvDatasetSheet open={csv} onOpenChange={setCsv} />
+        </>
+      )}
     </div>
   )
 }
@@ -62,6 +84,7 @@ function RunsTable({ runs, datasets }: { runs: RunOut[]; datasets: Map<string, D
             <TableHead>Status</TableHead>
             <TableHead className="text-right">Reviews</TableHead>
             <TableHead className="text-right">Raw → adjusted</TableHead>
+            <TableHead className="text-right">Steam policy</TableHead>
             <TableHead className="text-right">Cost</TableHead>
             <TableHead className="text-right">Started</TableHead>
             <TableHead>
@@ -95,15 +118,21 @@ function RunsTable({ runs, datasets }: { runs: RunOut[]; datasets: Map<string, D
                     '—'
                   )}
                 </TableCell>
+                <TableCell className="num text-right">{s?.platform?.rating != null ? formatRating(s.platform.rating, scale) : '—'}</TableCell>
                 <TableCell className="num text-right">{formatUsd(r.cost_usd)}</TableCell>
                 <TableCell className="num text-right text-xs text-muted-foreground">
                   {r.started_at ? new Date(r.started_at).toLocaleString() : '—'}
                 </TableCell>
                 <TableCell className="text-right">
                   {r.status === 'done' && (
-                    <Link to={`/runs/${r.id}?play=end`} className="text-xs underline-offset-4 hover:underline">
-                      Final state
-                    </Link>
+                    <span className="flex justify-end gap-3 text-xs">
+                      <Link to={`/runs/${r.id}/results`} className="font-medium underline-offset-4 hover:underline">
+                        Results
+                      </Link>
+                      <Link to={`/runs/${r.id}?play=end`} className="text-muted-foreground underline-offset-4 hover:text-foreground hover:underline">
+                        Final state
+                      </Link>
+                    </span>
                   )}
                 </TableCell>
               </TableRow>
@@ -112,60 +141,5 @@ function RunsTable({ runs, datasets }: { runs: RunOut[]; datasets: Map<string, D
         </TableBody>
       </Table>
     </div>
-  )
-}
-
-function StartRun({ datasets }: { datasets: DatasetOut[] }) {
-  const source = useDataSource()
-  const navigate = useNavigate()
-  const qc = useQueryClient()
-  const ready = datasets.filter((d) => d.status === 'ready')
-  const [datasetId, setDatasetId] = useState(ready[0]?.id ?? '')
-  const [backend, setBackend] = useState<RunCreate['backend']>('heuristic')
-  const start = useMutation({
-    mutationFn: () => source.createRun({ dataset_id: datasetId, backend, mock_latency_ms: backend === 'mock' ? 40 : undefined }),
-    onSuccess: (run) => {
-      qc.invalidateQueries({ queryKey: ['runs'] })
-      navigate(`/runs/${run.id}`)
-    },
-  })
-  const field = 'h-8 rounded-md border border-input bg-background px-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring'
-  return (
-    <section aria-label="Start a run" className="space-y-3">
-      <h2 className="text-[11px] font-medium tracking-wider text-muted-foreground uppercase">Start a $0 run</h2>
-      <form
-        className="flex flex-wrap items-end gap-3"
-        onSubmit={(e) => {
-          e.preventDefault()
-          start.mutate()
-        }}
-      >
-        <label className="flex flex-col gap-1 text-xs text-muted-foreground">
-          Dataset
-          <select className={field} value={datasetId} onChange={(e) => setDatasetId(e.target.value)}>
-            {ready.map((d) => (
-              <option key={d.id} value={d.id}>
-                {d.name} ({formatInt(d.n_reviews)})
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="flex flex-col gap-1 text-xs text-muted-foreground">
-          Backend
-          <select className={field} value={backend} onChange={(e) => setBackend(e.target.value as RunCreate['backend'])}>
-            {FREE_BACKENDS.map((b) => (
-              <option key={b.value} value={b.value}>
-                {b.label}
-              </option>
-            ))}
-          </select>
-        </label>
-        <Button type="submit" disabled={!datasetId || start.isPending}>
-          {start.isPending ? 'Starting…' : 'Start run'}
-        </Button>
-        {start.isError && <p className="text-xs text-destructive">{start.error.message}</p>}
-      </form>
-      <p className="text-xs text-muted-foreground">Jev runs need the pre-flight cost estimate, which arrives with the run-config drawer.</p>
-    </section>
   )
 }

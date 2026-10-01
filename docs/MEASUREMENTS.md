@@ -528,7 +528,7 @@ Two runs, $0.026, **1,528 tokens per review** (+133 over v3). Share "verdict not
 | Cities: Skylines II control (5K, Oct–Dec 2023) | 59.6% | 59.2% (57.8–60.6) | 59.9% (58.4–61.4) | **none** ✅ | 1,126 | $0.319 |
 | Gollum control (297) | 35.7% | 34.3% (29.1–39.9) | 34.4% (27.9–41.4) | none ✅ | 111 | $0.019 |
 | **Football Manager 26** (15,348, launch → now) | 38.0% | 37.2% (36.4–38.0) | 38.4% (37.4–39.3) | **none**: the launch backlash is genuine | 6,058 | $0.967 |
-| Metro 2033 Redux (2,444, Dec 2018–Mar 2019) | — | — | — | **not run: TypeSafe returned HTTP 402 "no available API credits"** | | |
+| Metro 2033 Redux (2,444, Dec 2018–Mar 2019) | 48.8% | 62.9% (60.8–64.9) | 61.5% (58.9–64.2) | three windows, 749 reviews (see M11d) | 370 | $0.154 |
 
 Reference levels (English, from our pulls): HD2 pre-bomb April 2024 88–91%, so **the Steam-policy rating lands on it**. BL2 and Metro English baselines are being pulled (Jan–Mar 2025; Sep–Nov 2018). **Correction:** the earlier "92–95%" (BL2) and "~90%" (Metro) came from Steam's review histogram, which counts **all languages**: its `l=english` parameter is the UI language, not a filter. Metro: 36,820 English reviews vs 103,493 in the histogram.
 

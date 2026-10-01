@@ -286,6 +286,19 @@ Open items: the color-mode toggle (informativeness/topic/cluster) and the "Compa
 
 **Wording flag (legal):** UI copy never says "fake". Use "integrity weight" and "low evidential value", never name reviewers (research §9). Get Solulever legal to review the copy before any public link.
 
+**Status (2026-10-01): built.**
+- **API:** `GET /runs/{id}/reviews` (filters: action, reason, cluster, verdict, text; sort by time or integrity); review detail with answers, S1 signals, meta and platform status; `GET /runs/{id}/scores`; export. Exports carry no `ext_id` or `author_hash`.
+- **UI:** inspector drawer, cluster drawer, results page, reviews table, `/help`, run-config drawer with pre-flight and `confirm_cost`, CSV upload with column mapper. The run views share one header (Live · Results · Reviews · How it works). Reason chips link to `/help#reason-…`.
+- **Checks:** 73 frontend and 159 backend tests. The inspector's integrity arithmetic is computed client-side; it matched the stored base integrity on 150 of 150 sampled HD2 reviews. The scripted walkthrough (Playwright, system Chrome) covers runs → Jev pre-flight → live → cluster → results → reviews → inspector → help → phone width. It took 14–19 s with **0 console errors** on HD2 5K and Metro, in dark and light, with no horizontal scroll at 390 px. The pre-flight estimate for Metro was $0.15 against an actual $0.154.
+
+| Deviation | Planned | Built | Why |
+|---|---|---|---|
+| "What Valve actually did" | on the results page | on `/help` (Steam policy, emulated) | M11c is per game and all-language; it is not part of a run's data |
+| Sensitivity sliders | any threshold | downweight line, downweight weight, cluster penalty on/off | Only the KEEP/DOWNWEIGHT split can be replayed from stored scores. FLAG, EXCLUDE and the copy floor stay as decided. An exact $0 re-run uses `backend: "cached"` |
+| Waterfall | per reason | per *primary* reason, applied in a fixed order | Each review sits in exactly one step, so the steps sum exactly to adjusted − raw |
+
+**Open finding (owner decision):** the low-confidence FLAG cannot fire under question sets v3/v4. It needs ≥ 2 *weighted* questions below 0.5 confidence. Noul answers carry no confidence, and option B set informativeness to 0, which leaves only `rating_support`. HD2 v4 has 0 `LOW_CONFIDENCE` decisions; its 159 FLAGs come from the grey zone and spam. Options: set `low_confidence_min_questions` to 1, count unweighted score questions too, or accept the current behaviour. Any of them can be tested at $0 with the cached backend. The help page states the current behaviour.
+
 ---
 
 ## Phase 7: Evaluation and benchmarks

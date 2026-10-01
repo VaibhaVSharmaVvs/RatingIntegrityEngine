@@ -1,15 +1,26 @@
 import type {
   ClusterDetail,
   ClusterOut,
+  CsvPreview,
   DatasetDetail,
   DatasetOut,
   HourIndex,
+  PreflightOut,
   ReplayLine,
   ReviewDetail,
+  ReviewPage,
   RunCreate,
   RunOut,
+  RunScores,
 } from './api'
-import { ApiError, type DataSource, type RunStreamHandlers, type TimedRunEvent } from './DataSource'
+import {
+  ApiError,
+  type ColumnMapping,
+  type DataSource,
+  type ReviewFilter,
+  type RunStreamHandlers,
+  type TimedRunEvent,
+} from './DataSource'
 
 export const RUN_EVENT_TYPES = [
   'stage',
@@ -85,11 +96,44 @@ export class LiveApi implements DataSource {
   getClusters = (runId: string, kind?: ClusterOut['kind']) =>
     this.json<ClusterOut[]>(`/runs/${encodeURIComponent(runId)}/clusters${kind ? `?kind=${kind}` : ''}`)
 
-  getCluster = (runId: string, cid: number) =>
-    this.json<ClusterDetail>(`/runs/${encodeURIComponent(runId)}/clusters/${cid}?sample=0`)
+  getCluster = (runId: string, cid: number, sample = 0) =>
+    this.json<ClusterDetail>(`/runs/${encodeURIComponent(runId)}/clusters/${cid}?sample=${sample}`)
 
   getReview = (runId: string, reviewId: number) =>
     this.json<ReviewDetail>(`/runs/${encodeURIComponent(runId)}/reviews/${reviewId}`)
+
+  listReviews = (runId: string, filter: ReviewFilter = {}) => {
+    const qs = new URLSearchParams()
+    for (const [k, v] of Object.entries(filter)) if (v !== undefined && v !== '' && v !== null) qs.set(k, String(v))
+    const tail = qs.toString() ? `?${qs}` : ''
+    return this.json<ReviewPage>(`/runs/${encodeURIComponent(runId)}/reviews${tail}`)
+  }
+
+  getScores = (runId: string) => this.json<RunScores>(`/runs/${encodeURIComponent(runId)}/scores`)
+
+  exportUrl = (runId: string, fmt: 'csv' | 'json') => `${this.base}/runs/${encodeURIComponent(runId)}/export?fmt=${fmt}`
+
+  preflight = (req: RunCreate) =>
+    this.json<PreflightOut>('/runs/preflight', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(req),
+    })
+
+  previewCsv = (file: File) => {
+    const body = new FormData()
+    body.set('file', file)
+    return this.json<CsvPreview>('/datasets/csv/preview', { method: 'POST', body })
+  }
+
+  uploadCsv = (file: File, name: string, mapping: ColumnMapping, ratingScale?: string) => {
+    const body = new FormData()
+    body.set('file', file)
+    body.set('name', name)
+    body.set('mapping', JSON.stringify(mapping))
+    if (ratingScale) body.set('rating_scale', ratingScale)
+    return this.json<DatasetOut>('/datasets/csv', { method: 'POST', body })
+  }
 
   getReplay = async (runId: string): Promise<ReplayLine[]> => {
     const res = await this.request(`/runs/${encodeURIComponent(runId)}/replay`)

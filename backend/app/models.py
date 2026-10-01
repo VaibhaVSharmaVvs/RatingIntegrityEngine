@@ -432,6 +432,33 @@ class ClusterReview(Contract):
     reasons: list[str]
 
 
+class ReviewSignals(Contract):
+    """Deterministic S1 signals for one review."""
+
+    n_tokens: int | None
+    has_url: bool
+    has_promo: bool
+    promo_hits: list[str]
+    duplicate_of: int | None  # earlier review this is a copy of (None if first / no copy)
+    duplicate_score: float | None
+    nearest_review_id: int | None
+    nearest_cosine: float | None
+    low_playtime: bool | None
+    single_review_account: bool | None
+    received_for_free: bool | None
+    key_activation: bool | None  # not bought on Steam (Steam's score leaves these out)
+
+
+class ReviewMeta(Contract):
+    playtime_hours: float | None
+    author_num_reviews: int | None
+    steam_purchase: bool | None
+    received_for_free: bool | None
+    votes_up: int | None
+    edited: bool  # updated more than 1 h after posting (verdicts can change, C13)
+    updated_at: datetime | None
+
+
 class ReviewDetail(Contract):
     """`GET /runs/{id}/reviews/{rid}`. Decision fields are None while the run is still deciding."""
 
@@ -444,6 +471,46 @@ class ReviewDetail(Contract):
     weight: float | None
     integrity_score: float | None
     reasons: list[str]
+    base_integrity: float | None = None  # before the S4 cluster penalty
+    cluster_id: int | None = None  # most suspicious cluster it belongs to
+    cluster_suspicion: float | None = None
+    cluster_kind: str | None = None
+    cluster_caption: str | None = None
+    answers: dict[str, dict[str, Any]] = {}  # System One answers by question id
+    signals: ReviewSignals | None = None
+    meta: ReviewMeta | None = None
+    counts_in_platform_rating: bool | None = None  # False: key activation or off-topic window
+
+
+class ReviewRow(Contract):
+    review_id: int
+    created_at: datetime | None
+    rating_norm: float | None
+    action: str | None
+    weight: float | None
+    integrity_score: float | None
+    reasons: list[str]
+    snippet: str
+
+
+class ReviewPage(Contract):
+    total: int
+    offset: int
+    items: list[ReviewRow]
+
+
+class RunScores(Contract):
+    """Per-review arrays in grid order, for client-side sliders and the waterfall."""
+
+    rating_norm: list[float | None]
+    integrity: list[float | None]  # final, after the cluster penalty
+    base_integrity: list[float | None]  # before it
+    action: list[int]  # ActionCode
+    primary_reason: list[int]  # index into reason_codes, -1 = none
+    reason_codes: list[str]
+    counts_in_platform: list[bool]
+    weights: ActionWeights
+    downweight_below: float
 
 
 class ClusterDetail(ClusterOut):

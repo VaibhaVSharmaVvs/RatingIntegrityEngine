@@ -1734,6 +1734,102 @@
             "type": "string"
           },
           "type": "array"
+        },
+        "base_integrity": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "cluster_id": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "cluster_suspicion": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "cluster_kind": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "cluster_caption": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "answers": {
+          "additionalProperties": {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          "default": {},
+          "type": "object"
+        },
+        "signals": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ReviewSignals"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "meta": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ReviewMeta"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "counts_in_platform_rating": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
         }
       },
       "required": [
@@ -1745,9 +1841,322 @@
         "action",
         "weight",
         "integrity_score",
-        "reasons"
+        "reasons",
+        "base_integrity",
+        "cluster_id",
+        "cluster_suspicion",
+        "cluster_kind",
+        "cluster_caption",
+        "answers",
+        "signals",
+        "meta",
+        "counts_in_platform_rating"
       ],
       "title": "ReviewDetail",
+      "type": "object"
+    },
+    "ReviewMeta": {
+      "properties": {
+        "playtime_hours": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "author_num_reviews": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "steam_purchase": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "received_for_free": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "votes_up": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "edited": {
+          "type": "boolean"
+        },
+        "updated_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "playtime_hours",
+        "author_num_reviews",
+        "steam_purchase",
+        "received_for_free",
+        "votes_up",
+        "edited",
+        "updated_at"
+      ],
+      "title": "ReviewMeta",
+      "type": "object"
+    },
+    "ReviewPage": {
+      "properties": {
+        "total": {
+          "type": "integer"
+        },
+        "offset": {
+          "type": "integer"
+        },
+        "items": {
+          "items": {
+            "$ref": "#/$defs/ReviewRow"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "total",
+        "offset",
+        "items"
+      ],
+      "title": "ReviewPage",
+      "type": "object"
+    },
+    "ReviewRow": {
+      "properties": {
+        "review_id": {
+          "type": "integer"
+        },
+        "created_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "rating_norm": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "action": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "weight": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "integrity_score": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "reasons": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "snippet": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "review_id",
+        "created_at",
+        "rating_norm",
+        "action",
+        "weight",
+        "integrity_score",
+        "reasons",
+        "snippet"
+      ],
+      "title": "ReviewRow",
+      "type": "object"
+    },
+    "ReviewSignals": {
+      "description": "Deterministic S1 signals for one review.",
+      "properties": {
+        "n_tokens": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "has_url": {
+          "type": "boolean"
+        },
+        "has_promo": {
+          "type": "boolean"
+        },
+        "promo_hits": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "duplicate_of": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "duplicate_score": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "nearest_review_id": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "nearest_cosine": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "low_playtime": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "single_review_account": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "received_for_free": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "key_activation": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "n_tokens",
+        "has_url",
+        "has_promo",
+        "promo_hits",
+        "duplicate_of",
+        "duplicate_score",
+        "nearest_review_id",
+        "nearest_cosine",
+        "low_playtime",
+        "single_review_account",
+        "received_for_free",
+        "key_activation"
+      ],
+      "title": "ReviewSignals",
       "type": "object"
     },
     "RunCreate-Input": {
@@ -2278,6 +2687,93 @@
         "tokens_in"
       ],
       "title": "RunOut",
+      "type": "object"
+    },
+    "RunScores": {
+      "description": "Per-review arrays in grid order, for client-side sliders and the waterfall.",
+      "properties": {
+        "rating_norm": {
+          "items": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "type": "array"
+        },
+        "integrity": {
+          "items": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "type": "array"
+        },
+        "base_integrity": {
+          "items": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "type": "array"
+        },
+        "action": {
+          "items": {
+            "type": "integer"
+          },
+          "type": "array"
+        },
+        "primary_reason": {
+          "items": {
+            "type": "integer"
+          },
+          "type": "array"
+        },
+        "reason_codes": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "counts_in_platform": {
+          "items": {
+            "type": "boolean"
+          },
+          "type": "array"
+        },
+        "weights": {
+          "$ref": "#/$defs/ActionWeights-Output"
+        },
+        "downweight_below": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "rating_norm",
+        "integrity",
+        "base_integrity",
+        "action",
+        "primary_reason",
+        "reason_codes",
+        "counts_in_platform",
+        "weights",
+        "downweight_below"
+      ],
+      "title": "RunScores",
       "type": "object"
     },
     "RunSummary": {
@@ -2843,6 +3339,18 @@
     "ReviewDetail": {
       "$ref": "#/$defs/ReviewDetail"
     },
+    "ReviewMeta": {
+      "$ref": "#/$defs/ReviewMeta"
+    },
+    "ReviewPage": {
+      "$ref": "#/$defs/ReviewPage"
+    },
+    "ReviewRow": {
+      "$ref": "#/$defs/ReviewRow"
+    },
+    "ReviewSignals": {
+      "$ref": "#/$defs/ReviewSignals"
+    },
     "RunCreate-Input": {
       "$ref": "#/$defs/RunCreate-Input"
     },
@@ -2851,6 +3359,9 @@
     },
     "RunOut": {
       "$ref": "#/$defs/RunOut"
+    },
+    "RunScores": {
+      "$ref": "#/$defs/RunScores"
     },
     "RunSummary": {
       "$ref": "#/$defs/RunSummary"
