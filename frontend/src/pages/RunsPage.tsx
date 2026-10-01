@@ -34,10 +34,7 @@ export function RunsPage() {
         <section aria-label="Runs" className="space-y-3">
           <h2 className="text-[11px] font-medium tracking-wider text-muted-foreground uppercase">Recent runs</h2>
           {runs.isError ? (
-            <p className="text-sm text-muted-foreground">
-              Could not reach the API ({runs.error.message}). Start it with{' '}
-              <code className="font-mono text-xs">uv run uvicorn app.main:app --port 8001</code>.
-            </p>
+            <p className="text-sm text-muted-foreground">Could not reach the API ({runs.error.message}).</p>
           ) : runs.isPending ? (
             <div className="h-40 animate-pulse rounded-md bg-muted" />
           ) : runs.data.length === 0 ? (
