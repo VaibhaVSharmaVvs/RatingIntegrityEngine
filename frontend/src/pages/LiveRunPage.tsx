@@ -74,7 +74,7 @@ export function LiveRunPage() {
       <Centered>
         <p className="text-sm">Run {runId} could not be loaded: {run.error.message}</p>
         <Link to="/" className="text-sm underline underline-offset-4">
-          Back to runs
+          Choose another game
         </Link>
       </Centered>
     )

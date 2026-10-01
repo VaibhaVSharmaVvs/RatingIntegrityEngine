@@ -5,7 +5,7 @@ import type { DataSource } from '@/data/DataSource'
 import { DataSourceProvider } from '@/data/DataSourceProvider'
 import { defaultDataSource } from '@/data/source'
 import { LiveRunPage } from '@/pages/LiveRunPage'
-import { RunsPage } from '@/pages/RunsPage'
+import { HomePage } from '@/pages/HomePage'
 
 // Drill-down pages load on first visit; the live screen stays in the main bundle.
 const ResultsPage = lazy(() => import('@/pages/ResultsPage').then((m) => ({ default: m.ResultsPage })))
@@ -16,7 +16,7 @@ export function AppRoutes() {
   return (
     <Suspense fallback={<div className="min-h-dvh bg-background" />}>
       <Routes>
-        <Route path="/" element={<RunsPage />} />
+        <Route path="/" element={<HomePage />} />
         <Route path="/runs/:runId" element={<LiveRunPage />} />
         <Route path="/runs/:runId/results" element={<ResultsPage />} />
         <Route path="/runs/:runId/reviews" element={<ReviewsPage />} />

@@ -80,15 +80,16 @@ it('explains every reason code on the help page', async () => {
   expect(document.body.textContent).not.toMatch(/\bfake\b/i)
 })
 
-it('shows the pre-flight estimate before a Jev run starts', async () => {
+it('shows the pre-flight estimate before a live Jev run starts', async () => {
   const source = renderAt('/')
-  const button = await screen.findByRole('button', { name: /New run/ })
-  await waitFor(() => expect(button.hasAttribute('disabled')).toBe(false))
-  fireEvent.click(button)
-  const sheet = await screen.findByRole('dialog')
-  fireEvent.change(within(sheet).getByLabelText(/System One/), { target: { value: 'jev' } })
-  expect(await within(sheet).findByText('$0.06')).toBeTruthy()
+  fireEvent.change(screen.getByRole('combobox', { name: /^Run/ }), { target: { value: 'live' } })
+  const estimate = await screen.findByRole('region', { name: 'Pre-flight estimate' })
+  expect(await within(estimate).findByText('$0.06')).toBeTruthy()
   const create = vi.spyOn(source, 'createRun')
-  fireEvent.click(within(sheet).getByRole('button', { name: /Start run · \$0\.06/ }))
-  await waitFor(() => expect(create).toHaveBeenCalledWith(expect.objectContaining({ backend: 'jev', question_set: 'v4' })))
+  const start = screen.getByRole('button', { name: /Start live run · \$0\.06/ })
+  await waitFor(() => expect(start.hasAttribute('disabled')).toBe(false))
+  fireEvent.click(start)
+  await waitFor(() =>
+    expect(create).toHaveBeenCalledWith(expect.objectContaining({ dataset_id: 'ds_fixture', backend: 'jev', question_set: 'v4' })),
+  )
 })
