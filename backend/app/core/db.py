@@ -149,6 +149,21 @@ MIGRATIONS: list[str] = [
     ALTER TABLE decisions ADD COLUMN cluster_id INTEGER;     -- most suspicious cluster (-1 none)
     ALTER TABLE decisions ADD COLUMN cluster_suspicion DOUBLE;
     """,
+    # 4: Phase 7 benchmark results (one row per scored experiment)
+    """
+    CREATE TABLE benchmarks (
+        id           VARCHAR PRIMARY KEY,
+        kind         VARCHAR NOT NULL,          -- attack | control | agreement | adversarial | ablation
+        name         VARCHAR NOT NULL,
+        backend      VARCHAR,
+        question_set VARCHAR,
+        run_ids      JSON NOT NULL,
+        metrics      JSON NOT NULL,
+        cost_usd     DOUBLE NOT NULL DEFAULT 0,
+        notes        VARCHAR,
+        created_at   TIMESTAMPTZ NOT NULL DEFAULT current_timestamp
+    );
+    """,
 ]
 
 

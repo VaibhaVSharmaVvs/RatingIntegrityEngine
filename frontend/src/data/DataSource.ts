@@ -1,12 +1,15 @@
 // One interface, two implementations (MVP_SPEC §9):
 // LiveApi for local development, StaticBundle for the replay-only public build.
 import type {
+  BenchmarkOut,
   ClusterDetail,
   ClusterOut,
   CsvPreview,
   DatasetDetail,
   DatasetOut,
   HourIndex,
+  LabelSet,
+  LabelSetSummary,
   PreflightOut,
   ReplayLine,
   ReviewDetail,
@@ -79,6 +82,12 @@ export interface DataSource {
   preflight(req: RunCreate): Promise<PreflightOut>
   /** size and row caps for CSV / XLSX uploads */
   getUploadLimits(): Promise<UploadLimits>
+  /** Phase 7: recorded benchmark results */
+  listBenchmarks(): Promise<BenchmarkOut[]>
+  /** blind human labelling (local only) */
+  listLabelSets(): Promise<LabelSetSummary[]>
+  getLabelSet(name: string, rater: string): Promise<LabelSet>
+  putLabel(name: string, reviewId: number, rater: string, label: Record<string, string>): Promise<void>
   previewCsv(file: File): Promise<CsvPreview>
   uploadCsv(file: File, name: string, mapping: ColumnMapping, ratingScale?: string): Promise<DatasetOut>
   /** the recorded event stream of a finished run */

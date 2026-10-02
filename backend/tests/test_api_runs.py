@@ -693,3 +693,70 @@ def test_export_has_decisions_but_no_identifiers(client: TestClient) -> None:
     assert "not the 'true' rating" in body["methodology_note"].lower()
     assert "ext_id" not in json.dumps(body["decisions"]) and "author_hash" not in json.dumps(body)
     assert client.get(f"/runs/{run_id}/export", params={"fmt": "xml"}).status_code == 422
+
+
+def test_benchmarks_are_recorded_and_listed(client: TestClient) -> None:
+    body = {
+        "kind": "attack",
+        "name": "attack-bench-v1",
+        "backend": "jev",
+        "question_set": "v4",
+        "run_ids": ["run_a", "run_b"],
+        "metrics": {"rating": {"shift_removed": 0.5}},
+        "cost_usd": 0.66,
+    }
+    r = client.post("/benchmarks", json=body)
+    assert r.status_code == 201, r.text
+    listed = client.get("/benchmarks").json()
+    assert (
+        len(listed) == 1
+        and listed[0]["metrics"] == body["metrics"]
+        and listed[0]["id"].startswith("bench")
+    )
+    assert client.post("/benchmarks", json=body | {"kind": "nonsense"}).status_code == 422
+
+
+def test_label_set_is_blind_and_stores_one_label_per_rater(
+    client: TestClient, tmp_path: Path
+) -> None:
+    ds = upload(client)
+    folder = tmp_path / "bench" / "labelsets"
+    folder.mkdir(parents=True)
+    items = [{"review_id": i, "stratum": "uniform"} for i in (3, 1, 2)]
+    (folder / "t-3.json").write_text(
+        json.dumps({"name": "t-3", "dataset_id": ds, "subject": "X", "items": items})
+    )
+    s = client.get("/labelsets/t-3", params={"rater": "va"}).json()
+    assert [i["review_id"] for i in s["items"]] == [3, 1, 2]
+    assert set(s["items"][0]) == {"review_id", "text", "recommended", "label"}  # no engine output
+    label = {
+        "about_game": "yes",
+        "verdict_basis": "playing",
+        "contradicts": "no",
+        "spam": "no",
+        "copied": "no",
+        "overall": "keep",
+    }
+    assert client.put("/labelsets/t-3/1", json={"rater": "va", "label": label}).status_code == 204
+    assert (
+        client.put(
+            "/labelsets/t-3/1", json={"rater": "va", "label": label | {"overall": "downweight"}}
+        ).status_code
+        == 204
+    )
+    again = client.get("/labelsets/t-3", params={"rater": "va"}).json()["items"][1]
+    assert again["label"]["overall"] == "downweight"
+    assert client.get("/labelsets/t-3", params={"rater": "xy"}).json()["items"][1]["label"] is None
+    assert client.get("/labelsets").json() == [{"name": "t-3", "size": 3, "labelled": {"va": 1}}]
+    assert (
+        client.put(
+            "/labelsets/t-3/1", json={"rater": "va", "label": label | {"spam": "maybe"}}
+        ).status_code
+        == 422
+    )
+    assert (
+        client.put("/labelsets/t-3/1", json={"rater": "va", "label": {"spam": "no"}}).status_code
+        == 422
+    )
+    assert client.put("/labelsets/t-3/99", json={"rater": "va", "label": label}).status_code == 404
+    assert client.get("/labelsets/..secret", params={"rater": "va"}).status_code == 404

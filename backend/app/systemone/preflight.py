@@ -17,7 +17,9 @@ TOKENS_PER_STATE_CHAR = 0.2445
 # caps requests at the documented 40/s, so ETA uses whichever is lower.
 JEV_MEASURED_RPS = 64.0
 LAYA_CPU_REVIEWS_PER_S = 0.08  # M1, dev laptop
-PACKED_TOKEN_FACTOR = 0.59  # pack=5 used 59% of single-request tokens (M4b, 5 reviews)
+# pack=5 used 88.8% of single-request tokens with question set v4 (M12d: 2 runs, 10,688
+# reviews). The earlier 0.59 was v1 on 5 reviews; v4 questions dominate each call.
+PACKED_TOKEN_FACTOR = 0.888
 
 
 # Measured per question set: same 200 dev states, v1 1,018.1 vs v2 1,264.1 tokens per

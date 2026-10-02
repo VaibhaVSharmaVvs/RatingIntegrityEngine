@@ -50,6 +50,92 @@
       "title": "ActionWeights",
       "type": "object"
     },
+    "BenchmarkOut": {
+      "properties": {
+        "kind": {
+          "enum": [
+            "attack",
+            "control",
+            "agreement",
+            "adversarial",
+            "ablation"
+          ],
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "backend": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "question_set": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "run_ids": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "metrics": {
+          "additionalProperties": true,
+          "type": "object"
+        },
+        "cost_usd": {
+          "default": 0.0,
+          "type": "number"
+        },
+        "notes": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "id": {
+          "type": "string"
+        },
+        "created_at": {
+          "format": "date-time",
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "name",
+        "backend",
+        "question_set",
+        "run_ids",
+        "metrics",
+        "cost_usd",
+        "notes",
+        "id",
+        "created_at"
+      ],
+      "title": "BenchmarkOut",
+      "type": "object"
+    },
     "BurstConfig-Input": {
       "description": "S3 burst detection (MVP_SPEC \u00a76.4). Calibrated on HD2 / CS2 (MEASUREMENTS M9).",
       "properties": {
@@ -1149,6 +1235,108 @@
         "actions_b64"
       ],
       "title": "JudgedEvent",
+      "type": "object"
+    },
+    "LabelIn": {
+      "properties": {
+        "rater": {
+          "maxLength": 40,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9_.-]+$",
+          "type": "string"
+        },
+        "label": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        }
+      },
+      "required": [
+        "rater",
+        "label"
+      ],
+      "title": "LabelIn",
+      "type": "object"
+    },
+    "LabelItem": {
+      "properties": {
+        "review_id": {
+          "type": "integer"
+        },
+        "text": {
+          "type": "string"
+        },
+        "recommended": {
+          "type": "boolean"
+        },
+        "label": {
+          "anyOf": [
+            {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "review_id",
+        "text",
+        "recommended",
+        "label"
+      ],
+      "title": "LabelItem",
+      "type": "object"
+    },
+    "LabelSet": {
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "subject": {
+          "type": "string"
+        },
+        "items": {
+          "items": {
+            "$ref": "#/$defs/LabelItem"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "name",
+        "subject",
+        "items"
+      ],
+      "title": "LabelSet",
+      "type": "object"
+    },
+    "LabelSetSummary": {
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "size": {
+          "type": "integer"
+        },
+        "labelled": {
+          "additionalProperties": {
+            "type": "integer"
+          },
+          "type": "object"
+        }
+      },
+      "required": [
+        "name",
+        "size",
+        "labelled"
+      ],
+      "title": "LabelSetSummary",
       "type": "object"
     },
     "PlatformPolicyConfig-Input": {
@@ -3262,6 +3450,9 @@
     "ActionWeights-Output": {
       "$ref": "#/$defs/ActionWeights-Output"
     },
+    "BenchmarkOut": {
+      "$ref": "#/$defs/BenchmarkOut"
+    },
     "BurstConfig-Input": {
       "$ref": "#/$defs/BurstConfig-Input"
     },
@@ -3327,6 +3518,18 @@
     },
     "JudgedEvent": {
       "$ref": "#/$defs/JudgedEvent"
+    },
+    "LabelIn": {
+      "$ref": "#/$defs/LabelIn"
+    },
+    "LabelItem": {
+      "$ref": "#/$defs/LabelItem"
+    },
+    "LabelSet": {
+      "$ref": "#/$defs/LabelSet"
+    },
+    "LabelSetSummary": {
+      "$ref": "#/$defs/LabelSetSummary"
     },
     "PlatformPolicyConfig-Input": {
       "$ref": "#/$defs/PlatformPolicyConfig-Input"

@@ -317,6 +317,32 @@ Open items: the color-mode toggle (informativeness/topic/cluster) and the "Compa
 
 **Exit criteria:** every §10 row has a number, including failures; FP rate on Cities: Skylines II on-topic negatives is reported; Gollum adjusted rating moves by < 5 pp (target, adjust after first measurement). Results in `docs/RESULTS.md`.
 
+**Status (2026-10-02): built and measured, two items open.**
+- **Results:** in `docs/RESULTS.md`; method notes in MEASUREMENTS M12. Jev spend $2.16; every policy experiment reused answers at $0.
+- **Tools:** `inject_attacks.py` + `bench_attacks.py` (exact ground truth); `make_adversarial.py` + `bench_adversarial.py`; `bench_controls.py`; `make_labelset.py` + `bench_agreement.py`; `sweep_cached.py` ($0 variants and ablations); `_api.py` (a client that retries GETs).
+- **API:** `benchmarks` table (migration 4) with `GET`/`POST /benchmarks`; blind labelling via `/labelsets`.
+- **UI:** `/benchmarks` (tables plus a cost-vs-accuracy chart) and `/label`.
+- **Exit criteria:**
+  - CS2 on-topic negative false-positive rate 0.3% ✅
+  - Gollum −1.4 pp (< 5) ✅
+  - every §10 row has a number or a stated reason, except two open items.
+- **Open:**
+  - **human labels:** two raters at `/label`, set `hd2-300`, then `tools/bench_agreement.py --record`;
+  - **Laya zero-shot κ:** run `run_9e290104478b` on the 300-review set.
+
+| Deviation | Planned | Built | Why |
+|---|---|---|---|
+| Labelling | `tools/label_cli.py` | `/label` page in the app (local only) | A second rater need not be a developer; labels go to the existing `labels` table |
+| Laya ablation (c) | the full attack set | the 300-review label set | Laya runs at 0.06–0.08 reviews/s on CPU, about 20 h for 5,689 reviews |
+| Ablation (d) | Laya fine-tuned on Jev labels | not run | Out of the MVP (Phase 8, owner decision) |
+| YelpZip | if access is granted | not run | No access |
+
+**Findings that need owner decisions** (RESULTS: recommendations):
+1. Halve the off-topic and similarity suspicion weights: +10 pp attack removal, controls unchanged.
+2. A deterministic detector for self-legitimising text: one sentence launders 30–39% of off-topic reviews.
+3. The cluster penalty on semantic clusters: little gain, all the collateral.
+4. Document that varied, on-topic coordinated campaigns are not discounted.
+
 ---
 
 ## Phase 8 (stretch, out of MVP): Laya fine-tune on non-Jev labels (re-scoped, C6)

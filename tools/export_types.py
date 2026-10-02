@@ -15,7 +15,7 @@ from app import models
 
 OUT = Path(__file__).resolve().parents[1] / "frontend" / "src" / "data" / "api.schema.json"
 
-REQUESTS = {models.RunCreate, models.SteamFetchRequest}  # defaults stay optional
+REQUESTS = {models.RunCreate, models.SteamFetchRequest, models.LabelIn}  # defaults stay optional
 
 EXPORTED = [
     models.RunCreate,
@@ -32,6 +32,10 @@ EXPORTED = [
     models.RunScores,
     models.CsvPreview,
     models.UploadLimits,
+    models.BenchmarkOut,
+    models.LabelIn,
+    models.LabelSet,
+    models.LabelSetSummary,
     models.SteamFetchRequest,
     models.ReplayLine,
     models.StageEvent,

@@ -562,3 +562,125 @@ English reference levels, from our own pulls (the earlier histogram figures were
 "Gap closed" = (rating − raw) / (reference − raw). **Caveat:** the reference assumes the game did not change. That is true for Metro (the bomb was about another game). It is false for Borderlands 2, where the EULA change was a real change to the product, so a buyer-facing rating *should* stay below the pre-change level. This is why the engine (which counts product terms as on-topic) moves BL2 less than Steam's rules do.
 
 All 39 runs of 2026-09-30/10-01 keep their replays (`data/replays/`, gitignored); `docs/RUNS.md` indexes them (`tools/run_index.py`). Phase 4–6 spend total: ≈ $3.93.
+
+---
+
+## M12. Phase 7 evaluation (2026-10-02)
+
+Results tables for readers are in `docs/RESULTS.md`; this section keeps the method notes and the corrections. Each benchmark is recorded in the `benchmarks` table (`GET /benchmarks`). The raw JSON is in `data/bench/` (gitignored).
+
+### M12a. Synthetic-attack benchmark (`tools/inject_attacks.py`, `tools/bench_attacks.py`)
+
+- **Clean slice:** Helldivers 2, 2024-04-01 → 04-28, 4,999 reviews (stratified by day, seed 7).
+- **Attacked copy:** the same slice plus 690 injected reviews, each attack type in its own window:
+  - template flood: 150 copy-paste negatives with slot edits, over 48 h;
+  - paraphrase flood: 150 rewordings of one off-topic boycott, over 24 h;
+  - coordinated burst: 200 varied on-topic complaints, 78% new accounts, in 3 h;
+  - astroturf flood: 150 templated praise reviews, 80% new accounts, in 6 h;
+  - spam: 40 promo links over the month.
+- **Ground truth:** `data/bench/attack-bench-v1.truth.json`, kept out of review meta, so no pipeline stage can see it.
+- **Pull of the attack:** raw 87.8% → 80.2% (−7.66 pp).
+- **Jev v4 (both runs):** $0.655.
+- **Organic alignment check:** organic reviews are matched by order. Their ratings are identical in both datasets, and the scorer checks this.
+
+**Finding 1 — the off-topic factor vetoes on-topic campaigns.** Suspicion is a geometric mean. When `offtopic_mean` is near 0, which it is for on-topic copies, suspicion falls to about 0.4, below the 0.5 penalty threshold. So copy-paste on-topic floods get only the copy floor (DOWNWEIGHT, weight 0.25), never the in-burst escalation to EXCLUDE.
+- With heuristics only, where the factor is absent, the same clusters score 0.87–0.95.
+- Off-topic weight ½ (cached, $0): the template flood is excluded 99% (mean weight 0.26 → 0.01); pull removed 45% → 54%.
+
+**Finding 2 — the similarity factor vetoes varied bursts.** The coordinated burst is detected exactly (200 reviews, 67/h against a baseline of 1/h, z = 52, 78% new accounts, 100% one verdict). Its suspicion is still 0.17, because similarity is 0.0.
+- Even when penalised, on-topic complaints keep integrity ≈ 0.9, and × (1 − 0.5 × suspicion) stays above the 0.55 line.
+- So the engine, by design, does not discount genuine-looking complaints on timing evidence alone. This is the same property that protects Cities: Skylines II.
+- Similarity weight ½ on top of off-topic ½: pull removed 55%, and cluster collateral falls from 127 to 74 organic reviews.
+- Similarity weight 0 is unstable on the real games (HD2 −0.8 pp, Metro +2.4 pp) and is rejected.
+
+**Off-topic and similarity weights on the real games** (cached, $0):
+
+| Variant | bench attacked | bench clean | CS2 | Gollum | FM26 | HD2 | BL2 | Metro |
+|---|---|---|---|---|---|---|---|---|
+| current (off-topic 1, similarity 1) | 83.5 | 87.7 | 59.2 | 34.3 | 37.2 | 77.6 | 37.4 | 62.9 |
+| off-topic ½ | 84.2 | 87.7 | 59.2 | 34.3 | 37.2 | 77.7 | 37.4 | 62.9 |
+| off-topic 0 | 84.3 | 87.8 | 59.2 | 34.3 | 37.2 | 77.7 | 37.5 | 62.9 |
+| off-topic ½ + similarity ½ | 84.3 | 87.8 | 59.2 | 34.3 | 37.2 | 77.7 | 37.4 | 62.9 |
+| off-topic ½ + similarity 0 | 83.7 | 87.9 | 59.2 | 34.3 | 37.2 | 76.8 | 37.0 | 65.3 |
+
+**Defaults unchanged. This is an owner decision** (see RESULTS: recommendations).
+
+**Finding 3 — organic decisions change when the corpus changes.** 458 of 4,999 organic reviews (9.2%) get a different action in the attacked run than in the clean run, against 1.2% between two identical runs (M12d).
+- Almost all of these are semantic-cluster membership changes. UMAP + HDBSCAN is global, so adding 690 reviews reshapes the organic meme clusters.
+- 213 FLAG→KEEP, 84 DOWNWEIGHT→KEEP, 70 KEEP→DOWNWEIGHT, 54 DOWNWEIGHT→FLAG, 35 KEEP→FLAG.
+- The leave-one-out ablation finds the cluster penalty adds about 1 pp of pull removed while causing all of this churn.
+
+### M12b. Adversarial set (`tools/make_adversarial.py`, `tools/bench_adversarial.py`)
+
+- **Sources:** 150 HD2 reviews: 100 downweighted as off-topic and 50 kept.
+- **Five versions each, in one run:** original, identical repeat, a legitimacy claim before the text, the claim after it, and a note to the AI.
+- **Cost:** $0.047.
+- **Upload:** as CSV, so the context line is "Review of" for every version. Compare versions with each other, not with the showcase run.
+
+| Off-topic sources (n = 100) | about_game | verdict_basis | integrity | laundered (crossed above 0.55) |
+|---|---|---|---|---|
+| identical repeat | −0.001 | −0.004 | −0.002 | 0% |
+| claim before | +0.161 | +0.249 | +0.104 | **39%** |
+| claim after | +0.152 | +0.196 | +0.095 | **30%** |
+| note to the AI | +0.143 | +0.287 | +0.093 | **35%** |
+
+Reviews the engine kept move by at most +0.05 on any answer, and at most 2% were harmed. **One sentence launders a third of off-topic reviews.** This confirms the documented Jev weakness; mitigation is an owner decision.
+
+### M12c. Controls (`tools/bench_controls.py`)
+
+On-topic negatives = negatives with `about_game` ≥ 0.5. False positive = such a review was downweighted or excluded.
+
+| Game | Raw | Adjusted | False positives |
+|---|---|---|---|
+| Cities: Skylines II | 59.6% | 59.2% | 6 of 1,994 (0.3%): 4 contradiction, 1 off-topic, 1 copy |
+| Gollum | 35.7% | 34.3% (−1.4 pp, within the 5 pp target) | 1 of 187 (0.5%) |
+| FM26 | 38.0% | 37.2% | 60 of 9,389 (0.6%) |
+
+- Raw sits inside the 95% CI for all three.
+- **Caveat:** no burst was detected in any control. These are launch windows with no earlier history for the 7-day baseline. So "does not suppress a genuine burst" is tested only on per-review judgments, not on the cluster rules.
+
+### M12d. Repeat noise and packing (corrects M7c and M4b)
+
+**Repeat noise.** Two identical Jev v4 pack-1 runs on the clean bench (4,999 reviews, $0.307 for the repeat):
+- 98.76% decision agreement (62 flips: 21 KEEP→DOWN, 15 FLAG→DOWN, 13 DOWN→KEEP, 8 DOWN→FLAG, …);
+- mean |Δ integrity| 0.0066, p95 0.023;
+- adjusted 87.71% vs 87.66%.
+- **This corrects the "2.6% of decisions" figure (M7c: policy v1, 60 states) to 1.2% for policy v3 / question set v4 at corpus scale.** The UI copy is updated.
+
+**Packing** (both datasets at pack 5 and pack 10, $1.15):
+
+| Pack size | Token factor vs single calls | Decision agreement with pack 1, same dataset | Pull removed |
+|---|---|---|---|
+| 1 | 1 | 98.8% (the repeat noise floor) | 45% |
+| 5 | 0.888 | 91.2% / 91.8% | 42% |
+| 10 | 0.87 | 90.8% / 91.0% | 43% |
+
+- Packing costs about 7× the noise in decision changes, to save 11–13%. It stays rejected.
+- `preflight.PACKED_TOKEN_FACTOR`: 0.59 (v1, 5 reviews, M4b) → **0.888**. Packed estimates had been about 35% low ($0.387 estimated vs $0.581 actual).
+- The 1.25× spend cap applies to the *approved* amount (the $4 limit for runs under it), not to the estimate, so these runs were correctly allowed.
+
+### M12e. Leave one signal out (cached, $0, attack bench)
+
+| Signal off | Pull removed | Note |
+|---|---|---|
+| none (current) | 45% | |
+| off-game | **30%** | paraphrase flood discounted 100% → 26% |
+| contradiction | 46% | |
+| spam weight | 46% | spam is still 90% excluded by the deterministic spam + promo rule |
+| copied text | 46% | |
+| low experience | 45% | |
+| cluster penalty | 44% | organic collateral 127 → 0 |
+| in-burst copy escalation | 46% | astroturf excluded 77% → 66% |
+
+### M12f. Phase 7 Jev spend
+
+| Item | Cost |
+|---|---|
+| attack pair | $0.655 |
+| adversarial set | $0.047 |
+| pack 5 | $0.581 |
+| pack 10 | $0.570 |
+| repeat | $0.307 |
+| **total** | **$2.16** |
+
+All sweeps and ablations reused answers at $0.

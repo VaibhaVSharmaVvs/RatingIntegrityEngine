@@ -10,6 +10,8 @@ import { HomePage } from '@/pages/HomePage'
 // Drill-down pages load on first visit; the live screen stays in the main bundle.
 const ResultsPage = lazy(() => import('@/pages/ResultsPage').then((m) => ({ default: m.ResultsPage })))
 const ReviewsPage = lazy(() => import('@/pages/ReviewsPage').then((m) => ({ default: m.ReviewsPage })))
+const LabelPage = lazy(() => import('@/pages/LabelPage').then((m) => ({ default: m.LabelPage })))
+const BenchmarksPage = lazy(() => import('@/pages/BenchmarksPage').then((m) => ({ default: m.BenchmarksPage })))
 const HelpPage = lazy(() => import('@/pages/HelpPage').then((m) => ({ default: m.HelpPage })))
 
 export function AppRoutes() {
@@ -21,6 +23,8 @@ export function AppRoutes() {
         <Route path="/runs/:runId/results" element={<ResultsPage />} />
         <Route path="/runs/:runId/reviews" element={<ReviewsPage />} />
         <Route path="/help" element={<HelpPage />} />
+        <Route path="/label" element={<LabelPage />} />
+        <Route path="/benchmarks" element={<BenchmarksPage />} />
       </Routes>
     </Suspense>
   )

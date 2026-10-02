@@ -1,4 +1,4 @@
-import type { DatasetDetail, ReplayLine, ReviewDetail, ReviewPage, RunOut, RunScores } from '@/data/api'
+import type { BenchmarkOut, DatasetDetail, LabelSet, ReplayLine, ReviewDetail, ReviewPage, RunOut, RunScores } from '@/data/api'
 import type { DataSource, ReviewFilter, RunStreamHandlers, TimedRunEvent } from '@/data/DataSource'
 import { fixtureAction, hourIndex, recordedRun } from './fixtures'
 
@@ -198,6 +198,17 @@ export class FakeSource implements DataSource {
     needs_confirmation: false,
   })
   getUploadLimits = async () => ({ max_mb: 50, max_rows: 200_000 })
+  listBenchmarks = async (): Promise<BenchmarkOut[]> => []
+  labels = new Map<number, Record<string, string>>()
+  listLabelSets = async () => [{ name: 'hd2-300', size: 3, labelled: {} }]
+  getLabelSet = async (name: string): Promise<LabelSet> => ({
+    name,
+    subject: 'Fixture game',
+    items: [1, 2, 3].map((i) => ({ review_id: i, text: `Label me ${i}`, recommended: i !== 2, label: this.labels.get(i) ?? null })),
+  })
+  putLabel = async (_name: string, reviewId: number, _rater: string, label: Record<string, string>) => {
+    this.labels.set(reviewId, label)
+  }
   previewCsv = async () => ({
     columns: ['body', 'stars', 'date'],
     n_rows: 3,

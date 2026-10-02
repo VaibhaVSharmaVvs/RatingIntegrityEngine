@@ -7,7 +7,7 @@ from datetime import datetime
 from enum import IntEnum
 from typing import Annotated, Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 Backend = Literal["jev", "laya", "laya-ft", "heuristic", "mock", "cached"]
 StageName = Literal["ingest", "features", "systemone", "corpus", "decide"]
@@ -518,6 +518,69 @@ class ClusterDetail(ClusterOut):
     actions: dict[str, int]  # action counts among members
     sample: list[ClusterReview]
     member_ids: list[int]
+
+
+BenchmarkKind = Literal["attack", "control", "agreement", "adversarial", "ablation"]
+
+
+class BenchmarkIn(Contract):
+    kind: BenchmarkKind
+    name: str
+    backend: str | None = None
+    question_set: str | None = None
+    run_ids: list[str] = []
+    metrics: dict[str, Any]
+    cost_usd: float = 0.0
+    notes: str | None = None
+
+
+class BenchmarkOut(BenchmarkIn):
+    id: str
+    created_at: datetime
+
+
+# Human labels for the agreement benchmark. Each key mirrors a System One question or the
+# engine's decision, so Cohen's kappa can be computed per question (tools/bench_agreement.py).
+HUMAN_LABELS: dict[str, list[str]] = {
+    "about_game": ["yes", "no"],  # ~ about_game
+    "verdict_basis": ["playing", "other"],  # ~ verdict_basis
+    "contradicts": ["no", "yes"],  # ~ rating_support level 0
+    "spam": ["no", "yes"],  # ~ spam_promo
+    "copied": ["no", "yes"],  # ~ templated
+    "overall": ["keep", "downweight", "exclude"],  # ~ the engine's action
+}
+HUMAN_LABEL_KEYS = list(HUMAN_LABELS)
+
+
+class LabelIn(Contract):
+    rater: str = Field(min_length=1, max_length=40, pattern=r"^[A-Za-z0-9_.-]+$")
+    label: dict[str, str]
+
+    @model_validator(mode="after")
+    def _values(self) -> "LabelIn":
+        bad = {k: v for k, v in self.label.items() if v not in HUMAN_LABELS.get(k, [])}
+        if bad:
+            raise ValueError(f"unknown label values: {bad}")
+        return self
+
+
+class LabelItem(Contract):
+    review_id: int
+    text: str
+    recommended: bool
+    label: dict[str, str] | None
+
+
+class LabelSet(Contract):
+    name: str
+    subject: str
+    items: list[LabelItem]
+
+
+class LabelSetSummary(Contract):
+    name: str
+    size: int
+    labelled: dict[str, int]  # rater -> reviews labelled
 
 
 class UploadLimits(Contract):

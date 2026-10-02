@@ -282,7 +282,7 @@ function Methodology({ run, s, exportUrl }: { run: RunOut; s: RunSummary; export
         <li>Not the “true” rating: the rating under this documented method.</li>
         <li>English-language reviews only.</li>
         <li>Reviews as they stand today: Steam lets people edit their verdicts later.</li>
-        <li>System One is not deterministic: 2.6% of decisions flipped on a repeat run (measured).</li>
+        <li>System One is not deterministic: about 1% of decisions flip on a repeat run (measured: 62 of 4,999).</li>
       </ul>
       <div className="flex flex-wrap items-center gap-2 pt-1">
         {csv && (

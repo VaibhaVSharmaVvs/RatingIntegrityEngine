@@ -404,7 +404,7 @@ export function HelpPage() {
                 Reviews as they stand today. Steam lets people edit their verdicts: 77% of Helldivers 2 bomb-day reviews were edited later, mostly flipping to
                 positive after the reversal. The verdict as posted is not available.
               </li>
-              <li>System One is not deterministic: about 2.6% of decisions differ between two runs on the same reviews.</li>
+              <li>System One is not deterministic: about 1% of decisions (62 of 4,999) differed between two identical runs on the same reviews; the rating moved by 0.05 pp.</li>
               <li>
                 The contradiction rule has known false positives on mixed reviews (“cool game, but connecting to friends is virtually impossible”,
                 Recommended). Its precision is measured against hand labels in the benchmark.

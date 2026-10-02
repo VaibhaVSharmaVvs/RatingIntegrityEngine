@@ -104,6 +104,9 @@ export function HomePage() {
   return (
     <div className="flex min-h-dvh flex-col bg-background text-foreground">
       <header className="flex items-center justify-end gap-1 px-4 py-2.5">
+        <Link to="/benchmarks" className={buttonVariants({ variant: 'ghost', size: 'sm' })}>
+          Benchmarks
+        </Link>
         <Link to="/help" className={buttonVariants({ variant: 'ghost', size: 'sm' })}>
           <CircleHelp />
           How it works
@@ -159,7 +162,7 @@ export function HomePage() {
             <span className="block text-[11px] text-muted-foreground">
               {live
                 ? canReplay
-                  ? 'Every review is judged again by Jev, one call each. It costs money and takes a few minutes; Jev is not deterministic, so about 2.6% of decisions can differ from the recording.'
+                  ? 'Every review is judged again by Jev, one call each. It costs money and takes a few minutes; Jev is not deterministic, so about 1% of decisions can differ from the recording.'
                   : 'Not analysed yet: every review is judged by Jev, one call each. It costs money and takes a few minutes.'
                 : 'Plays back the recorded analysis: the same judgments and timeline, at no cost.'}
             </span>

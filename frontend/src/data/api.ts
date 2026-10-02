@@ -11,6 +11,7 @@ export type ActionCode = 0 | 1 | 2 | 3 | 4;
 export interface RIEAPI {
   "ActionWeights-Input"?: ActionWeights;
   "ActionWeights-Output"?: ActionWeights1;
+  BenchmarkOut?: BenchmarkOut;
   "BurstConfig-Input"?: BurstConfig;
   "BurstConfig-Output"?: BurstConfig1;
   "ClusterConfig-Input"?: ClusterConfig;
@@ -33,6 +34,10 @@ export interface RIEAPI {
   HistogramBin?: HistogramBin;
   HourIndex?: HourIndex;
   JudgedEvent?: JudgedEvent;
+  LabelIn?: LabelIn;
+  LabelItem?: LabelItem;
+  LabelSet?: LabelSet;
+  LabelSetSummary?: LabelSetSummary;
   "PlatformPolicyConfig-Input"?: PlatformPolicyConfig;
   "PlatformPolicyConfig-Output"?: PlatformPolicyConfig1;
   PlatformSummary?: PlatformSummary;
@@ -78,6 +83,24 @@ export interface ActionWeights1 {
   DOWNWEIGHT: number;
   FLAG: number;
   EXCLUDE: number;
+}
+/**
+ * This interface was referenced by `RIEAPI`'s JSON-Schema
+ * via the `definition` "BenchmarkOut".
+ */
+export interface BenchmarkOut {
+  kind: "attack" | "control" | "agreement" | "adversarial" | "ablation";
+  name: string;
+  backend: string | null;
+  question_set: string | null;
+  run_ids: string[];
+  metrics: {
+    [k: string]: unknown;
+  };
+  cost_usd: number;
+  notes: string | null;
+  id: string;
+  created_at: string;
 }
 /**
  * S3 burst detection (MVP_SPEC §6.4). Calibrated on HD2 / CS2 (MEASUREMENTS M9).
@@ -477,6 +500,48 @@ export interface JudgedEvent {
   type: "judged";
   indices_b64: string;
   actions_b64: string;
+}
+/**
+ * This interface was referenced by `RIEAPI`'s JSON-Schema
+ * via the `definition` "LabelIn".
+ */
+export interface LabelIn {
+  rater: string;
+  label: {
+    [k: string]: string;
+  };
+}
+/**
+ * This interface was referenced by `RIEAPI`'s JSON-Schema
+ * via the `definition` "LabelItem".
+ */
+export interface LabelItem {
+  review_id: number;
+  text: string;
+  recommended: boolean;
+  label: {
+    [k: string]: string;
+  } | null;
+}
+/**
+ * This interface was referenced by `RIEAPI`'s JSON-Schema
+ * via the `definition` "LabelSet".
+ */
+export interface LabelSet {
+  name: string;
+  subject: string;
+  items: LabelItem[];
+}
+/**
+ * This interface was referenced by `RIEAPI`'s JSON-Schema
+ * via the `definition` "LabelSetSummary".
+ */
+export interface LabelSetSummary {
+  name: string;
+  size: number;
+  labelled: {
+    [k: string]: number;
+  };
 }
 /**
  * Steam's review-score rules, emulated (app/decide/platform.py).
