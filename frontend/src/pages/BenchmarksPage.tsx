@@ -56,7 +56,7 @@ export function BenchmarksPage() {
           <div className="h-64 animate-pulse rounded-lg bg-muted" />
         ) : (
           <>
-            <AttackSection rows={by('attack')} />
+            <AttackSection rows={by('attack')} ablations={by('ablation')} />
             <Section
               title="Ablations"
               lead="The same attack benchmark with one signal switched off (cached runs: the same Jev answers, so differences come from the policy alone), and Jev with five reviews per call."
@@ -94,7 +94,10 @@ function Section({ title, lead, children }: { title: string; lead: ReactNode; ch
   )
 }
 
-function AttackSection({ rows }: { rows: BenchmarkOut[] }) {
+function AttackSection({ rows, ablations = [] }: { rows: BenchmarkOut[]; ablations?: BenchmarkOut[] }) {
+  // ablations that change the cost (packing) belong on the cost axis; leave-one-out runs
+  // reuse the same answers, so they would all sit on one vertical line
+  const chartAblations = ablations.filter((b) => /pack \d+/.test(b.name))
   return (
     <Section
       title="Synthetic attacks"
@@ -111,7 +114,7 @@ function AttackSection({ rows }: { rows: BenchmarkOut[] }) {
       ) : (
         <div className="space-y-6">
           <AttackTable rows={rows} />
-          <CostAccuracy rows={rows} />
+          <CostAccuracy rows={[...rows, ...chartAblations]} />
         </div>
       )}
     </Section>
@@ -166,13 +169,15 @@ function CostAccuracy({ rows }: { rows: BenchmarkOut[] }) {
     .map((b) => {
       const m = b.metrics as M
       const n = (m.n_organic ?? 0) * 2 + (m.n_injected ?? 0) // the clean and attacked runs together
-      return { id: b.id, label: b.name.split(' · ').slice(1).join(' · ') || b.name, x: n ? (1000 * b.cost_usd) / n : 0, y: m.rating?.shift_removed as number | null }
+      // short chart label: the method without the parenthetical detail the table carries
+      const label = (b.name.split(' · ').slice(1).join(' · ') || b.name).replace(/\s*\(.*\)$/, '')
+      return { id: b.id, label, x: n ? (1000 * b.cost_usd) / n : 0, y: m.rating?.shift_removed as number | null }
     })
     .filter((p) => p.y != null) as { id: string; label: string; x: number; y: number }[]
   if (pts.length === 0) return null
   const W = 560
   const H = 240
-  const pad = { l: 40, r: 12, t: 12, b: 34 }
+  const pad = { l: 52, r: 12, t: 12, b: 34 }
   const xMax = Math.max(0.1, ...pts.map((p) => p.x)) * 1.15
   const X = (v: number) => pad.l + (v / xMax) * (W - pad.l - pad.r)
   const Y = (v: number) => H - pad.b - v * (H - pad.t - pad.b)
@@ -202,7 +207,14 @@ function CostAccuracy({ rows }: { rows: BenchmarkOut[] }) {
           </text>
         ))}
         <text x={(pad.l + W - pad.r) / 2} y={H - 4} textAnchor="middle" className="fill-muted-foreground text-[10px]">
-          cost per 1,000 reviews
+          Jev cost per 1,000 reviews
+        </text>
+        <text
+          transform={`translate(12 ${(pad.t + H - pad.b) / 2}) rotate(-90)`}
+          textAnchor="middle"
+          className="fill-muted-foreground text-[10px]"
+        >
+          attack’s pull removed
         </text>
         {pts.map((p) => (
           <g key={p.id} tabIndex={0} className="outline-none focus-visible:[&>circle]:stroke-ring">
@@ -220,7 +232,10 @@ function CostAccuracy({ rows }: { rows: BenchmarkOut[] }) {
           </g>
         ))}
       </svg>
-      <figcaption className="text-[11px] text-muted-foreground">Cached variants reuse one Jev run’s answers, so they share its cost.</figcaption>
+      <figcaption className="text-[11px] text-muted-foreground">
+        Policy variants reuse one Jev run’s answers, so they share its cost; packing several reviews per call is the only cheaper Jev option. Question set
+        v5 was measured on the adversarial and genuine-review sets, not on this benchmark.
+      </figcaption>
     </figure>
   )
 }
