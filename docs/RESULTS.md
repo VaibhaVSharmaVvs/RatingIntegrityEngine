@@ -71,9 +71,12 @@ Three ratings, from M11:
 | Helldivers 2 (5K, bomb 2024-05-03 → 05-06) | 76.4% | 77.6% | 89.0% | 88.0% |
 | Borderlands 2 (EULA, 2025) | 33.8% | 37.4% | 50.7% | 91.1% |
 | Metro 2033 Redux (Exodus exclusivity) | 48.8% | 62.9% | 61.5% | 93.8% |
+| Total War: ROME II (culture-war bomb, Sep 2018) | 32.3% | 35.7% | 42.2% (Valve's actual flag: **61.3%**) | 66.3% (purchasers) |
+| DOOM Eternal (soundtrack dispute, Nov 2022) | 76.1% | **82.3%** | 83.1% (Valve's actual flag: 91.8%) | 91.1% (purchasers) |
 
 - **Burst location:** the burst detector locates the HD2 bomb window, and the Steam-policy emulation removes 2024-05-03 08h → 05-06 07h (2,117 reviews, 78% of negatives off-topic). The emulated Steam policy recovers the pre-bomb level.
 - **Why the engine moves HD2 little:** most HD2 bomb reviews still talk about the game.
+- **ROME II is the one case where Valve's own decision can be checked.** Valve hid 3,520 of 3,846 English reviews (2018-09-22 → 10-17); what Steam shows is 61.3%. Our emulation, following the written rule with our burst detector, removes only the hottest week (42.2%). See MEASUREMENTS M14.
 
 ## 5. Reviews that argue for their own legitimacy (§10)
 

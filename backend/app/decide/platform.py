@@ -100,13 +100,53 @@ def platform_rating(
                 continue
             start = np.datetime64(b.start.replace(tzinfo=None), "us")
             end = np.datetime64(b.end.replace(tzinfo=None), "us") + np.timedelta64(1, "h")
+            if cfg.extend_windows:
+                start, end = _extend(start, end, rating_norm, created_at, offtopic, decided, cfg)
             in_window = (created_at >= start) & (created_at < end)
             removed = int((in_window & keep).sum())
             keep &= ~in_window
             windows.append(
-                ExcludedWindow(b.start, b.end, int(known.size), round(share, 4), removed)
+                ExcludedWindow(
+                    _to_datetime(start, b.start),
+                    _to_datetime(end - np.timedelta64(1, "h"), b.end),
+                    int(known.size),
+                    round(share, 4),
+                    removed,
+                )
             )
 
     counted = int(keep.sum())
     rating = float(rating_norm[keep].mean()) if counted else None
     return PlatformRating(rating, counted, key_removed, windows, basis)
+
+
+_DAY = np.timedelta64(24, "h")
+
+
+def _offtopic_step(lo, hi, rating_norm, created_at, offtopic, decided, cfg) -> bool:
+    """Does [lo, hi) still look like the bomb: enough judged negatives, mostly off-topic?"""
+    m = (created_at >= lo) & (created_at < hi) & (rating_norm < 0.5) & ~np.isnan(offtopic)
+    if decided is not None:
+        m &= decided
+    n = int(m.sum())
+    return (
+        n >= cfg.extend_min_daily_negatives
+        and float(offtopic[m].mean()) > cfg.offtopic_window_share
+    )
+
+
+def _extend(start, end, rating_norm, created_at, offtopic, decided, cfg):
+    """Grow a qualifying window by whole days while the bomb continues (both directions)."""
+    for _ in range(cfg.extend_max_days):
+        if not _offtopic_step(start - _DAY, start, rating_norm, created_at, offtopic, decided, cfg):
+            break
+        start = start - _DAY
+    for _ in range(cfg.extend_max_days):
+        if not _offtopic_step(end, end + _DAY, rating_norm, created_at, offtopic, decided, cfg):
+            break
+        end = end + _DAY
+    return start, end
+
+
+def _to_datetime(t: np.datetime64, like: datetime) -> datetime:
+    return t.astype("datetime64[us]").astype(datetime).replace(tzinfo=like.tzinfo)

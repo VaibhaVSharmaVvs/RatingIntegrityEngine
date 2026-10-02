@@ -201,6 +201,13 @@ class PlatformPolicyConfig(Contract):
     # Valve 2019: a negative spike whose reviews are mostly off-topic is removed whole.
     offtopic_window_share: float = Field(0.5, ge=0, le=1)
     min_judged_negatives: int = Field(20, ge=1)
+    # Extend a removed window in 24 h steps, back and forward, while each step still has
+    # at least `extend_min_daily_negatives` judged negatives and more than
+    # `offtopic_window_share` of them are off-topic. Valve removed ROME II's whole
+    # 3.5-week bomb period, not only its peak (MEASUREMENTS M14/M15).
+    extend_windows: bool = False
+    extend_min_daily_negatives: int = Field(5, ge=1)
+    extend_max_days: int = Field(45, ge=0)
 
 
 class RunCreate(Contract):

@@ -773,3 +773,94 @@ In normal periods the semantic penalty hit organic fan-meme clusters ("For Democ
 - Laya downweights 288 of 300 (96%) and calls 97% "not about the game".
 - **Agreement with Jev, Cohen's κ:** about_game −0.01, verdict_basis −0.10, contradicts 0.01, spam 0.17, copied −0.13, overall 0.00.
 - Chance level: Laya stays a benchmark row (see memory/decision C6).
+
+---
+
+## M14. Total War: ROME II: a culture-war bomb that Valve flagged (2026-10-02)
+
+**Why this game:** the demo lacked a political bomb, and a case where Valve's actual off-topic flag could be compared with our emulation.
+- Of 15 well-known review-bomb candidates, only ROME II (5,894 reviews flagged across all languages) and DOOM Eternal (3,172) have Valve-flagged reviews. The check: totals with `filter_offtopic_activity` 0 vs 1.
+- The ROME II event is the September 2018 "female generals" backlash.
+
+**Data:** English reviews, all free pulls.
+- Bomb window, 2018-08-01 → 10-31: 3,846 reviews, with a peak of 938 on 09-25.
+- Reference, 2018-06-01 → 07-31: 278 reviews, 68.0% positive; Steam purchasers 66.3% (n = 187).
+
+**Run:** `run_e54638b2b2ce`, question set v5, current rules, $0.265.
+
+| Rating | Value |
+|---|---|
+| Raw | 32.3% |
+| Integrity-adjusted | 35.7% (34.0–37.2) |
+| Steam policy, emulated | 42.2% (38.3–46.0) |
+| **What Steam shows (Valve's actual flag)** | **61.3%** (Steam purchasers among the 326 reviews still visible; 63.2% all visible) |
+| Reference before the bomb | 66.3% (purchasers) |
+
+- **Emulation:** removed five windows on 09-23 → 09-30 (1,831 reviews; 53–63% of their judged negatives not based on playing) plus 1,432 key activations.
+- **Valve's actual flag:** we listed the same English reviews with Valve's off-topic filter on and compared. Valve hides **3,520 of 3,846 (91.5%)**: essentially every review from 2018-09-22 to 10-17 (29.4% positive), plus 7 scattered in August.
+- **Gap closed** against the reference: engine 10%, emulation 29%, Valve 85%.
+
+**Finding:** Steam's written rule ("remove a spike whose negatives are mostly off-topic") is what we emulate. Valve's decision covers the whole sustained period, nearly four weeks, while our burst detector marks only the most intense week. The emulation therefore understates Valve here.
+
+**Proposed refinement (owner decision, not applied):** extend a removed window forward and backward while the daily share of off-topic negatives stays above the threshold.
+
+---
+
+## M15. Extending removed windows in the Steam-policy emulation (2026-10-02)
+
+**Rule tested** (`PlatformPolicyConfig.extend_windows`, default **off**):
+- Once a negative spike qualifies, grow its window in 24 h steps, back and forward, while each step has at least 5 judged negatives and more than 50% of them are off-topic.
+- At most 45 days each way.
+
+**Comparison:**
+- Cached re-runs of all seven showcase games ($0).
+- "What Steam shows" = English Steam purchasers' reviews in the same window, counted with Valve's off-topic filter on. These come from date-ranged API summaries, which match the ROME II full scan exactly (3,846 / 326 visible).
+
+| Game | Emulation now | Extended | What Steam shows | Before the bomb |
+|---|---|---|---|---|
+| Helldivers 2 | 89.0% (2,117 removed) | 85.6% (2,755) | 77.7% (Valve flagged nothing) | 88.0% |
+| Borderlands 2 | 50.7% (4,482) | 78.3% (6,780; 04-22 → 06-30) | 28.7% (nothing flagged in this window) | 91.1% |
+| Metro 2033 Redux | 61.5% (749) | 84.7% (1,563; 01-27 → 02-19) | 49.1% (nothing flagged) | 93.8% |
+| Total War: ROME II | 42.2% (1,831) | 46.5% (2,033; 09-22 → 10-03) | **61.3%** (Valve hid 09-22 → 10-17) | 66.3% |
+| CS2, FM26, Gollum | unchanged | unchanged | ≈ same (CS2: 58 hidden) | — |
+
+**Mean absolute gap to what Steam shows:** 9.3 pp now, against 15.4 pp extended. **The default stays off.**
+
+**Why neither version can match:** Valve's practice is inconsistent with its own wording.
+- It skipped three bombs the policy covers: HD2 (account requirement), BL2 (EULA, named in the policy) and Metro (another game).
+- On ROME II it removed the whole period, on-topic reviews included. After 10-03 fewer than half the daily negatives are judged off-topic, so a content-based extension stops there.
+- The "Steam policy" rating therefore applies Steam's **written rule**; it does not predict Valve's case-by-case decisions. The help page says so.
+
+**A second Valve case found while sizing DOOM Eternal:**
+- Valve did **not** flag the May 2020 Denuvo anti-cheat (DRM) bomb: 55 of 5,076 English reviews hidden in its peak week.
+- It **did** flag the November 2022 Mick Gordon (soundtrack dispute) bomb: 1,671 of 1,845 English reviews in November hidden, about 11/07 → 11/30, including a late-November positive counter-wave. Raw 68.0%, Steam shows 94.3%.
+
+---
+
+## M16. DOOM Eternal: a developer-conduct bomb that Valve flagged (2026-10-02)
+
+**Choice:** DOOM Eternal had two candidate windows, compared with 300-review pilots ($0.041).
+
+| Window | Pilot move (raw → adjusted) | Negatives "not about the game" | Negatives "verdict not from playing" | Valve |
+|---|---|---|---|---|
+| **A. Oct–Dec 2022, soundtrack dispute** | **+5.8 pp** | 42% | 74% | flagged |
+| B. May 2020, Denuvo anti-cheat | −0.5 pp | 2% | 75% | not flagged |
+
+- **B** is about how the game runs, a requirement that changes the product, so the engine keeps it, as with Borderlands 2's EULA. It repeats the Helldivers 2 story.
+- **A** was run in full.
+
+**Run** `run_306263ab191d`: 2,825 English reviews, 2022-10-15 → 12-15, question set v5, current rules, $0.193.
+
+| Rating | Value |
+|---|---|
+| Raw | 76.1% |
+| Integrity-adjusted | **82.3%** (80.9–83.7) |
+| Steam policy, emulated | 83.1% (81.5–84.7). One window removed, 11-09 18h → 11-10 21h: 254 reviews, 87% off-topic. 543 key activations |
+| What Steam shows | **91.8%** (Steam purchasers). Valve hid 1,372 of 2,283; weekly counts show everything from about 11-07 to 11-30, including a late-November positive counter-wave |
+| Reference before the bomb (10-15 → 11-04) | 91.1% (purchasers, n = 304) |
+
+**Gap closed against the reference:** engine 41%, emulation 47%, Valve 105%. Valve's hide overshoots slightly because it also removed the positive counter-wave.
+
+**Finding:** the engine recovers most of the distortion by downweighting off-topic reviews one by one, while keeping the genuine complaints inside the bomb period that Valve's blanket hide also threw away.
+
+**Phase 7–16 Jev spend since the top-up:** ROME II $0.265 + DOOM pilots $0.041 + DOOM A $0.193.

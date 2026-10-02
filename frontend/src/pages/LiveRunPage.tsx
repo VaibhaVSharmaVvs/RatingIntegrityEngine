@@ -43,6 +43,23 @@ export function LiveRunPage() {
     staleTime: Infinity,
   })
   const buckets = useMemo(() => (hours.data ? hourBuckets(hours.data) : null), [hours.data])
+  // a cached run reuses another run's answers: show that run's real pace and cost
+  const sourceId = run.data?.backend === 'cached' ? run.data.config.reuse_judgments_from : null
+  const source_ = useQuery({
+    queryKey: ['run', sourceId],
+    queryFn: () => source.getRun(sourceId!),
+    enabled: !!sourceId,
+    staleTime: Infinity,
+  })
+  const reusedFrom = source_.data?.summary
+    ? {
+        runId: source_.data.id,
+        backend: source_.data.backend,
+        costUsd: source_.data.cost_usd,
+        reviewsPerS: source_.data.summary.reviews_per_s,
+        elapsedS: source_.data.summary.elapsed_s,
+      }
+    : null
 
   const finished = run.data ? ['done', 'error'].includes(run.data.status) : false
   const n = dataset.data?.n_reviews ?? 0
@@ -163,7 +180,7 @@ export function LiveRunPage() {
 
         <aside aria-label="Run summary" className="relative flex min-h-0 flex-col gap-5 lg:overflow-y-auto lg:pr-1 [&>*]:shrink-0">
           <RatingTicker scale={scale} />
-          <RunCounters />
+          <RunCounters reusedFrom={reusedFrom} />
           <SelectedReview runId={runId} ratingScale={scale} />
           <section aria-label="Clusters" className="flex flex-col gap-2">
             <h2 className="flex items-baseline justify-between text-[11px] font-medium tracking-wider text-muted-foreground uppercase">

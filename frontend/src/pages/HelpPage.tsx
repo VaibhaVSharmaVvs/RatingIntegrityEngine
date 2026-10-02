@@ -81,6 +81,32 @@ const EXAMPLES: Example[] = [
       'The bomb was about a different game (Metro Exodus going Epic-exclusive). Reviews that are not about this game are caught one by one, so the engine makes its largest move: +14.1 pp, closing 31% of the gap to the earlier level.',
   },
   {
+    game: 'Total War: ROME II',
+    window: '3,846 reviews, Aug–Oct 2018',
+    raw: 0.323,
+    adjusted: 0.357,
+    ci: [0.34, 0.372],
+    platform: 0.422,
+    platformCi: [0.383, 0.46],
+    reference: 0.663,
+    referenceLabel: 'Jun–Jul 2018, Steam purchasers (66.3%)',
+    note:
+      'A culture-war bomb over female generals, and the one case here where Valve’s own decision can be checked: Valve hides 3,520 of these 3,846 reviews, every one from 22 September to 17 October, and the rating Steam shows is 61.3%. Our emulation follows the written rule with our burst detector and removes only the hottest week (42.2%); the engine moves the rating 3.4 pp.',
+  },
+  {
+    game: 'DOOM Eternal',
+    window: '2,825 reviews, Oct–Dec 2022',
+    raw: 0.761,
+    adjusted: 0.823,
+    ci: [0.809, 0.837],
+    platform: 0.831,
+    platformCi: [0.815, 0.847],
+    reference: 0.911,
+    referenceLabel: '15 Oct – 4 Nov 2022, Steam purchasers (91.1%)',
+    note:
+      'A bomb over the studio’s dispute with its composer, mostly about conduct rather than the game. Valve hid the whole month, the positive counter-wave included, and Steam shows 91.8%. The engine reaches 82.3% by downweighting the off-topic reviews one by one while keeping the genuine complaints, without hiding anything.',
+  },
+  {
     game: 'Cities: Skylines II (control)',
     window: '5,000 reviews, Oct–Dec 2023',
     raw: 0.596,
@@ -399,8 +425,9 @@ export function HelpPage() {
             </ol>
             <Callout>
               Steam’s written rules and Valve’s decisions differ. By the policy’s own wording, the Helldivers 2 PSN bomb and the Borderlands 2 EULA bomb
-              qualify, but Steam still counts the Helldivers 2 bomb in full. Borderlands 2 does have 7,644 reviews excluded by Valve; which window they come
-              from is not public.
+              qualify, but Steam still counts the Helldivers 2 bomb in full. Borderlands 2 does have 7,644 reviews excluded by Valve, outside our window.
+              Where Valve does flag a bomb (ROME II in 2018, DOOM Eternal in 2022), it hides the whole period, weeks long and positives included,
+              which no content-based rule reproduces. This rating applies the written rule; it does not predict Valve’s case-by-case decisions.
             </Callout>
           </Section>
 

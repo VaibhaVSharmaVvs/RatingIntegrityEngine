@@ -2,7 +2,7 @@
 
 *Researched 2026-09-29. Source: `idea.txt`. [V] means confirmed in a source; [U] means unverified, check before external use.*
 
-> ⚠️ Review datasets contain PII (reviewer names, user IDs, steamids). Anonymize them before sharing, per Solulever's SOC2/ISO 27001 obligations. The prices and vendor claims below are from research agents' web lookups. Re-verify them before anything reaches clients.
+> ⚠️ Review datasets contain PII (reviewer names, user IDs, steamids). Anonymize them before sharing. The prices and vendor claims below are from research agents' web lookups. Re-verify them before relying on them.
 
 ---
 
@@ -166,11 +166,11 @@ Caveats:
 
 ---
 
-## 8. Plan (ProtrackLite framing)
+## 8. Plan
 
-🎯 **Goal:** a demoable MVP that processes 50K reviews visually and reports a benchmarked integrity-adjusted rating, in about 4 weeks with 2 engineers.
+**Goal:** a demoable MVP that processes 50K reviews visually and reports a benchmarked integrity-adjusted rating, in about 4 weeks with 2 engineers.
 
-| Week | ✅ Task (deliverable) | 📌 Key activities |
+| Week | Task (deliverable) | Key activities |
 |---|---|---|
 | 0 (now) | Data and vendor access | Email for YelpZip access; join the Jev waitlist and request SOC2 / ZDR terms; pull Helldivers 2 reviews via the Steam API; start hand-labeling 300 reviews |
 | 1 | Pipeline skeleton | CSV ingest + PII hashing, DuckDB schema, heuristic signals, MinHash, SSE job endpoint, first grid render |
@@ -194,12 +194,12 @@ Caveats:
 
 | Risk | Severity | Mitigation |
 |---|---|---|
-| **Defamation.** Courts treat "this review is fake" as a factual claim; an Ohio appeals court let a defamation case over 62 alleged fake reviews proceed. | High | Never say "fake". Use "integrity weight" and "low evidential value". Never name reviewers. Keep evidence trails. **Solulever legal to review the wording before any external use.** |
+| **Defamation.** Courts treat "this review is fake" as a factual claim; an Ohio appeals court let a defamation case over 62 alleged fake reviews proceed. | High | Never say "fake". Use "integrity weight" and "low evidential value". Never name reviewers. Keep evidence trails. **Have a lawyer review the wording before any public link.** |
 | Adversarial text moving the model's judgment (a documented Jev weakness) | High | Deterministic signals weigh as much as model judgments; the model alone can never EXCLUDE; red-team with the injector |
 | False positives against real complainers or non-native writers | High | Prefer DOWNWEIGHT over EXCLUDE; humans review FLAGs; publish error rates; run an FP test on organic bursts |
 | Vendor immaturity (Jev is 2 weeks old, on a waitlist, with shifting limits) | Medium | Pluggable judgment layer; fallback to Haiku 4.5 or a local model |
 | Dataset licenses are NC or research-only | Medium | Demo and benchmark only; client data for any commercial use; Legal sign-off |
-| PII in reviews sent to third-party APIs | Medium | Hash IDs and strip names/emails at ingest; vendor DPA + ZDR; log in Scrut.io |
+| PII in reviews sent to third-party APIs | Medium | Hash IDs and strip names/emails at ingest; vendor DPA + ZDR |
 | A published methodology gives attackers a playbook | Medium | Publish principles, keep thresholds private, version the models |
 | Demo number looks cherry-picked (7.4 → 8.1) | Low–Medium | Always show the CI, n_eff and the ablation table next to the headline number |
 

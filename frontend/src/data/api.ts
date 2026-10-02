@@ -555,6 +555,9 @@ export interface PlatformPolicyConfig {
   purchasers_only?: boolean;
   offtopic_window_share?: number;
   min_judged_negatives?: number;
+  extend_windows?: boolean;
+  extend_min_daily_negatives?: number;
+  extend_max_days?: number;
 }
 /**
  * Steam's review-score rules, emulated (app/decide/platform.py).
@@ -566,6 +569,9 @@ export interface PlatformPolicyConfig1 {
   purchasers_only: boolean;
   offtopic_window_share: number;
   min_judged_negatives: number;
+  extend_windows: boolean;
+  extend_min_daily_negatives: number;
+  extend_max_days: number;
 }
 /**
  * Every number the decision policy uses (MVP_SPEC §6.5). Nothing is hard-coded.
@@ -898,6 +904,9 @@ export interface PlatformPolicyConfig2 {
   purchasers_only?: boolean;
   offtopic_window_share?: number;
   min_judged_negatives?: number;
+  extend_windows?: boolean;
+  extend_min_daily_negatives?: number;
+  extend_max_days?: number;
 }
 /**
  * This interface was referenced by `RIEAPI`'s JSON-Schema
@@ -1030,6 +1039,9 @@ export interface PlatformPolicyConfig3 {
   purchasers_only: boolean;
   offtopic_window_share: number;
   min_judged_negatives: number;
+  extend_windows: boolean;
+  extend_min_daily_negatives: number;
+  extend_max_days: number;
 }
 /**
  * This interface was referenced by `RIEAPI`'s JSON-Schema
