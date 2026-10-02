@@ -88,6 +88,9 @@ const hourFmt = new Intl.DateTimeFormat('en-GB', {
 export const formatDay = (d: Date | string) => dayFmt.format(new Date(d))
 export const formatHour = (d: Date | string) => `${hourFmt.format(new Date(d))} UTC`
 
+/** Review text, or a stand-in when there is none (an empty review, or a demo exported without text). */
+export const reviewText = (text: string | null | undefined) => text || '(no review text)'
+
 export function snippet(text: string, max = 80): string {
   const flat = text.replace(/\s+/g, ' ').trim()
   return flat.length > max ? `${flat.slice(0, max - 1).trimEnd()}…` : flat

@@ -74,6 +74,18 @@ const RATER_KEY = 'rie.rater'
 
 export function LabelPage() {
   const source = useDataSource()
+  if (!source.canStartRuns) {
+    return (
+      <div className="grid min-h-dvh place-items-center bg-background p-6 text-sm text-muted-foreground">
+        Labelling runs on a local copy of the engine only.
+      </div>
+    )
+  }
+  return <Labelling />
+}
+
+function Labelling() {
+  const source = useDataSource()
   const [params, setParams] = useSearchParams()
   const set = params.get('set') ?? ''
   const rater = params.get('rater') ?? ''

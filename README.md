@@ -90,17 +90,20 @@ Every run's event stream is recorded, so the public demo replays real runs with 
 
 ## Results so far
 
-All numbers were measured; see [`docs/MEASUREMENTS.md`](docs/MEASUREMENTS.md). Evaluation against injected attacks and human labels is [Phase 7](docs/PLAN.md).
+All numbers were measured; see [`docs/RESULTS.md`](docs/RESULTS.md) and [`docs/MEASUREMENTS.md`](docs/MEASUREMENTS.md). Three ratings per game: raw, the engine's integrity-adjusted rating, and Steam's written review-bomb rules applied to the same reviews. "Steam shows" is Steam's own score for the window, with Valve's off-topic filter.
 
-| Run | Raw → adjusted (95% CI) |
-|---|---|
-| Helldivers 2, 5K subset, Jev, full pipeline | 76.4% → **72.9%** (71.5–74.2%) · bursts found **3–8 May 2024** |
-| Cities: Skylines II control (organic backlash) | 59.6% → 58.8% · **0 reviews penalised** by clusters |
-| LOTR: Gollum control (genuinely poor game) | 35.7% → 34.4% · **not inflated** |
+| Game (window) | Raw | Integrity-adjusted | Steam rules | Steam shows | Before the bomb |
+|---|---|---|---|---|---|
+| Helldivers 2 (Apr–Jun 2024, account requirement) | 76.4% | 77.7% | 89.0% | 77.7% | 88.0% |
+| Borderlands 2 (Apr–Aug 2025, EULA) | 33.8% | 37.4% | 50.7% | 28.7% | 91.1% |
+| Metro 2033 Redux (Dec 2018–Mar 2019, another game) | 48.8% | 62.8% | 61.5% | 49.1% | 93.8% |
+| Total War: ROME II (Aug–Oct 2018, culture war) | 32.3% | 35.7% | 42.2% | 61.3% | 66.3% |
+| DOOM Eternal (Oct–Dec 2022, soundtrack dispute) | 76.1% | **82.3%** | 83.1% | 91.8% | 91.1% |
+| Cities: Skylines II · Gollum · FM26 (genuine reception) | 59.6 · 35.7 · 38.0% | 59.2 · 34.3 · 37.2% | 59.9 · 34.4 · 38.4% | 59.8 · 34.4 · 38.4% | — |
 
-- **Scale:** UMAP + HDBSCAN on 50K reviews in 3.3 min on a laptop CPU. A full 50K heuristic run takes 48 s end to end.
-- **Live screen:** a 50K replay renders at 60 fps (grid paint p95 0.4 ms).
-- **Cost:** about $0.25 of Jev per 5,000 reviews, one call per review.
+- **Attack benchmark** (4,999 real reviews + 690 injected, exact ground truth): the engine removes 51% of the attack's pull on the rating, against 22% for heuristics alone. Genuine on-topic complaints are discounted 0.3–0.6% of the time.
+- **Adversarial text:** one sentence claiming legitimacy laundered 29–53% of off-topic reviews before the defence; 0–7% after it.
+- **Cost:** about $0.07 of Jev per 1,000 reviews, one call per review. The public demo replays recorded runs and costs nothing to serve.
 
 ## Run it locally
 
@@ -152,12 +155,26 @@ data/       local only (gitignored): DuckDB, caches, replays, raw pulls
 
 ## Status
 
-Phases 0–5 are done: backend pipeline end to end, plus the live analysis screen. Next up: drill-downs, results and export (Phase 6, the demoable MVP), then evaluation and benchmarks (Phase 7), then the public replay-only demo (Phase 9). See [the plan](docs/PLAN.md).
+Phases 0–7 are done: the pipeline end to end, the live screen, drill-downs and results, and the evaluation (see [RESULTS](docs/RESULTS.md)). Phase 9, the public replay-only demo, is in progress; human-agreement labels are being collected. See [the plan](docs/PLAN.md).
+
+## Public demo (static)
+
+The public demo is a static site: the showcase runs replayed from exported files, with no backend, database or API key.
+
+```bash
+# with the API running on :8001 (from backend/)
+uv run python ../tools/export_bundle.py           # writes frontend/public/bundle (gitignored)
+# from frontend/
+npm run build:static && npm run check:static      # dist/ is the site; the check fails on any key or backend URL
+```
+
+- **Hosting:** any static host. `dist/` carries fallbacks for client-side routes: `_redirects` (Netlify, Cloudflare Pages), `vercel.json` (Vercel), `404.html` (GitHub Pages).
+- **Subfolder sites:** for a GitHub Pages project site, build with `VITE_BASE=/<repo>/`.
 
 ## Responsible use
 
 - The UI and docs talk about *integrity weight* and *low evidential value*, never about "fake" reviews, and never name reviewers. Author IDs are salted hashes from ingest onward.
-- Steam review data is used under Steam's terms for personal, non-commercial use and is **not redistributed** in this repository.
+- Steam review data is used under Steam's terms for personal, non-commercial use and is **not redistributed** in this repository. The public demo's bundle is exported locally; whether it carries review text (scrubbed of e-mails, links, phone numbers and handles) or none (`export_bundle.py --text none`) is decided before publishing.
 - An adjusted rating is a method's output, not a verdict on any reviewer or product.
 
 ## Credits

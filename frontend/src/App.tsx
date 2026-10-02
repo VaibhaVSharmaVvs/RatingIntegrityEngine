@@ -35,7 +35,8 @@ export default function App({ source = defaultDataSource }: { source?: DataSourc
   return (
     <QueryClientProvider client={client}>
       <DataSourceProvider source={source}>
-        <BrowserRouter>
+        {/* BASE_URL: "/" by default, "/<repo>/" for a GitHub Pages project site (VITE_BASE) */}
+        <BrowserRouter basename={import.meta.env.BASE_URL.replace(/\/$/, '')}>
           <AppRoutes />
         </BrowserRouter>
       </DataSourceProvider>

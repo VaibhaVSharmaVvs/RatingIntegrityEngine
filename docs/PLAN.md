@@ -377,6 +377,25 @@ Open items: the color-mode toggle (informativeness/topic/cluster) and the "Compa
 
 **Exit criteria:** the static build contains **no API key and no backend URL** (grep the `dist/` output in CI); Lighthouse performance ≥ 90 on landing; bundle review text has been PII-scrubbed and author hashes only.
 
+**Status (2026-10-02): built; not yet published (host and review-text decision open).**
+- **Bundle:** `tools/export_bundle.py` writes `frontend/public/bundle/` (gitignored). The 8 showcase runs come to 107 MB on disk, about 17 MB gzipped. There are 1,214 files, the largest 4.2 MB, and review details are split into 1,000-review chunks that load on demand. A bulk `GET /runs/{id}/review-details` makes the export take minutes instead of an hour.
+- **`StaticBundle`:** serves every page from those files, including table filtering and "Skip to end" from the recording. Runs, uploads, the pre-flight and labelling are refused.
+- **Static build:** shows a "pre-recorded" note on the home page.
+- **SPA fallbacks:** `_redirects` (Netlify, Cloudflare Pages), `vercel.json`, and `404.html` (GitHub Pages). `VITE_BASE` sets a subfolder base.
+- **Exit criteria:**
+  - `npm run check:static` (also in CI, `.github/workflows/ci.yml`) is clean on all 1,214 files: no key, model or backend URL, no live-API code, no identifier fields or e-mail addresses in the data.
+  - Lighthouse on the landing page: performance **95**, accessibility 100, best practices 100 (LCP 2.4 s, TBT 20 ms).
+  - Text is scrubbed of e-mails, links, phone numbers and @handles; no author hashes or Steam ids are exported.
+- **Browser check:** home → replay → reviews (filtered) → inspector → benchmarks → help → skip to end, with no console errors.
+
+| Deviation | Planned | Built | Why |
+|---|---|---|---|
+| Landing | auto-plays the 50K HD2 replay | the product picker; each game replays on demand | Owner decision (home page); the showcase runs are the reference runs |
+| Replay player | play/pause, 1×/4×/16×, scrub | 30 s / 10 s / real time, and Skip to end | The existing controls cover the demo; scrubbing is open |
+| Review text | ~3–5K sampled texts per bundle | all texts, scrubbed, or none (`--text none`) | Sampling would leave inspector and tooltip gaps. Publishing Steam review text is an owner decision (README "Responsible use") |
+| Demo video | 90 s | not made | Needs the final host |
+
+
 ---
 
 ## Cross-cutting requirements (every phase)

@@ -7,7 +7,7 @@ import { buttonVariants } from '@/components/ui/button'
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import type { ClusterDetail, RunOut } from '@/data/api'
 import { useDataSource } from '@/data/source'
-import { formatHour, formatInt, snippet, verdictWords } from '@/lib/format'
+import { formatHour, formatInt, reviewText, snippet, verdictWords } from '@/lib/format'
 import { FACTORS, KIND_LABEL } from '@/lib/methodology'
 import { ACTION_LABELS, type ActionName } from '@/lib/palette'
 import { cn } from '@/lib/utils'
@@ -167,7 +167,7 @@ function ClusterBody({ c, run, runId, scale }: { c: ClusterDetail; run: RunOut; 
                   {m.created_at && <span className="num ml-auto">{formatHour(m.created_at)}</span>}
                 </div>
                 <p className="mt-0.5 text-xs leading-snug">
-                  <Highlight text={snippet(m.text, 160)} phrases={c.top_phrases} />
+                  <Highlight text={snippet(reviewText(m.text), 160)} phrases={c.top_phrases} />
                 </p>
                 {m.reasons.length > 0 && <ReasonList codes={m.reasons} className="pointer-events-none mt-1" />}
               </button>

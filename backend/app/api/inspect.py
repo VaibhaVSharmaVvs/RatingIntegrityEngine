@@ -368,3 +368,16 @@ def export_run(
         media_type="text/csv",
         headers={"Content-Disposition": f'attachment; filename="{name}.csv"'},
     )
+
+
+@router.get("/{run_id}/review-details", response_model=list[ReviewDetail])
+def review_details(
+    run_id: str,
+    offset: int = Query(0, ge=0),
+    limit: int = Query(1000, ge=1, le=1000),
+    state: AppState = Depends(get_state),
+) -> list[ReviewDetail]:
+    """Review details for ids offset .. offset+limit-1, in one request (static export)."""
+    run = _fetch_run(state, run_id)
+    ds = fetch_dataset(state, run.dataset_id)
+    return [get_review(run_id, i, state) for i in range(offset, min(offset + limit, ds.n_reviews))]
