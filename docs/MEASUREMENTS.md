@@ -834,3 +834,33 @@ In normal periods the semantic penalty hit organic fan-meme clusters ("For Democ
 **A second Valve case found while sizing DOOM Eternal:**
 - Valve did **not** flag the May 2020 Denuvo anti-cheat (DRM) bomb: 55 of 5,076 English reviews hidden in its peak week.
 - It **did** flag the November 2022 Mick Gordon (soundtrack dispute) bomb: 1,671 of 1,845 English reviews in November hidden, about 11/07 → 11/30, including a late-November positive counter-wave. Raw 68.0%, Steam shows 94.3%.
+
+---
+
+## M16. DOOM Eternal: a developer-conduct bomb that Valve flagged (2026-10-02)
+
+**Choice:** DOOM Eternal had two candidate windows, compared with 300-review pilots ($0.041).
+
+| Window | Pilot move (raw → adjusted) | Negatives "not about the game" | Negatives "verdict not from playing" | Valve |
+|---|---|---|---|---|
+| **A. Oct–Dec 2022, soundtrack dispute** | **+5.8 pp** | 42% | 74% | flagged |
+| B. May 2020, Denuvo anti-cheat | −0.5 pp | 2% | 75% | not flagged |
+
+- **B** is about how the game runs, a requirement that changes the product, so the engine keeps it, as with Borderlands 2's EULA. It repeats the Helldivers 2 story.
+- **A** was run in full.
+
+**Run** `run_306263ab191d`: 2,825 English reviews, 2022-10-15 → 12-15, question set v5, current rules, $0.193.
+
+| Rating | Value |
+|---|---|
+| Raw | 76.1% |
+| Integrity-adjusted | **82.3%** (80.9–83.7) |
+| Steam policy, emulated | 83.1% (81.5–84.7). One window removed, 11-09 18h → 11-10 21h: 254 reviews, 87% off-topic. 543 key activations |
+| What Steam shows | **91.8%** (Steam purchasers). Valve hid 1,372 of 2,283; weekly counts show everything from about 11-07 to 11-30, including a late-November positive counter-wave |
+| Reference before the bomb (10-15 → 11-04) | 91.1% (purchasers, n = 304) |
+
+**Gap closed against the reference:** engine 41%, emulation 47%, Valve 105%. Valve's hide overshoots slightly because it also removed the positive counter-wave.
+
+**Finding:** the engine recovers most of the distortion by downweighting off-topic reviews one by one, while keeping the genuine complaints inside the bomb period that Valve's blanket hide also threw away.
+
+**Phase 7–16 Jev spend since the top-up:** ROME II $0.265 + DOOM pilots $0.041 + DOOM A $0.193.

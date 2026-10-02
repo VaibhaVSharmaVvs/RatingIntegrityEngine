@@ -12,6 +12,7 @@ delete them:** the Phase 9 public demo is built from these replays.
 | Borderlands 2 Apr-Aug 2025 · current rules | `run_31ffbd3bddd6` | v4 | 12,981 | 33.8% | 37.4% (36.6%-38.2%) | 50.7% (49.1%-52.3%) | $0.000 | ✅ |
 | Metro 2033 Redux Dec 2018-Mar 2019 · current rules | `run_e638053d0ca6` | v4 | 2,444 | 48.8% | 62.8% (60.7%-64.8%) | 61.5% (58.9%-64.2%) | $0.000 | ✅ |
 | Total War: ROME II Aug-Oct 2018 · v5 | `run_e54638b2b2ce` | v5 | 3,846 | 32.3% | 35.7% (34.0%-37.2%) | 42.2% (38.3%-46.0%) | $0.265 | ✅ |
+| DOOM Eternal Oct-Dec 2022 · v5 | `run_306263ab191d` | v5 | 2,825 | 76.1% | 82.3% (80.9%-83.7%) | 83.1% (81.5%-84.7%) | $0.193 | ✅ |
 | Football Manager 26 launch→now · current rules | `run_55d11443d036` | v4 | 15,348 | 38.0% | 37.2% (36.4%-38.0%) | 38.4% (37.4%-39.3%) | $0.000 | ✅ |
 | Cities: Skylines II 5K control · current rules | `run_696384d545ae` | v4 | 5,000 | 59.6% | 59.2% (57.8%-60.6%) | 59.9% (58.4%-61.4%) | $0.000 | ✅ |
 | Gollum control · current rules | `run_51d5d8355914` | v4 | 297 | 35.7% | 34.3% (29.1%-39.9%) | 34.4% (27.9%-41.4%) | $0.000 | ✅ |
@@ -170,3 +171,13 @@ delete them:** the Phase 9 public demo is built from these replays.
 | `run_696384d545ae` | Cities: Skylines II, Oct-Dec 2023 (5K) | cached | v4 | done | 5000 | 59.6% | 59.2% | 59.9% | ✅ |
 | `run_51d5d8355914` | LOTR: Gollum, May-Jul 2023 | cached | v4 | done | 297 | 35.7% | 34.3% | 34.4% | ✅ |
 | `run_e54638b2b2ce` | Total War: ROME II, Aug-Oct 2018 (female generals bomb) | jev | v5 | done | 3846 | 32.3% | 35.7% | 42.2% | ✅ |
+| `run_288a6454dca9` | Helldivers 2 Apr-Jun 2024 5K live | cached | v4 | done | 4999 | 76.4% | 77.7% | 85.6% | ✅ |
+| `run_149c2bb1941e` | Borderlands 2, Apr-Aug 2025 (EULA bomb) | cached | v4 | done | 12981 | 33.8% | 37.4% | 78.3% | ✅ |
+| `run_646cb5142876` | Metro 2033 Redux, Dec 2018-Mar 2019 (Exodus exclusivity bomb) | cached | v4 | done | 2444 | 48.8% | 62.8% | 84.7% | ✅ |
+| `run_fc1599c0ce1b` | Football Manager 26 (launch to now) | cached | v4 | done | 15348 | 38.0% | 37.2% | 38.4% | ✅ |
+| `run_0f1fb53b050f` | Cities: Skylines II, Oct-Dec 2023 (5K) | cached | v4 | done | 5000 | 59.6% | 59.2% | 59.9% | ✅ |
+| `run_7af29fe69aac` | LOTR: Gollum, May-Jul 2023 | cached | v4 | done | 297 | 35.7% | 34.3% | 34.4% | ✅ |
+| `run_5e7e5d39e594` | Total War: ROME II, Aug-Oct 2018 (female generals bomb) | cached | v5 | done | 3846 | 32.3% | 35.7% | 46.5% | ✅ |
+| `run_e23b55fe81ae` | DOOM Eternal 2022 pilot (300) | jev | v5 | done | 301 | 78.1% | 83.9% | 76.9% | ✅ |
+| `run_e2cc5399997b` | DOOM Eternal 2020 pilot (300) | jev | v5 | done | 302 | 68.2% | 67.7% | 68.4% | ✅ |
+| `run_306263ab191d` | DOOM Eternal, Oct-Dec 2022 (soundtrack dispute bomb) | jev | v5 | done | 2825 | 76.1% | 82.3% | 83.1% | ✅ |

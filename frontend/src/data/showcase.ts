@@ -43,6 +43,13 @@ export const SHOWCASE: ShowcaseGame[] = [
     runId: 'run_e54638b2b2ce',
   },
   {
+    key: 'doom',
+    title: 'DOOM Eternal',
+    story: 'Bomb over a soundtrack dispute that Valve flagged',
+    window: 'Oct–Dec 2022 · 2,825 reviews',
+    runId: 'run_306263ab191d',
+  },
+  {
     key: 'fm26',
     title: 'Football Manager 26',
     story: 'Genuine launch backlash (control)',

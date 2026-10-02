@@ -72,6 +72,7 @@ Three ratings, from M11:
 | Borderlands 2 (EULA, 2025) | 33.8% | 37.4% | 50.7% | 91.1% |
 | Metro 2033 Redux (Exodus exclusivity) | 48.8% | 62.9% | 61.5% | 93.8% |
 | Total War: ROME II (culture-war bomb, Sep 2018) | 32.3% | 35.7% | 42.2% (Valve's actual flag: **61.3%**) | 66.3% (purchasers) |
+| DOOM Eternal (soundtrack dispute, Nov 2022) | 76.1% | **82.3%** | 83.1% (Valve's actual flag: 91.8%) | 91.1% (purchasers) |
 
 - **Burst location:** the burst detector locates the HD2 bomb window, and the Steam-policy emulation removes 2024-05-03 08h → 05-06 07h (2,117 reviews, 78% of negatives off-topic). The emulated Steam policy recovers the pre-bomb level.
 - **Why the engine moves HD2 little:** most HD2 bomb reviews still talk about the game.

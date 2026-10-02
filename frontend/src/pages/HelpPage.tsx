@@ -94,6 +94,19 @@ const EXAMPLES: Example[] = [
       'A culture-war bomb over female generals, and the one case here where Valve’s own decision can be checked: Valve hides 3,520 of these 3,846 reviews, every one from 22 September to 17 October, and the rating Steam shows is 61.3%. Our emulation follows the written rule with our burst detector and removes only the hottest week (42.2%); the engine moves the rating 3.4 pp.',
   },
   {
+    game: 'DOOM Eternal',
+    window: '2,825 reviews, Oct–Dec 2022',
+    raw: 0.761,
+    adjusted: 0.823,
+    ci: [0.809, 0.837],
+    platform: 0.831,
+    platformCi: [0.815, 0.847],
+    reference: 0.911,
+    referenceLabel: '15 Oct – 4 Nov 2022, Steam purchasers (91.1%)',
+    note:
+      'A bomb over the studio’s dispute with its composer, mostly about conduct rather than the game. Valve hid the whole month, the positive counter-wave included, and Steam shows 91.8%. The engine reaches 82.3% by downweighting the off-topic reviews one by one while keeping the genuine complaints, without hiding anything.',
+  },
+  {
     game: 'Cities: Skylines II (control)',
     window: '5,000 reviews, Oct–Dec 2023',
     raw: 0.596,

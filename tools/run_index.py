@@ -26,6 +26,7 @@ SHOWCASE = {
     "Borderlands 2 Apr-Aug 2025 · current rules": "run_31ffbd3bddd6",
     "Metro 2033 Redux Dec 2018-Mar 2019 · current rules": "run_e638053d0ca6",
     "Total War: ROME II Aug-Oct 2018 · v5": "run_e54638b2b2ce",
+    "DOOM Eternal Oct-Dec 2022 · v5": "run_306263ab191d",
     "Football Manager 26 launch→now · current rules": "run_55d11443d036",
     "Cities: Skylines II 5K control · current rules": "run_696384d545ae",
     "Gollum control · current rules": "run_51d5d8355914",
