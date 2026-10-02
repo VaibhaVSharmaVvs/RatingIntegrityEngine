@@ -112,7 +112,7 @@ Three ratings, from M11:
    - It can be measured on the existing adversarial set for about $0.05.
    - Must keep the rule that System One alone never excludes.
 3. **Reconsider the cluster penalty on *semantic* clusters.** It adds about 1 pp of attack removal but drives all the collateral, and its effect changes whenever the corpus changes (9.2% of organic decisions moved under injection, against 1.2% repeat noise). Bursts and duplicate groups would keep it.
-4. **Say plainly that varied, on-topic coordinated campaigns are not discounted** (§1), in the help page's limits.
+4. **Say plainly that varied, on-topic coordinated campaigns are not discounted** (§1). *Done:* the help page's limits now state this and the legitimacy-claim result (§5).
 
 ## Phase 7 spend
 

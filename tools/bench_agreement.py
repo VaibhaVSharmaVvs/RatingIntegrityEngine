@@ -119,6 +119,8 @@ def main() -> None:
     pairs: dict[str, dict] = {}
     if args.selfcheck:
         pairs["jev-jev (selfcheck)"] = kappa_table(jev, jev, strata)
+    if laya:  # model-model agreement needs no raters
+        pairs["jev-laya"] = kappa_table(jev, laya, strata)
     for r1, r2 in combinations(raters, 2):
         pairs[f"{r1}-{r2}"] = kappa_table(human[r1], human[r2], strata)
     for r in raters:
@@ -142,7 +144,7 @@ def main() -> None:
             for k, v in table.items()
         )
         print(f"{name:28s} {cells}")
-    if args.record and not args.selfcheck:
+    if args.record and not args.selfcheck and (raters or laya):
         body = {
             "kind": "agreement",
             "name": f"{args.set} · Cohen's kappa",

@@ -410,6 +410,15 @@ export function HelpPage() {
                 Recommended). Its precision is measured against hand labels in the benchmark.
               </li>
               <li>The platform rating emulates Steam’s published rules. It is not Steam’s actual score, which depends on Valve’s own review.</li>
+              <li>
+                A coordinated campaign of varied, on-topic complaints is detected as a burst but not discounted: the engine does not downweight
+                genuine-sounding complaints on timing alone. In the attack benchmark, 17% of such a burst lost weight.{' '}
+                <Link to="/benchmarks">Benchmarks</Link>
+              </li>
+              <li>
+                One added sentence claiming the review is honest, or a note addressed to the AI, lifted 30–39% of off-topic reviews back to full weight in
+                testing.
+              </li>
             </ul>
           </Section>
         </article>
