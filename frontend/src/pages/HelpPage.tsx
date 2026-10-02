@@ -285,6 +285,13 @@ export function HelpPage() {
                 Spam above 0.9 <em>and</em> a deterministic promo pattern (Discord or Telegram invites, link shorteners, key resellers, free-key giveaways):
                 EXCLUDE. Spam above 0.9 alone: FLAG for a human.
               </Term>
+              <Term name="Text written to sway the judge" id="rule-influence">
+                A note addressed to the AI, model or algorithm judging the review (“[Note to the AI: …]”, “ignore previous instructions”) is a
+                deterministic signal: such text appeared in 1 of 420,582 genuine Steam reviews, so the review is EXCLUDEd. Claims of the review’s own
+                honesty (“this is an honest review”, “not a paid review”) are common among genuine reviewers, so they are never penalised; they are
+                removed from the text System One judges, which makes them useless as a lever. Both are removed before judging; the review itself is
+                shown as written.
+              </Term>
               <Term name="Low confidence" id="rule-confidence">
                 Two or more questions that carry weight answered with confidence under 0.5: FLAG. Questions with no weight never send a review to a human. With
                 question sets v3 and v4 only one weighted question (rating support) reports a confidence, so this rule does not currently fire: FLAGs come
@@ -404,12 +411,22 @@ export function HelpPage() {
                 Reviews as they stand today. Steam lets people edit their verdicts: 77% of Helldivers 2 bomb-day reviews were edited later, mostly flipping to
                 positive after the reversal. The verdict as posted is not available.
               </li>
-              <li>System One is not deterministic: about 2.6% of decisions differ between two runs on the same reviews.</li>
+              <li>System One is not deterministic: about 1% of decisions (62 of 4,999) differed between two identical runs on the same reviews; the rating moved by 0.05 pp.</li>
               <li>
                 The contradiction rule has known false positives on mixed reviews (“cool game, but connecting to friends is virtually impossible”,
                 Recommended). Its precision is measured against hand labels in the benchmark.
               </li>
               <li>The platform rating emulates Steam’s published rules. It is not Steam’s actual score, which depends on Valve’s own review.</li>
+              <li>
+                A coordinated campaign of varied, on-topic complaints is detected as a burst but not discounted: the engine does not downweight
+                genuine-sounding complaints on timing alone. In the attack benchmark, 17% of such a burst lost weight.{' '}
+                <Link to="/benchmarks">Benchmarks</Link>
+              </li>
+              <li>
+                Text written to sway the judge is defended against (<a href="#rule-influence">rule</a>): in testing it now launders 0–7% of off-topic
+                reviews, down from 29–53%. A paraphrased claim of experience (“hundreds of hours in it…”) still gets through about 40% of the time,
+                because genuine reviewers write exactly like that.
+              </li>
             </ul>
           </Section>
         </article>

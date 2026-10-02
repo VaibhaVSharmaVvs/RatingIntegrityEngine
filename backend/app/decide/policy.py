@@ -79,6 +79,15 @@ def _norm_score(answer: dict, levels: int) -> float:
     return float(answer["score"]) / (levels - 1)
 
 
+def apply_model_note_rule(decision: Decision, action: str) -> Decision:
+    """A note addressed to the model judging the review (a deterministic signal,
+    features/influence.py): at least `action`, with INFLUENCE_ATTEMPT as the first reason."""
+    floor = ActionCode[action]
+    worst = max(decision.action, floor, key=_SEVERITY.__getitem__)
+    reasons = ["INFLUENCE_ATTEMPT", *[r for r in decision.reasons if r != "INFLUENCE_ATTEMPT"]][:3]
+    return Decision(worst, decision.integrity_score, reasons)
+
+
 def decide(
     answers: dict[str, dict],
     thresholds: PolicyThresholds,
@@ -86,6 +95,25 @@ def decide(
     score_levels: dict[str, int],
     has_promo: bool = False,
     low_playtime: bool = False,
+    model_note: bool = False,
+) -> Decision:
+    d = _decide(
+        answers,
+        thresholds,
+        score_levels=score_levels,
+        has_promo=has_promo,
+        low_playtime=low_playtime,
+    )
+    return apply_model_note_rule(d, thresholds.model_note_action) if model_note else d
+
+
+def _decide(
+    answers: dict[str, dict],
+    thresholds: PolicyThresholds,
+    *,
+    score_levels: dict[str, int],
+    has_promo: bool,
+    low_playtime: bool,
 ) -> Decision:
     t = thresholds
     informativeness = _norm_score(answers["informativeness"], score_levels["informativeness"])
@@ -112,6 +140,10 @@ def decide(
         "OFF_TOPIC": offgame_weight * offgame,
         "LOW_EXPERIENCE": t.w_low_experience * offgame * float(low_playtime),
     }
+    if "influence_attempt" in answers:  # question set v5
+        p = float(answers["influence_attempt"]["noul"])
+        above = max(0.0, p - t.influence_floor) / (1.0 - t.influence_floor)
+        contributions["INFLUENCE_ATTEMPT"] = t.w_influence * above
     score = max(0.0, 1.0 - sum(contributions.values()))
     reasons = [
         code

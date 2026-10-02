@@ -41,6 +41,7 @@ REASON_CODES = [
     "LOW_EXPERIENCE",
     "LOW_INFO",
     "UNSUPPORTED_VERDICT",
+    "INFLUENCE_ATTEMPT",
 ]
 ACTIONS = {"KEEP": 1, "DOWNWEIGHT": 2, "FLAG": 3, "EXCLUDE": 4}
 
@@ -90,7 +91,8 @@ def get_review(run_id: str, review_id: int, state: AppState = Depends(get_state)
         }
         f = cur.execute(
             "SELECT n_tokens, has_url, has_promo, promo_hits, dup_of, dup_score, nn_review_id, "
-            "nn_cosine_max, low_playtime, single_review_account, received_for_free, not_purchased "
+            "nn_cosine_max, low_playtime, single_review_account, received_for_free, not_purchased, "
+            "model_note, influence_hits "
             "FROM features WHERE run_id = ? AND review_id = ?",
             [run_id, review_id],
         ).fetchone()
@@ -132,6 +134,8 @@ def get_review(run_id: str, review_id: int, state: AppState = Depends(get_state)
             single,
             free,
             not_pur,
+            note,
+            infl,
         ) = f
         signals = ReviewSignals(
             n_tokens=n_tok,
@@ -148,6 +152,8 @@ def get_review(run_id: str, review_id: int, state: AppState = Depends(get_state)
             single_review_account=single,
             received_for_free=free,
             key_activation=not_pur,
+            model_note=bool(note),
+            influence_hits=json.loads(infl or "[]"),
         )
     cfg = run.config.platform
     return ReviewDetail(

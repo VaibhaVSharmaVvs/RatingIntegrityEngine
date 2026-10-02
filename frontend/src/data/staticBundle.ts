@@ -23,6 +23,10 @@ export class StaticBundle implements DataSource {
   getScores = notYet('getScores')
   exportUrl = () => null
   preflight = () => Promise.reject(new Error('The public demo plays pre-recorded runs only.'))
+  listBenchmarks = notYet('listBenchmarks')
+  listLabelSets = () => Promise.reject(new Error('Labelling runs locally only.'))
+  getLabelSet = () => Promise.reject(new Error('Labelling runs locally only.'))
+  putLabel = () => Promise.reject(new Error('Labelling runs locally only.'))
   getUploadLimits = () => Promise.reject(new Error('The public demo cannot upload data.'))
   previewCsv = () => Promise.reject(new Error('The public demo cannot upload data.'))
   uploadCsv = () => Promise.reject(new Error('The public demo cannot upload data.'))

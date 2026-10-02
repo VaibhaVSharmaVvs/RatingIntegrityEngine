@@ -2,15 +2,16 @@
 
 from types import ModuleType
 
-from app.systemone import questions_v1, questions_v2, questions_v3, questions_v4
+from app.systemone import questions_v1, questions_v2, questions_v3, questions_v4, questions_v5
 
 QUESTION_SETS: dict[str, ModuleType] = {
     "v1": questions_v1,
     "v2": questions_v2,
     "v3": questions_v3,
     "v4": questions_v4,
+    "v5": questions_v5,
 }
-DEFAULT_QUESTION_SET = "v4"
+DEFAULT_QUESTION_SET = "v5"
 
 
 def get(version: str) -> dict[str, dict]:

@@ -73,6 +73,18 @@ export function integrityLedger(
       contribution: 0,
     },
   ]
+  if (a.influence_attempt) {
+    // question set v5: counted only above `influence_floor`, rescaled to [0, 1]
+    const tt = t as unknown as Record<string, number>
+    const floor = tt.influence_floor ?? 0.5
+    lines.push({
+      code: 'INFLUENCE_ATTEMPT',
+      weightName: 'w_influence',
+      weight: tt.w_influence ?? 0,
+      value: Math.max(0, (a.influence_attempt.noul ?? 0) - floor) / (1 - floor),
+      contribution: 0,
+    })
+  }
   for (const l of lines) l.contribution = l.weight * l.value
   const score = Math.max(0, 1 - lines.reduce((s, l) => s + l.contribution, 0))
   return { lines, score }

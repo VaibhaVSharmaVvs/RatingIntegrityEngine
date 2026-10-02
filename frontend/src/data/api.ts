@@ -11,6 +11,7 @@ export type ActionCode = 0 | 1 | 2 | 3 | 4;
 export interface RIEAPI {
   "ActionWeights-Input"?: ActionWeights;
   "ActionWeights-Output"?: ActionWeights1;
+  BenchmarkOut?: BenchmarkOut;
   "BurstConfig-Input"?: BurstConfig;
   "BurstConfig-Output"?: BurstConfig1;
   "ClusterConfig-Input"?: ClusterConfig;
@@ -33,6 +34,10 @@ export interface RIEAPI {
   HistogramBin?: HistogramBin;
   HourIndex?: HourIndex;
   JudgedEvent?: JudgedEvent;
+  LabelIn?: LabelIn;
+  LabelItem?: LabelItem;
+  LabelSet?: LabelSet;
+  LabelSetSummary?: LabelSetSummary;
   "PlatformPolicyConfig-Input"?: PlatformPolicyConfig;
   "PlatformPolicyConfig-Output"?: PlatformPolicyConfig1;
   PlatformSummary?: PlatformSummary;
@@ -78,6 +83,24 @@ export interface ActionWeights1 {
   DOWNWEIGHT: number;
   FLAG: number;
   EXCLUDE: number;
+}
+/**
+ * This interface was referenced by `RIEAPI`'s JSON-Schema
+ * via the `definition` "BenchmarkOut".
+ */
+export interface BenchmarkOut {
+  kind: "attack" | "control" | "agreement" | "adversarial" | "ablation";
+  name: string;
+  backend: string | null;
+  question_set: string | null;
+  run_ids: string[];
+  metrics: {
+    [k: string]: unknown;
+  };
+  cost_usd: number;
+  notes: string | null;
+  id: string;
+  created_at: string;
 }
 /**
  * S3 burst detection (MVP_SPEC §6.4). Calibrated on HD2 / CS2 (MEASUREMENTS M9).
@@ -421,6 +444,7 @@ export interface FeatureConfig {
   embedding_model?: string;
   embedding_max_seq_len?: number;
   low_playtime_minutes?: number;
+  strip_influence?: boolean;
 }
 /**
  * S1 deterministic features (MVP_SPEC §6.2).
@@ -439,6 +463,7 @@ export interface FeatureConfig1 {
   embedding_model: string;
   embedding_max_seq_len: number;
   low_playtime_minutes: number;
+  strip_influence: boolean;
 }
 /**
  * This interface was referenced by `RIEAPI`'s JSON-Schema
@@ -477,6 +502,48 @@ export interface JudgedEvent {
   type: "judged";
   indices_b64: string;
   actions_b64: string;
+}
+/**
+ * This interface was referenced by `RIEAPI`'s JSON-Schema
+ * via the `definition` "LabelIn".
+ */
+export interface LabelIn {
+  rater: string;
+  label: {
+    [k: string]: string;
+  };
+}
+/**
+ * This interface was referenced by `RIEAPI`'s JSON-Schema
+ * via the `definition` "LabelItem".
+ */
+export interface LabelItem {
+  review_id: number;
+  text: string;
+  recommended: boolean;
+  label: {
+    [k: string]: string;
+  } | null;
+}
+/**
+ * This interface was referenced by `RIEAPI`'s JSON-Schema
+ * via the `definition` "LabelSet".
+ */
+export interface LabelSet {
+  name: string;
+  subject: string;
+  items: LabelItem[];
+}
+/**
+ * This interface was referenced by `RIEAPI`'s JSON-Schema
+ * via the `definition` "LabelSetSummary".
+ */
+export interface LabelSetSummary {
+  name: string;
+  size: number;
+  labelled: {
+    [k: string]: number;
+  };
 }
 /**
  * Steam's review-score rules, emulated (app/decide/platform.py).
@@ -519,11 +586,16 @@ export interface PolicyThresholds {
   w_offgame?: number;
   w_contradiction?: number;
   w_low_experience?: number;
+  w_influence?: number;
+  influence_floor?: number;
+  model_note_action?: "EXCLUDE" | "FLAG" | "DOWNWEIGHT";
   reason_min_contribution?: number;
   duplicate_action?: "EXCLUDE" | "DOWNWEIGHT";
   cluster_penalty_threshold?: number;
   cluster_penalty_strength?: number;
   min_penalty_cluster_size?: number;
+  cluster_penalty_kinds?: ("burst" | "duplicate" | "semantic")[];
+  semantic_penalty_scope?: "all" | "bursts";
   grey_zone_width?: number;
   duplicate_in_burst_action?: "EXCLUDE" | "FLAG" | "DOWNWEIGHT";
 }
@@ -546,11 +618,16 @@ export interface PolicyThresholds1 {
   w_offgame: number;
   w_contradiction: number;
   w_low_experience: number;
+  w_influence: number;
+  influence_floor: number;
+  model_note_action: "EXCLUDE" | "FLAG" | "DOWNWEIGHT";
   reason_min_contribution: number;
   duplicate_action: "EXCLUDE" | "DOWNWEIGHT";
   cluster_penalty_threshold: number;
   cluster_penalty_strength: number;
   min_penalty_cluster_size: number;
+  cluster_penalty_kinds: ("burst" | "duplicate" | "semantic")[];
+  semantic_penalty_scope: "all" | "bursts";
   grey_zone_width: number;
   duplicate_in_burst_action: "EXCLUDE" | "FLAG" | "DOWNWEIGHT";
 }
@@ -651,6 +728,8 @@ export interface ReviewSignals {
   single_review_account: boolean | null;
   received_for_free: boolean | null;
   key_activation: boolean | null;
+  model_note: boolean;
+  influence_hits: string[];
 }
 /**
  * This interface was referenced by `RIEAPI`'s JSON-Schema
@@ -701,7 +780,7 @@ export interface RunCreate {
   reuse_identical_inputs?: boolean;
   reuse_judgments_from?: string | null;
   confirm_cost?: boolean;
-  question_set?: "v1" | "v2" | "v3" | "v4";
+  question_set?: "v1" | "v2" | "v3" | "v4" | "v5";
   concurrency?: number;
   weights?: ActionWeights2;
   thresholds?: PolicyThresholds2;
@@ -739,11 +818,16 @@ export interface PolicyThresholds2 {
   w_offgame?: number;
   w_contradiction?: number;
   w_low_experience?: number;
+  w_influence?: number;
+  influence_floor?: number;
+  model_note_action?: "EXCLUDE" | "FLAG" | "DOWNWEIGHT";
   reason_min_contribution?: number;
   duplicate_action?: "EXCLUDE" | "DOWNWEIGHT";
   cluster_penalty_threshold?: number;
   cluster_penalty_strength?: number;
   min_penalty_cluster_size?: number;
+  cluster_penalty_kinds?: ("burst" | "duplicate" | "semantic")[];
+  semantic_penalty_scope?: "all" | "bursts";
   grey_zone_width?: number;
   duplicate_in_burst_action?: "EXCLUDE" | "FLAG" | "DOWNWEIGHT";
 }
@@ -761,6 +845,7 @@ export interface FeatureConfig2 {
   embedding_model?: string;
   embedding_max_seq_len?: number;
   low_playtime_minutes?: number;
+  strip_influence?: boolean;
 }
 /**
  * S3 burst detection (MVP_SPEC §6.4). Calibrated on HD2 / CS2 (MEASUREMENTS M9).
@@ -827,7 +912,7 @@ export interface RunCreate1 {
   reuse_identical_inputs: boolean;
   reuse_judgments_from: string | null;
   confirm_cost: boolean;
-  question_set: "v1" | "v2" | "v3" | "v4";
+  question_set: "v1" | "v2" | "v3" | "v4" | "v5";
   concurrency: number;
   weights: ActionWeights3;
   thresholds: PolicyThresholds3;
@@ -865,11 +950,16 @@ export interface PolicyThresholds3 {
   w_offgame: number;
   w_contradiction: number;
   w_low_experience: number;
+  w_influence: number;
+  influence_floor: number;
+  model_note_action: "EXCLUDE" | "FLAG" | "DOWNWEIGHT";
   reason_min_contribution: number;
   duplicate_action: "EXCLUDE" | "DOWNWEIGHT";
   cluster_penalty_threshold: number;
   cluster_penalty_strength: number;
   min_penalty_cluster_size: number;
+  cluster_penalty_kinds: ("burst" | "duplicate" | "semantic")[];
+  semantic_penalty_scope: "all" | "bursts";
   grey_zone_width: number;
   duplicate_in_burst_action: "EXCLUDE" | "FLAG" | "DOWNWEIGHT";
 }
@@ -887,6 +977,7 @@ export interface FeatureConfig3 {
   embedding_model: string;
   embedding_max_seq_len: number;
   low_playtime_minutes: number;
+  strip_influence: boolean;
 }
 /**
  * S3 burst detection (MVP_SPEC §6.4). Calibrated on HD2 / CS2 (MEASUREMENTS M9).

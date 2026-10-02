@@ -79,7 +79,7 @@ it('shows the pre-flight estimate before a live Jev run starts', async () => {
   await waitFor(() => expect(start.hasAttribute('disabled')).toBe(false))
   fireEvent.click(start)
   await waitFor(() =>
-    expect(create).toHaveBeenCalledWith(expect.objectContaining({ dataset_id: 'ds_fixture', backend: 'jev', question_set: 'v4' })),
+    expect(create).toHaveBeenCalledWith(expect.objectContaining({ dataset_id: 'ds_fixture', backend: 'jev', question_set: 'v5' })),
   )
 })
 
@@ -120,4 +120,35 @@ it('states the upload limits and refuses an oversized file without sending it', 
   expect(await within(sheet).findByRole('alert')).toBeTruthy()
   expect(within(sheet).getByText(/huge\.csv is 60\.0 MB; the limit is 50 MB/)).toBeTruthy()
   expect(preview).not.toHaveBeenCalled()
+})
+
+it('labels blind: no engine output, saves the answers and moves on', async () => {
+  const source = renderAt('/label?set=hd2-300&rater=vs')
+  expect(await screen.findByText('Label me 1')).toBeTruthy()
+  expect(screen.queryByText(/integrity|downweight line|System One answers/i)).toBeNull()
+  fireEvent.click(screen.getByRole('radio', { name: 'No', checked: false, description: undefined }))
+  fireEvent.click(within(screen.getByRole('radiogroup', { name: /How much should it count/ })).getByRole('radio', { name: 'Reduced' }))
+  fireEvent.click(screen.getByRole('button', { name: /Save and next/ }))
+  await waitFor(() => expect(source.labels.get(1)).toMatchObject({ about_game: 'no', overall: 'downweight', spam: 'no' }))
+  expect(await screen.findByText('Label me 2')).toBeTruthy()
+})
+
+it('renders the benchmarks page with attack, ablation and control rows', async () => {
+  const source = new FakeSource()
+  const row = (kind: string, name: string, created: string, metrics: Record<string, unknown>) => ({
+    id: name, kind, name, backend: 'jev', question_set: 'v4', run_ids: [], metrics, cost_usd: 0.66, notes: null, created_at: created,
+  })
+  const attack = { per_type: { spam: { discounted: 0.9 } }, rating: { shift_removed: 0.45 }, collateral: { organic_newly_in_penalised_cluster: 127 }, n_organic: 4999, n_injected: 690 }
+  source.listBenchmarks = async () =>
+    [
+      row('attack', 'bench · Jev v4', '2026-10-02T10:00:00Z', attack),
+      row('attack', 'bench · heuristics only', '2026-10-02T10:01:00Z', { ...attack, rating: { shift_removed: 0.22 } }),
+      row('attack', 'bench · ablation: no-spam', '2026-10-02T10:02:00Z', attack),
+      row('ablation', 'bench · ablation: no-spam', '2026-10-02T11:00:00Z', attack),
+    ] as never
+  renderAt('/benchmarks', source)
+  const attacks = await screen.findByRole('region', { name: 'Synthetic attacks' })
+  expect(within(attacks).getAllByText('Jev v4').length).toBeGreaterThan(0)
+  expect(within(attacks).queryByText('ablation: no-spam')).toBeNull() // re-recorded as an ablation
+  expect(within(screen.getByRole('region', { name: 'Ablations' })).getByText('ablation: no-spam')).toBeTruthy()
 })

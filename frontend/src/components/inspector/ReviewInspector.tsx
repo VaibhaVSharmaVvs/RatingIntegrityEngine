@@ -122,6 +122,8 @@ function InspectorBody({ r, run, scale }: { r: ReviewDetail; run: RunOut; scale:
               <span className="num text-muted-foreground"> · cos {s.nearest_cosine.toFixed(2)}</span>
             </Signal>
           )}
+          {s?.model_note && <Signal strong>Addressed to the AI judging it</Signal>}
+          {s && s.influence_hits.length > 0 && !s.model_note && <Signal>Claims its own legitimacy (removed before judging)</Signal>}
           {s?.has_promo && <Signal strong>Promo pattern{s.promo_hits.length ? `: ${s.promo_hits.slice(0, 2).join(', ')}` : ''}</Signal>}
           {s?.has_url && <Signal>Contains a link</Signal>}
           {r.meta?.steam_purchase === false && <Signal>Key activation</Signal>}

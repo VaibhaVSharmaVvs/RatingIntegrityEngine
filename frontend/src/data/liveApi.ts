@@ -1,10 +1,13 @@
 import type {
+  BenchmarkOut,
   ClusterDetail,
   ClusterOut,
   CsvPreview,
   DatasetDetail,
   DatasetOut,
   HourIndex,
+  LabelSet,
+  LabelSetSummary,
   PreflightOut,
   ReplayLine,
   ReviewDetail,
@@ -122,6 +125,21 @@ export class LiveApi implements DataSource {
     })
 
   getUploadLimits = () => this.json<UploadLimits>('/datasets/upload-limits')
+
+  listBenchmarks = () => this.json<BenchmarkOut[]>('/benchmarks')
+
+  listLabelSets = () => this.json<LabelSetSummary[]>('/labelsets')
+
+  getLabelSet = (name: string, rater: string) =>
+    this.json<LabelSet>(`/labelsets/${encodeURIComponent(name)}?rater=${encodeURIComponent(rater)}`)
+
+  putLabel = async (name: string, reviewId: number, rater: string, label: Record<string, string>) => {
+    await this.request(`/labelsets/${encodeURIComponent(name)}/${reviewId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ rater, label }),
+    })
+  }
 
   previewCsv = (file: File) => {
     const body = new FormData()

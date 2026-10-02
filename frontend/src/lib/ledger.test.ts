@@ -35,3 +35,11 @@ it('adds the experience floor only with low playtime', () => {
 it('returns null without System One answers', () => {
   expect(integrityLedger({}, T, false)).toBeNull()
 })
+
+it('counts the v5 influence answer only above its floor', () => {
+  const t = { ...T, w_influence: 0.6, influence_floor: 0.5 } as RunOut['config']['thresholds']
+  const yes = integrityLedger({ ...answers, influence_attempt: { noul: 0.6 } }, t, false)!
+  expect(yes.score).toBeCloseTo(0.475 - 0.6 * 0.2)
+  const no = integrityLedger({ ...answers, influence_attempt: { noul: 0.3 } }, t, false)!
+  expect(no.score).toBeCloseTo(0.475)
+})
