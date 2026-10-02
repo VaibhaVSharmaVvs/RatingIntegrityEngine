@@ -803,3 +803,34 @@ In normal periods the semantic penalty hit organic fan-meme clusters ("For Democ
 **Finding:** Steam's written rule ("remove a spike whose negatives are mostly off-topic") is what we emulate. Valve's decision covers the whole sustained period, nearly four weeks, while our burst detector marks only the most intense week. The emulation therefore understates Valve here.
 
 **Proposed refinement (owner decision, not applied):** extend a removed window forward and backward while the daily share of off-topic negatives stays above the threshold.
+
+---
+
+## M15. Extending removed windows in the Steam-policy emulation (2026-10-02)
+
+**Rule tested** (`PlatformPolicyConfig.extend_windows`, default **off**):
+- Once a negative spike qualifies, grow its window in 24 h steps, back and forward, while each step has at least 5 judged negatives and more than 50% of them are off-topic.
+- At most 45 days each way.
+
+**Comparison:**
+- Cached re-runs of all seven showcase games ($0).
+- "What Steam shows" = English Steam purchasers' reviews in the same window, counted with Valve's off-topic filter on. These come from date-ranged API summaries, which match the ROME II full scan exactly (3,846 / 326 visible).
+
+| Game | Emulation now | Extended | What Steam shows | Before the bomb |
+|---|---|---|---|---|
+| Helldivers 2 | 89.0% (2,117 removed) | 85.6% (2,755) | 77.7% (Valve flagged nothing) | 88.0% |
+| Borderlands 2 | 50.7% (4,482) | 78.3% (6,780; 04-22 → 06-30) | 28.7% (nothing flagged in this window) | 91.1% |
+| Metro 2033 Redux | 61.5% (749) | 84.7% (1,563; 01-27 → 02-19) | 49.1% (nothing flagged) | 93.8% |
+| Total War: ROME II | 42.2% (1,831) | 46.5% (2,033; 09-22 → 10-03) | **61.3%** (Valve hid 09-22 → 10-17) | 66.3% |
+| CS2, FM26, Gollum | unchanged | unchanged | ≈ same (CS2: 58 hidden) | — |
+
+**Mean absolute gap to what Steam shows:** 9.3 pp now, against 15.4 pp extended. **The default stays off.**
+
+**Why neither version can match:** Valve's practice is inconsistent with its own wording.
+- It skipped three bombs the policy covers: HD2 (account requirement), BL2 (EULA, named in the policy) and Metro (another game).
+- On ROME II it removed the whole period, on-topic reviews included. After 10-03 fewer than half the daily negatives are judged off-topic, so a content-based extension stops there.
+- The "Steam policy" rating therefore applies Steam's **written rule**; it does not predict Valve's case-by-case decisions. The help page says so.
+
+**A second Valve case found while sizing DOOM Eternal:**
+- Valve did **not** flag the May 2020 Denuvo anti-cheat (DRM) bomb: 55 of 5,076 English reviews hidden in its peak week.
+- It **did** flag the November 2022 Mick Gordon (soundtrack dispute) bomb: 1,671 of 1,845 English reviews in November hidden, about 11/07 → 11/30, including a late-November positive counter-wave. Raw 68.0%, Steam shows 94.3%.

@@ -412,8 +412,9 @@ export function HelpPage() {
             </ol>
             <Callout>
               Steam’s written rules and Valve’s decisions differ. By the policy’s own wording, the Helldivers 2 PSN bomb and the Borderlands 2 EULA bomb
-              qualify, but Steam still counts the Helldivers 2 bomb in full. Borderlands 2 does have 7,644 reviews excluded by Valve; which window they come
-              from is not public.
+              qualify, but Steam still counts the Helldivers 2 bomb in full. Borderlands 2 does have 7,644 reviews excluded by Valve, outside our window.
+              Where Valve does flag a bomb (ROME II in 2018, DOOM Eternal in 2022), it hides the whole period, weeks long and positives included,
+              which no content-based rule reproduces. This rating applies the written rule; it does not predict Valve’s case-by-case decisions.
             </Callout>
           </Section>
 

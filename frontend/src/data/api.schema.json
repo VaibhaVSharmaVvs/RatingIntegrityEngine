@@ -1365,6 +1365,20 @@
           "default": 20,
           "minimum": 1,
           "type": "integer"
+        },
+        "extend_windows": {
+          "default": false,
+          "type": "boolean"
+        },
+        "extend_min_daily_negatives": {
+          "default": 5,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "extend_max_days": {
+          "default": 45,
+          "minimum": 0,
+          "type": "integer"
         }
       },
       "title": "PlatformPolicyConfig",
@@ -1387,12 +1401,29 @@
           "default": 20,
           "minimum": 1,
           "type": "integer"
+        },
+        "extend_windows": {
+          "default": false,
+          "type": "boolean"
+        },
+        "extend_min_daily_negatives": {
+          "default": 5,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "extend_max_days": {
+          "default": 45,
+          "minimum": 0,
+          "type": "integer"
         }
       },
       "required": [
         "purchasers_only",
         "offtopic_window_share",
-        "min_judged_negatives"
+        "min_judged_negatives",
+        "extend_windows",
+        "extend_min_daily_negatives",
+        "extend_max_days"
       ],
       "title": "PlatformPolicyConfig",
       "type": "object"
@@ -2655,7 +2686,10 @@
           "default": {
             "purchasers_only": true,
             "offtopic_window_share": 0.5,
-            "min_judged_negatives": 20
+            "min_judged_negatives": 20,
+            "extend_windows": false,
+            "extend_min_daily_negatives": 5,
+            "extend_max_days": 45
           }
         },
         "bootstrap_resamples": {
@@ -2877,7 +2911,10 @@
           "default": {
             "purchasers_only": true,
             "offtopic_window_share": 0.5,
-            "min_judged_negatives": 20
+            "min_judged_negatives": 20,
+            "extend_windows": false,
+            "extend_min_daily_negatives": 5,
+            "extend_max_days": 45
           }
         },
         "bootstrap_resamples": {
