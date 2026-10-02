@@ -17,11 +17,15 @@ const ATTACKS: [string, string][] = [
   ['spam', 'Spam'],
 ]
 const VERSIONS: [string, string][] = [
-  ['repeat', 'Identical repeat (noise floor)'],
+  ['repeat', 'Identical repeat (noise)'],
   ['claim_prefix', 'Legitimacy claim before'],
   ['claim_suffix', 'Legitimacy claim after'],
   ['injection', 'Note to the AI'],
+  ['paraphrase_claim', 'Paraphrased claim'],
+  ['paraphrase_note', 'Note to “the system”'],
+  ['authority', '“Verified veteran” claim'],
 ]
+const VERSION_LABEL = Object.fromEntries(VERSIONS)
 
 type M = Record<string, any> // eslint-disable-line @typescript-eslint/no-explicit-any -- metrics are script-defined JSON
 
@@ -57,7 +61,16 @@ export function BenchmarksPage() {
               title="Ablations"
               lead="The same attack benchmark with one signal switched off (cached runs: the same Jev answers, so differences come from the policy alone), and Jev with five reviews per call."
             >
-              {by('ablation').length ? <AttackTable rows={by('ablation')} /> : <Empty />}
+              {by('ablation').some((b) => (b.metrics as M).per_type) ? (
+                <AttackTable rows={by('ablation').filter((b) => (b.metrics as M).per_type)} />
+              ) : (
+                <Empty />
+              )}
+              {by('ablation')
+                .filter((b) => (b.metrics as M).pairs)
+                .map((b) => (
+                  <ClusterPenaltyTable key={b.id} row={b} />
+                ))}
             </Section>
             <ControlSection rows={by('control')} />
             <AdversarialSection rows={by('adversarial')} />
@@ -212,6 +225,42 @@ function CostAccuracy({ rows }: { rows: BenchmarkOut[] }) {
   )
 }
 
+function ClusterPenaltyTable({ row }: { row: BenchmarkOut }) {
+  const pairs = (row.metrics as M).pairs as M[]
+  return (
+    <div className="overflow-x-auto rounded-md border border-border">
+      <table className="num w-full text-xs">
+        <caption className="px-3 pt-2 text-left text-[11px] font-medium text-muted-foreground">{row.name}</caption>
+        <thead className="bg-muted/40 text-left text-[11px] text-muted-foreground">
+          <tr>
+            <th className="px-3 py-2 font-medium">Dataset</th>
+            <th className="px-3 py-2 text-right font-medium">Normal-period decisions changed</th>
+            <th className="px-3 py-2 text-right font-medium">In bursts</th>
+            <th className="px-3 py-2 text-right font-medium">Rating move</th>
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-border">
+          {pairs.map((p) => (
+            <tr key={p.dataset}>
+              <td className="px-3 py-2 font-medium">{p.dataset}</td>
+              <td className="px-3 py-2 text-right font-mono">
+                {p.normal.changed.toLocaleString()} <span className="text-muted-foreground">of {p.normal.reviews.toLocaleString()}</span>
+              </td>
+              <td className="px-3 py-2 text-right font-mono">
+                {p.bursts.changed.toLocaleString()} <span className="text-muted-foreground">of {p.bursts.reviews.toLocaleString()}</span>
+              </td>
+              <td className="px-3 py-2 text-right font-mono">
+                {p.move_pp >= 0 ? '+' : '−'}
+                {Math.abs(p.move_pp).toFixed(2)} pp
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )
+}
+
 function ControlSection({ rows }: { rows: BenchmarkOut[] }) {
   return (
     <Section
@@ -264,45 +313,56 @@ function ControlSection({ rows }: { rows: BenchmarkOut[] }) {
 }
 
 function AdversarialSection({ rows }: { rows: BenchmarkOut[] }) {
-  const b = rows.at(-1)
+  // one table per adversarial set; a row per configuration (question set, stripping)
+  const sets = [...new Set(rows.map((b) => (b.metrics as M).set ?? 'v1'))].sort()
   return (
     <Section
       title="Reviews that argue for their own legitimacy"
-      lead="150 real reviews, each judged as written and again with a sentence claiming legitimacy or a note addressed to the AI. “Laundered” is the share of off-topic reviews that crossed above the downweight line and would regain full weight. The identical repeat measures System One’s own noise."
+      lead="150 real reviews, each judged as written and again with one added sentence. Set v1 uses common wordings; set v2 uses wordings no detection pattern lists. “Laundered” is the share of the 100 off-topic reviews that crossed above the downweight line and would regain full weight; the identical repeat is System One’s own noise. With question set v5, a kept review with a manipulative sentence added is meant to lose weight too."
     >
-      {!b ? (
+      {rows.length === 0 ? (
         <Empty />
       ) : (
-        <div className="overflow-x-auto rounded-md border border-border">
-          <table className="num w-full text-xs">
-            <thead className="bg-muted/40 text-left text-[11px] text-muted-foreground">
-              <tr>
-                <th className="px-3 py-2 font-medium">Version</th>
-                <th className="px-3 py-2 text-right font-medium">Off-topic laundered</th>
-                <th className="px-3 py-2 text-right font-medium">“About the game” shift</th>
-                <th className="px-3 py-2 text-right font-medium">“Based on playing” shift</th>
-                <th className="px-3 py-2 text-right font-medium">Integrity shift</th>
-                <th className="px-3 py-2 text-right font-medium">Kept reviews harmed</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {VERSIONS.map(([k, label]) => {
-                const g = (b.metrics as M).groups
-                const o = g.offtopic[k]
-                return (
-                  <tr key={k}>
-                    <td className="px-3 py-2">{label}</td>
-                    <td className="px-3 py-2 text-right font-mono font-semibold">{pct(o.laundered)}</td>
-                    <td className="px-3 py-2 text-right font-mono">{o.mean_shift.about_game.toFixed(3)}</td>
-                    <td className="px-3 py-2 text-right font-mono">{o.mean_shift.verdict_basis.toFixed(3)}</td>
-                    <td className="px-3 py-2 text-right font-mono">{o.mean_shift.integrity.toFixed(3)}</td>
-                    <td className="px-3 py-2 text-right font-mono">{pct(g.kept[k].harmed)}</td>
+        sets.map((set) => {
+          const rs = rows.filter((b) => ((b.metrics as M).set ?? 'v1') === set)
+          const versions: string[] = (rs[0].metrics as M).versions ?? VERSIONS.map(([k]) => k)
+          return (
+            <div key={set} className="overflow-x-auto rounded-md border border-border">
+              <table className="num w-full text-xs">
+                <caption className="px-3 pt-2 text-left text-[11px] font-medium text-muted-foreground">Set {set}: off-topic reviews laundered</caption>
+                <thead className="bg-muted/40 text-left text-[11px] text-muted-foreground">
+                  <tr>
+                    <th className="px-3 py-2 font-medium">Configuration</th>
+                    {versions.map((v) => (
+                      <th key={v} className="px-3 py-2 text-right font-medium">
+                        {VERSION_LABEL[v] ?? v.replaceAll('_', ' ')}
+                      </th>
+                    ))}
+                    <th className="px-3 py-2 text-right font-medium" title="Kept reviews with the manipulative sentence added that lost weight. Under v5 that is intended: the added sentence is the manipulation.">
+                      Kept reviews downweighted (max)
+                    </th>
                   </tr>
-                )
-              })}
-            </tbody>
-          </table>
-        </div>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {rs.map((b) => {
+                    const g = (b.metrics as M).groups
+                    return (
+                      <tr key={b.id}>
+                        <td className="px-3 py-2 font-medium whitespace-nowrap">{b.name.split(' · ').slice(1).join(' · ')}</td>
+                        {versions.map((v) => (
+                          <td key={v} className="px-3 py-2 text-right font-mono">
+                            {pct(g.offtopic[v]?.laundered)}
+                          </td>
+                        ))}
+                        <td className="px-3 py-2 text-right font-mono">{pct(Math.max(...versions.map((v) => g.kept[v]?.harmed ?? 0)))}</td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )
+        })
       )}
     </Section>
   )

@@ -4,7 +4,7 @@ numbers."""
 
 import json
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 
 from app.api.deps import AppState, get_state
 from app.ingest.store import new_id
@@ -50,3 +50,12 @@ def record_benchmark(b: BenchmarkIn, state: AppState = Depends(get_state)) -> Be
         )
         row = cur.execute(f"SELECT {_COLS} FROM benchmarks WHERE id = ?", [bid]).fetchone()
     return _row(row)
+
+
+@router.delete("/{bench_id}", status_code=204)
+def delete_benchmark(bench_id: str, state: AppState = Depends(get_state)) -> None:
+    """Remove a superseded result (the runs it points to are kept)."""
+    with state.db.cursor() as cur:
+        if not cur.execute("SELECT 1 FROM benchmarks WHERE id = ?", [bench_id]).fetchone():
+            raise HTTPException(404, f"benchmark {bench_id} not found")
+        cur.execute("DELETE FROM benchmarks WHERE id = ?", [bench_id])

@@ -31,6 +31,10 @@ export const REASONS: Record<string, ReasonInfo> = {
   LOW_EXPERIENCE: { label: 'Off-game, low playtime', short: 'Not about the game, from an account with very little playtime.' },
   LOW_INFO: { label: 'Low information', short: 'Short or vague. Shown as evidence quality; carries no weight by default.' },
   LOW_INFORMATIVENESS: { label: 'Low information', short: 'Short or vague (heuristics-only run).' },
+  INFLUENCE_ATTEMPT: {
+    label: 'Tries to sway the judge',
+    short: 'Addressed to the AI judging it, or argues for its own legitimacy instead of reviewing.',
+  },
   UNSUPPORTED_VERDICT: {
     label: 'Weak support',
     short: 'The text barely supports its verdict. Shown as evidence quality; no weight by default.',
@@ -52,6 +56,7 @@ export interface QuestionInfo {
 export const QUESTIONS: Record<string, QuestionInfo> = {
   about_game: { label: 'About the game', high: 'talks about the game itself', weight: 'w_offgame' },
   verdict_basis: { label: 'Verdict from playing', high: 'the verdict rests on playing the game (platform policy)' },
+  influence_attempt: { label: 'Tries to sway the judge', high: 'addresses its judge or argues for its own legitimacy', weight: 'w_influence' },
   rating_support: { label: 'Supports its verdict', high: 'the text backs the thumbs up / down', weight: 'w_contradiction' },
   spam_promo: { label: 'Spam or promotion', high: 'advertising or referral', weight: 'w_spam' },
   templated: { label: 'Copied text', high: 'copypasta, lyrics or template', weight: 'w_templated' },

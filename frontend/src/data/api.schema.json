@@ -1051,6 +1051,10 @@
           "default": 120,
           "minimum": 0,
           "type": "integer"
+        },
+        "strip_influence": {
+          "default": true,
+          "type": "boolean"
         }
       },
       "title": "FeatureConfig",
@@ -1115,6 +1119,10 @@
           "default": 120,
           "minimum": 0,
           "type": "integer"
+        },
+        "strip_influence": {
+          "default": true,
+          "type": "boolean"
         }
       },
       "required": [
@@ -1127,7 +1135,8 @@
         "low_info_max_tokens",
         "embedding_model",
         "embedding_max_seq_len",
-        "low_playtime_minutes"
+        "low_playtime_minutes",
+        "strip_influence"
       ],
       "title": "FeatureConfig",
       "type": "object"
@@ -1511,6 +1520,25 @@
           "default": 0.2,
           "type": "number"
         },
+        "w_influence": {
+          "default": 0.6,
+          "type": "number"
+        },
+        "influence_floor": {
+          "default": 0.5,
+          "exclusiveMaximum": 1,
+          "minimum": 0,
+          "type": "number"
+        },
+        "model_note_action": {
+          "default": "EXCLUDE",
+          "enum": [
+            "EXCLUDE",
+            "FLAG",
+            "DOWNWEIGHT"
+          ],
+          "type": "string"
+        },
         "reason_min_contribution": {
           "default": 0.05,
           "type": "number"
@@ -1534,6 +1562,30 @@
         "min_penalty_cluster_size": {
           "default": 10,
           "type": "integer"
+        },
+        "cluster_penalty_kinds": {
+          "default": [
+            "burst",
+            "duplicate",
+            "semantic"
+          ],
+          "items": {
+            "enum": [
+              "burst",
+              "duplicate",
+              "semantic"
+            ],
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "semantic_penalty_scope": {
+          "default": "bursts",
+          "enum": [
+            "all",
+            "bursts"
+          ],
+          "type": "string"
         },
         "grey_zone_width": {
           "default": 0.1,
@@ -1603,6 +1655,25 @@
           "default": 0.2,
           "type": "number"
         },
+        "w_influence": {
+          "default": 0.6,
+          "type": "number"
+        },
+        "influence_floor": {
+          "default": 0.5,
+          "exclusiveMaximum": 1,
+          "minimum": 0,
+          "type": "number"
+        },
+        "model_note_action": {
+          "default": "EXCLUDE",
+          "enum": [
+            "EXCLUDE",
+            "FLAG",
+            "DOWNWEIGHT"
+          ],
+          "type": "string"
+        },
         "reason_min_contribution": {
           "default": 0.05,
           "type": "number"
@@ -1626,6 +1697,30 @@
         "min_penalty_cluster_size": {
           "default": 10,
           "type": "integer"
+        },
+        "cluster_penalty_kinds": {
+          "default": [
+            "burst",
+            "duplicate",
+            "semantic"
+          ],
+          "items": {
+            "enum": [
+              "burst",
+              "duplicate",
+              "semantic"
+            ],
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "semantic_penalty_scope": {
+          "default": "bursts",
+          "enum": [
+            "all",
+            "bursts"
+          ],
+          "type": "string"
         },
         "grey_zone_width": {
           "default": 0.1,
@@ -1654,11 +1749,16 @@
         "w_offgame",
         "w_contradiction",
         "w_low_experience",
+        "w_influence",
+        "influence_floor",
+        "model_note_action",
         "reason_min_contribution",
         "duplicate_action",
         "cluster_penalty_threshold",
         "cluster_penalty_strength",
         "min_penalty_cluster_size",
+        "cluster_penalty_kinds",
+        "semantic_penalty_scope",
         "grey_zone_width",
         "duplicate_in_burst_action"
       ],
@@ -2328,6 +2428,17 @@
               "type": "null"
             }
           ]
+        },
+        "model_note": {
+          "default": false,
+          "type": "boolean"
+        },
+        "influence_hits": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
         }
       },
       "required": [
@@ -2342,7 +2453,9 @@
         "low_playtime",
         "single_review_account",
         "received_for_free",
-        "key_activation"
+        "key_activation",
+        "model_note",
+        "influence_hits"
       ],
       "title": "ReviewSignals",
       "type": "object"
@@ -2407,12 +2520,13 @@
           "type": "boolean"
         },
         "question_set": {
-          "default": "v4",
+          "default": "v5",
           "enum": [
             "v1",
             "v2",
             "v3",
-            "v4"
+            "v4",
+            "v5"
           ],
           "type": "string"
         },
@@ -2446,11 +2560,20 @@
             "w_offgame": 0.6,
             "w_contradiction": 0.5,
             "w_low_experience": 0.2,
+            "w_influence": 0.6,
+            "influence_floor": 0.5,
+            "model_note_action": "EXCLUDE",
             "reason_min_contribution": 0.05,
             "duplicate_action": "DOWNWEIGHT",
             "cluster_penalty_threshold": 0.5,
             "cluster_penalty_strength": 0.5,
             "min_penalty_cluster_size": 10,
+            "cluster_penalty_kinds": [
+              "burst",
+              "duplicate",
+              "semantic"
+            ],
+            "semantic_penalty_scope": "bursts",
             "grey_zone_width": 0.1,
             "duplicate_in_burst_action": "EXCLUDE"
           }
@@ -2467,7 +2590,8 @@
             "low_info_max_tokens": 3,
             "embedding_model": "sentence-transformers/all-MiniLM-L6-v2",
             "embedding_max_seq_len": 256,
-            "low_playtime_minutes": 120
+            "low_playtime_minutes": 120,
+            "strip_influence": true
           }
         },
         "bursts": {
@@ -2517,7 +2641,9 @@
             ],
             "factor_floor": 0.02,
             "factor_weights": {
-              "new_account_share": 0.5
+              "new_account_share": 0.5,
+              "offtopic_mean": 0.5,
+              "similarity": 0.5
             },
             "null_samples": 24,
             "null_floor": 0.5,
@@ -2616,12 +2742,13 @@
           "type": "boolean"
         },
         "question_set": {
-          "default": "v4",
+          "default": "v5",
           "enum": [
             "v1",
             "v2",
             "v3",
-            "v4"
+            "v4",
+            "v5"
           ],
           "type": "string"
         },
@@ -2655,11 +2782,20 @@
             "w_offgame": 0.6,
             "w_contradiction": 0.5,
             "w_low_experience": 0.2,
+            "w_influence": 0.6,
+            "influence_floor": 0.5,
+            "model_note_action": "EXCLUDE",
             "reason_min_contribution": 0.05,
             "duplicate_action": "DOWNWEIGHT",
             "cluster_penalty_threshold": 0.5,
             "cluster_penalty_strength": 0.5,
             "min_penalty_cluster_size": 10,
+            "cluster_penalty_kinds": [
+              "burst",
+              "duplicate",
+              "semantic"
+            ],
+            "semantic_penalty_scope": "bursts",
             "grey_zone_width": 0.1,
             "duplicate_in_burst_action": "EXCLUDE"
           }
@@ -2676,7 +2812,8 @@
             "low_info_max_tokens": 3,
             "embedding_model": "sentence-transformers/all-MiniLM-L6-v2",
             "embedding_max_seq_len": 256,
-            "low_playtime_minutes": 120
+            "low_playtime_minutes": 120,
+            "strip_influence": true
           }
         },
         "bursts": {
@@ -2726,7 +2863,9 @@
             ],
             "factor_floor": 0.02,
             "factor_weights": {
-              "new_account_share": 0.5
+              "new_account_share": 0.5,
+              "offtopic_mean": 0.5,
+              "similarity": 0.5
             },
             "null_samples": 24,
             "null_floor": 0.5,
@@ -3292,7 +3431,9 @@
             "type": "number"
           },
           "default": {
-            "new_account_share": 0.5
+            "new_account_share": 0.5,
+            "offtopic_mean": 0.5,
+            "similarity": 0.5
           },
           "type": "object"
         },
@@ -3359,7 +3500,9 @@
             "type": "number"
           },
           "default": {
-            "new_account_share": 0.5
+            "new_account_share": 0.5,
+            "offtopic_mean": 0.5,
+            "similarity": 0.5
           },
           "type": "object"
         },

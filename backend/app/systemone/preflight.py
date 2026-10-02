@@ -29,6 +29,8 @@ MEASURED_INTERCEPTS = {
     "v2": TOKENS_INTERCEPT + 246.0,
     "v3": TOKENS_INTERCEPT + 246.0 + 131.0,  # dev set: 1,395.1 vs v2 1,264.1 per review (M10)
     "v4": TOKENS_INTERCEPT + 246.0 + 131.0 + 133.0,  # dev set: 1,528.1 per review (M11)
+    # +150 over v4 on the same 4,999 reviews: 8,050,100 vs 7,300,250 tokens (M13)
+    "v5": TOKENS_INTERCEPT + 246.0 + 131.0 + 133.0 + 150.0,
 }
 
 

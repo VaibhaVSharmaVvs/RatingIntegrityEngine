@@ -84,8 +84,8 @@ export function HomePage() {
   })
   const datasetId = product.datasetId ?? recorded.data?.dataset_id
   const pf = useQuery({
-    queryKey: ['preflight', datasetId, 'jev', 'v4'],
-    queryFn: () => source.preflight({ dataset_id: datasetId!, backend: 'jev', question_set: 'v4' }),
+    queryKey: ['preflight', datasetId, 'jev', 'v5'],
+    queryFn: () => source.preflight({ dataset_id: datasetId!, backend: 'jev', question_set: 'v5' }),
     enabled: live && !!datasetId,
     staleTime: 60_000,
   })
@@ -93,7 +93,7 @@ export function HomePage() {
   const confirmed = confirmedFor === product.key
   const start = useMutation({
     mutationFn: () =>
-      source.createRun({ dataset_id: datasetId!, backend: 'jev', question_set: 'v4', confirm_cost: needsConfirm ? confirmed : undefined }),
+      source.createRun({ dataset_id: datasetId!, backend: 'jev', question_set: 'v5', confirm_cost: needsConfirm ? confirmed : undefined }),
     onSuccess: (run) => navigate(`/runs/${run.id}`),
   })
 

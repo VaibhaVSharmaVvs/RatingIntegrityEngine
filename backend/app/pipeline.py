@@ -35,11 +35,13 @@ from app.decide.policy import (
     Decision,
     apply_cluster_rules,
     apply_duplicate_rule,
+    apply_model_note_rule,
     decide,
     decide_heuristic,
     is_later_copy,
 )
 from app.decide.rating import bootstrap_ci, n_eff, steam_label, weighted_mean
+from app.features import influence
 from app.features.embeddings import Embedder, SentenceTransformerEmbedder
 from app.features.extract import (
     SemanticResult,
@@ -102,6 +104,8 @@ FEATURE_COLUMNS = [
     "single_review_account",
     "received_for_free",
     "not_purchased",
+    "model_note",
+    "influence_hits",
 ]
 
 
@@ -311,7 +315,12 @@ class Pipeline:
         self.bus.publish(StageEvent(name="systemone", status="started"))
         promo = self.features_frame["has_promo"].to_list()
         low_play = self.features_frame["low_playtime"].fill_null(False).to_list()
+        model_note = self.features_frame["model_note"].fill_null(False).to_list()
         texts = self.reviews["text"].to_list()
+        if self.config.features.strip_influence:
+            # System One judges the review without text written to influence the judgment;
+            # the stored review is unchanged (features/influence.py).
+            texts = [influence.for_model(t) if t else t for t in texts]
         verdicts = self.reviews["rating_norm"].to_list()
         raw_ratings = self.reviews["rating_raw"].to_list()
         metas = self.reviews["meta"].to_list()
@@ -364,6 +373,7 @@ class Pipeline:
                         score_levels=self.score_levels,
                         has_promo=promo[rid],
                         low_playtime=low_play[rid],
+                        model_note=model_note[rid],
                     )
                     d = self._with_copy_rule(rid, d)
                     self.answers[rid] = ans
@@ -384,8 +394,8 @@ class Pipeline:
     def _decide_heuristic(self) -> None:
         cfg = self.config.features
         idx, act = [], []
-        for rid, n_tok, emoji, promo in self.features_frame.select(
-            "review_id", "n_tokens", "emoji_ratio", "has_promo"
+        for rid, n_tok, emoji, promo, note in self.features_frame.select(
+            "review_id", "n_tokens", "emoji_ratio", "has_promo", "model_note"
         ).iter_rows():
             d = decide_heuristic(
                 n_tokens=n_tok,
@@ -393,6 +403,8 @@ class Pipeline:
                 has_promo=promo,
                 low_info_max_tokens=cfg.low_info_max_tokens,
             )
+            if note:
+                d = apply_model_note_rule(d, self.config.thresholds.model_note_action)
             d = self._with_copy_rule(rid, d)
             self.decisions[rid] = d
             idx.append(rid)
@@ -651,11 +663,20 @@ class Pipeline:
         best = np.zeros(n)
         best_id = np.full(n, -1)
         min_size = self.config.thresholds.min_penalty_cluster_size
+        kinds_on = set(self.config.thresholds.cluster_penalty_kinds)
+        in_burst = np.zeros(n, dtype=bool)
+        for s in self.clusters:
+            if s.kind == "burst":
+                in_burst[s.members] = True
+        semantic_bursts_only = self.config.thresholds.semantic_penalty_scope == "bursts"
         for cid, s in enumerate(self.clusters):
-            if s.size < min_size:
+            if s.size < min_size or s.kind not in kinds_on:
                 continue
-            better = s.suspicion > best[s.members]
-            idx = s.members[better]
+            members = s.members
+            if s.kind == "semantic" and semantic_bursts_only:
+                members = members[in_burst[members]]
+            better = s.suspicion > best[members]
+            idx = members[better]
             best[idx] = s.suspicion
             best_id[idx] = cid
         kinds = [self.clusters[c].kind if c >= 0 else None for c in best_id]

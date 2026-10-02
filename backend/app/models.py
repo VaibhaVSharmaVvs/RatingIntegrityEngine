@@ -66,6 +66,16 @@ class PolicyThresholds(Contract):
     # Experience floor: low playtime only counts together with an off-game verdict
     # (low playtime alone is often a valid early-quit / won't-launch review).
     w_low_experience: float = 0.20
+    # Question set v5 `influence_attempt`: the review tries to influence how it is judged.
+    # Heavy, per owner (2026-10-02): such text is written to fool the judge.
+    w_influence: float = 0.60
+    # ...counted only above this probability, rescaled to [0, 1]: a "no" (< 0.5) costs
+    # nothing, a confident "yes" costs nearly the full weight. Without it, the answer's
+    # noise on genuine reviews pushed borderline ones under the line (M13).
+    influence_floor: float = Field(0.5, ge=0, lt=1)
+    # A deterministic note addressed to the model judging the review (features/influence.py):
+    # absent from genuine reviews (1 in 420,582, M13), so it may exclude.
+    model_note_action: Literal["EXCLUDE", "FLAG", "DOWNWEIGHT"] = "EXCLUDE"
     reason_min_contribution: float = 0.05
     # Later copies of an earlier review (>= dup_min_tokens). Owner decision 2026-09-30:
     # DOWNWEIGHT by default (independent reviewers do repeat generic sentences); the
@@ -79,6 +89,18 @@ class PolicyThresholds(Contract):
     # Clusters smaller than this are shown but never penalise: "coordination" among 3
     # reviews is not evidence worth moving a rating for.
     min_penalty_cluster_size: int = 10
+    # Which cluster kinds may penalise their members. Semantic clusters are global
+    # (UMAP + HDBSCAN) and shift whenever the corpus changes (MEASUREMENTS M12a).
+    cluster_penalty_kinds: list[Literal["burst", "duplicate", "semantic"]] = [
+        "burst",
+        "duplicate",
+        "semantic",
+    ]
+    # Where a semantic cluster may penalise (owner decision 2026-10-02, M13). In normal
+    # periods its "suspicious" clusters were organic fan memes ("For Democracy!") with no
+    # time concentration: similar and one-sided, not coordinated. "bursts" keeps the
+    # penalty for members inside a detected burst only.
+    semantic_penalty_scope: Literal["all", "bursts"] = "bursts"
     # FLAG a clustered review whose penalised integrity lands within this distance of
     # `downweight_below` (the spec's grey zone). Measured cost: +32 FLAGs on HD2 5K
     # (+0.6%); FLAG counts as KEEP in the rating (MEASUREMENTS M9d). 0 disables it.
@@ -110,6 +132,9 @@ class FeatureConfig(Contract):
     # reviews; 256 truncates 2.4% / 12% (MEASUREMENTS M6).
     embedding_max_seq_len: int = Field(256, ge=16, le=512)
     low_playtime_minutes: int = Field(120, ge=0)
+    # Remove model notes and self-legitimising claims from the text System One judges
+    # (features/influence.py). The stored review is never changed.
+    strip_influence: bool = True
 
 
 class BurstConfig(Contract):
@@ -153,7 +178,15 @@ class SuspicionConfig(Contract):
     # a methodology choice, reported with sensitivity (MEASUREMENTS M9).
     offtopic_topics: list[str] = ["off_topic", "joke_meme", "platform_policy"]
     factor_floor: float = Field(0.02, gt=0, lt=1)
-    factor_weights: dict[str, float] = {"new_account_share": 0.5}
+    # Supporting factors at half weight (owner decision 2026-10-02, MEASUREMENTS M12a):
+    # at full weight a near-zero off-topic or similarity factor vetoed on-topic copy floods
+    # and varied bursts. Halving both: attack pull removed 45% -> 55%, cluster collateral
+    # 127 -> 74, controls and the six showcase games within 0.1 pp.
+    factor_weights: dict[str, float] = {
+        "new_account_share": 0.5,
+        "offtopic_mean": 0.5,
+        "similarity": 0.5,
+    }
     null_samples: int = Field(24, ge=4)  # random subsets per (size, scale) for the time null
     # Minimum expected "other reviews" in the densest window: 2 of 3 reviews within
     # 15 min is unusual but a single coincidence, so it scores at most 0.5.
@@ -185,8 +218,8 @@ class RunCreate(Contract):
     reuse_judgments_from: str | None = None
     # Required when the pre-flight estimate exceeds MAX_RUN_COST_USD.
     confirm_cost: bool = False
-    # v2 is the default after dev-set review (MEASUREMENTS M8); v1 stays for comparison.
-    question_set: Literal["v1", "v2", "v3", "v4"] = "v4"
+    # v5 is the default (owner decision 2026-10-02, M13): v4 + influence_attempt.
+    question_set: Literal["v1", "v2", "v3", "v4", "v5"] = "v5"
     concurrency: int = Field(8, ge=1, le=64)
     weights: ActionWeights = ActionWeights()
     thresholds: PolicyThresholds = PolicyThresholds()
@@ -446,7 +479,10 @@ class ReviewSignals(Contract):
     low_playtime: bool | None
     single_review_account: bool | None
     received_for_free: bool | None
-    key_activation: bool | None  # not bought on Steam (Steam's score leaves these out)
+    key_activation: bool | None
+    # text written to influence the judgment (features/influence.py)
+    model_note: bool = False
+    influence_hits: list[str] = []  # not bought on Steam (Steam's score leaves these out)
 
 
 class ReviewMeta(Contract):

@@ -148,8 +148,9 @@ def test_coordinated_offtopic_cluster_scores_high_and_captions_its_factors() -> 
     assert "100% same verdict" in s.caption and "90% off-topic" in s.caption
 
 
-def test_guardrail_organic_on_topic_complaint_wave_is_not_suspicious() -> None:
-    """CS2-style launch complaints: concentrated, negative, similar, but ON-topic."""
+def _organic_wave(with_accounts: bool):
+    """CS2-style launch complaints: concentrated, negative, similar, but ON-topic, from
+    ordinary accounts (the same new-account rate as the rest of the corpus)."""
     n = 2000
     rng = np.random.default_rng(2)
     t = rng.uniform(0, 24 * 60, n)
@@ -159,13 +160,22 @@ def test_guardrail_organic_on_topic_complaint_wave_is_not_suspicious() -> None:
     same[members] = True
     offtopic = np.full(n, 0.03)  # performance / gameplay complaints
     verdict = np.where(same, 0, 1)
-    s = score_cluster(
-        "burst",
-        members,
-        burst_rate=(300 / 48, 1.4),
-        **_arrays(n, t_hours=t, emb_same=same, offtopic=offtopic, verdict=verdict),
-    )
+    arrays = _arrays(n, t_hours=t, emb_same=same, offtopic=offtopic, verdict=verdict)
+    if with_accounts:
+        arrays["new_account"] = np.random.default_rng(5).random(n) < 0.10
+    return score_cluster("burst", members, burst_rate=(300 / 48, 1.4), **arrays)
+
+
+def test_guardrail_organic_on_topic_complaint_wave_is_not_suspicious() -> None:
+    """With account data (Steam), a genuine on-topic wave stays below the penalty."""
+    s = _organic_wave(with_accounts=True)
     assert s.suspicion <= PolicyThresholds().cluster_penalty_threshold
+
+
+def test_guardrail_genuine_reviews_keep_full_weight_without_account_data() -> None:
+    """Without account data (e.g. a CSV) the same wave can just cross the threshold with
+    the halved supporting weights (M12a); genuine on-topic reviews must still KEEP."""
+    s = _organic_wave(with_accounts=False)
     genuine = Decision(ActionCode.KEEP, 0.95, [])
     d = apply_cluster_rules(
         genuine,
@@ -174,7 +184,11 @@ def test_guardrail_organic_on_topic_complaint_wave_is_not_suspicious() -> None:
         later_copy=False,
         thresholds=PolicyThresholds(),
     )
-    assert d.action is ActionCode.KEEP and d.integrity_score == 0.95
+    assert d.action is ActionCode.KEEP
+    assert (
+        d.integrity_score
+        >= PolicyThresholds().downweight_below + PolicyThresholds().grey_zone_width
+    )
 
 
 # --- S4 cluster rules ---------------------------------------------------------------

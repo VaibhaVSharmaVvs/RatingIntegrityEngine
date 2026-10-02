@@ -164,6 +164,11 @@ MIGRATIONS: list[str] = [
         created_at   TIMESTAMPTZ NOT NULL DEFAULT current_timestamp
     );
     """,
+    # 5: text written to influence the judgment (features/influence.py, M13)
+    """
+    ALTER TABLE features ADD COLUMN model_note BOOLEAN;      -- addressed to the model judging it
+    ALTER TABLE features ADD COLUMN influence_hits JSON;     -- matched pattern names
+    """,
 ]
 
 

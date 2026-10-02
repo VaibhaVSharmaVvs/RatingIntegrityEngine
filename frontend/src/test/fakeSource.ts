@@ -140,6 +140,8 @@ export class FakeSource implements DataSource {
       single_review_account: false,
       received_for_free: false,
       key_activation: false,
+      model_note: false,
+      influence_hits: [],
     },
     meta: {
       playtime_hours: 0.4,

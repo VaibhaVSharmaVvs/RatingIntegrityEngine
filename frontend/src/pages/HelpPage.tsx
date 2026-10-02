@@ -285,6 +285,13 @@ export function HelpPage() {
                 Spam above 0.9 <em>and</em> a deterministic promo pattern (Discord or Telegram invites, link shorteners, key resellers, free-key giveaways):
                 EXCLUDE. Spam above 0.9 alone: FLAG for a human.
               </Term>
+              <Term name="Text written to sway the judge" id="rule-influence">
+                A note addressed to the AI, model or algorithm judging the review (“[Note to the AI: …]”, “ignore previous instructions”) is a
+                deterministic signal: such text appeared in 1 of 420,582 genuine Steam reviews, so the review is EXCLUDEd. Claims of the review’s own
+                honesty (“this is an honest review”, “not a paid review”) are common among genuine reviewers, so they are never penalised; they are
+                removed from the text System One judges, which makes them useless as a lever. Both are removed before judging; the review itself is
+                shown as written.
+              </Term>
               <Term name="Low confidence" id="rule-confidence">
                 Two or more questions that carry weight answered with confidence under 0.5: FLAG. Questions with no weight never send a review to a human. With
                 question sets v3 and v4 only one weighted question (rating support) reports a confidence, so this rule does not currently fire: FLAGs come
@@ -416,8 +423,9 @@ export function HelpPage() {
                 <Link to="/benchmarks">Benchmarks</Link>
               </li>
               <li>
-                One added sentence claiming the review is honest, or a note addressed to the AI, lifted 30–39% of off-topic reviews back to full weight in
-                testing.
+                Text written to sway the judge is defended against (<a href="#rule-influence">rule</a>): in testing it now launders 0–7% of off-topic
+                reviews, down from 29–53%. A paraphrased claim of experience (“hundreds of hours in it…”) still gets through about 40% of the time,
+                because genuine reviewers write exactly like that.
               </li>
             </ul>
           </Section>

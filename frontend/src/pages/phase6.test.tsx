@@ -79,7 +79,7 @@ it('shows the pre-flight estimate before a live Jev run starts', async () => {
   await waitFor(() => expect(start.hasAttribute('disabled')).toBe(false))
   fireEvent.click(start)
   await waitFor(() =>
-    expect(create).toHaveBeenCalledWith(expect.objectContaining({ dataset_id: 'ds_fixture', backend: 'jev', question_set: 'v4' })),
+    expect(create).toHaveBeenCalledWith(expect.objectContaining({ dataset_id: 'ds_fixture', backend: 'jev', question_set: 'v5' })),
   )
 })
 

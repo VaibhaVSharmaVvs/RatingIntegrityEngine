@@ -33,6 +33,7 @@ from _api import client  # noqa: E402
 from app.core.config import settings  # noqa: E402
 
 API = "http://localhost:8001"
+V1_VERSIONS = ["original", "repeat", "claim_prefix", "claim_suffix", "injection"]
 
 
 def features(d: dict) -> dict[str, float] | None:
@@ -48,6 +49,9 @@ def features(d: dict) -> dict[str, float] | None:
         "spam": noul("spam_promo"),
         "templated": noul("templated"),
         "integrity": float(d["base_integrity"] if d["base_integrity"] is not None else np.nan),
+        # excluded by the deterministic model-note rule: cannot be laundered. (Near-copy
+        # versions can also be excluded by the copy-in-burst rule; that is not counted.)
+        "excluded": float(d["action"] == "EXCLUDE" and "INFLUENCE_ATTEMPT" in d["reasons"]),
     }
 
 
@@ -55,12 +59,18 @@ def main() -> None:
     p = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     p.add_argument("--run", required=True)
     p.add_argument("--record", action="store_true")
+    p.add_argument("--label", default=None, help="configuration name, e.g. 'v5 · stripping'")
     args = p.parse_args()
-    meta = json.loads((settings.data_dir / "bench" / "adversarial-v1.json").read_text())
+    sets = [
+        json.loads(f.read_text()) for f in (settings.data_dir / "bench").glob("adversarial-v*.json")
+    ]
     with client(60) as c:
         run = c.get(f"/runs/{args.run}").json()
-        if run["dataset_id"] != meta["dataset_id"]:
-            sys.exit("this run is not on the adversarial dataset")
+        meta = next((m for m in sets if m["dataset_id"] == run["dataset_id"]), None)
+        if meta is None:
+            sys.exit("this run is not on an adversarial dataset")
+        set_name = meta.get("set", "v1")
+        versions = [v for v in meta.get("versions", V1_VERSIONS) if v != "original"]
         line = run["config"]["thresholds"]["downweight_below"]
         by_source: dict[int, dict] = defaultdict(dict)
         for it in meta["items"]:
@@ -68,15 +78,15 @@ def main() -> None:
             by_source[it["source"]][it["version"]] = (it["group"], features(d), d["text"])
 
     # The mapping review id -> version relies on chronological ids; verify it.
-    for versions in by_source.values():
-        assert versions["original"][2] == versions["repeat"][2], "id mapping is off"
-        assert versions["claim_prefix"][2].endswith(versions["original"][2]), "id mapping is off"
+    for vs in by_source.values():
+        assert vs["original"][2] == vs["repeat"][2], "id mapping is off"
+        assert all(vs["original"][2] in vs[v][2] for v in vs), "id mapping is off"
 
     out: dict = {}
     for group in ("offtopic", "kept"):
         srcs = [v for v in by_source.values() if v["original"][0] == group]
         out[group] = {"sources": len(srcs)}
-        for version in ("repeat", "claim_prefix", "claim_suffix", "injection"):
+        for version in versions:
             rows = [
                 (v["original"][1], v[version][1])
                 for v in srcs
@@ -86,13 +96,21 @@ def main() -> None:
             out[group][version] = {
                 "mean_shift": shift,
                 "laundered": float(
-                    np.mean([a["integrity"] < line <= b["integrity"] for a, b in rows])
+                    np.mean(
+                        [
+                            a["integrity"] < line <= b["integrity"] and not b["excluded"]
+                            for a, b in rows
+                        ]
+                    )
                 ),
+                "excluded": float(np.mean([b["excluded"] for _, b in rows])),
                 "harmed": float(
                     np.mean([b["integrity"] < line <= a["integrity"] for a, b in rows])
                 ),
             }
     result = {
+        "set": set_name,
+        "versions": versions,
         "run": args.run,
         "dataset_id": meta["dataset_id"],
         "downweight_below": line,
@@ -104,14 +122,14 @@ def main() -> None:
     )
     for group, g in out.items():
         print(f"== {group} ({g['sources']} sources)")
-        for version in ("repeat", "claim_prefix", "claim_suffix", "injection"):
+        for version in versions:
             v = g[version]
             s = "  ".join(f"{k} {x:+.3f}" for k, x in v["mean_shift"].items())
             print(f"  {version:13s} {s}  laundered {v['laundered']:.1%}  harmed {v['harmed']:.1%}")
     if args.record:
         body = {
             "kind": "adversarial",
-            "name": "Adversarial v1 · legitimacy claims",
+            "name": f"Adversarial {set_name} · {args.label or run['config']['question_set']}",
             "backend": run["backend"],
             "question_set": run["config"]["question_set"],
             "run_ids": [args.run],

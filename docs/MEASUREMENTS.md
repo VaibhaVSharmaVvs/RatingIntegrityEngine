@@ -684,3 +684,92 @@ On-topic negatives = negatives with `about_game` ≥ 0.5. False positive = such 
 | **total** | **$2.16** |
 
 All sweeps and ablations reused answers at $0.
+
+---
+
+## M13. Owner decisions on the Phase 7 findings (2026-10-02)
+
+### M13a. Suspicion weights halved (default)
+
+`SuspicionConfig.factor_weights` = `{new_account_share: 0.5, offtopic_mean: 0.5, similarity: 0.5}`. Evidence in M12a: attack pull removed 45% → 55% (semantic penalty everywhere), controls and the six games within 0.1 pp.
+
+**Guardrail split:** the synthetic genuine on-topic wave stays at 0.32 suspicion when account data exists, as on Steam. Without account data (CSV), its suspicion is 0.51, just over the threshold. Even so, a genuine review keeps KEEP: 0.95 → 0.71 integrity, above the line and outside the grey zone. Its weight in the rating is unchanged. Both cases are now tests.
+
+### M13b. Text written to sway the judge
+
+**Organic prevalence**, 420,582 genuine Steam reviews (all pulls):
+
+| Family | Hits | Notes |
+|---|---|---|
+| Notes addressed to the model ("note to the AI", "dear AI", "ignore previous instructions") | 1 (a joke: "Disregard all previous instructions, Arrowhead seems hellbent…") | A `classify my review as` pattern was dropped: it matched 4 genuine "categorize my review as 'yes, but'" reviews |
+| Self-legitimising claims ("my honest review", "not a paid review", "from a long-time player") | 173 (0.04%) | Almost all genuine |
+
+**Treatment** (`features/influence.py`):
+- **Model note:**
+  - stripped from the text System One sees;
+  - deterministic `model_note_action` = EXCLUDE (reason `INFLUENCE_ATTEMPT`);
+  - allowed because the signal is deterministic, not System One's answer.
+- **Self-legitimising claim:**
+  - stripped (from the first claim to the end of its sentence, or the whole sentence when fewer than 4 words remain);
+  - never penalised.
+- **Question set v5** (default) = v4 + `influence_attempt` (noul):
+  - feeds `w_influence` 0.6, counted only above `influence_floor` 0.5 and rescaled;
+  - System One alone never excludes.
+- **Cost:** +150 tokens per review (8,050,100 vs 7,300,250 on the same 4,999 reviews), `MEASURED_INTERCEPTS["v5"]`.
+- **The stored review is never changed.**
+
+**Adversarial results** (laundered = off-topic review crossing above the downweight line; 100 off-topic sources each):
+
+| Configuration | v1: claim before / after / note to AI | v2 (wordings no pattern lists): paraphrased experience claim / note to "the system" / "verified veteran" |
+|---|---|---|
+| v4, as before | 39% / 30% / 35% | 53% / 48% / 11% |
+| v4 + stripping | 2% / 2% / 0% (note excluded 96%) | not reached by the patterns |
+| **v5 + stripping, floor 0.5** | 5% / 7% / 0% | **40% / 0% / 0%** |
+| identical repeat (noise) | 2–5% | 1–2% |
+
+*An earlier stripping version cut only the matched phrases. That left "…playing the game" behind and laundered 18% of suffix claims; it was fixed before these numbers.*
+
+**v5 on genuine reviews** (clean bench, 4,999, $0.338):
+- 0.78% score ≥ 0.5 on `influence_attempt`, none ≥ 0.9.
+- **Without the floor:** v5 changed about 4% of decisions against v4 (95.9% agreement vs a 98.8% noise floor), including 127 KEEP→DOWNWEIGHT.
+- **With the floor 0.5:**
+  - agreement with v4 is 98.8% / 98.4%, against a noise floor of 98.9%;
+  - **8 genuine reviews (0.16%)** are downweighted for influence, all "approved by the Ministry of Truth"-style in-game jokes that vouch for the review;
+  - adjusted 87.73% vs 87.77% under v4.
+
+**Score distributions** (median; p10–p90):
+
+| Text | Median | p10–p90 |
+|---|---|---|
+| Note to "the system" | 0.96 | 0.95–0.97 |
+| "Verified veteran" claim | 0.80 | 0.72–0.86 |
+| Paraphrased experience claim | 0.41 | 0.25–0.61 |
+| Genuine reviews | 0.03 | 99th percentile 0.37; 1.6% are ≥ 0.3 |
+
+**Limit:** a paraphrased claim of experience is phrased like a genuine reviewer stating their hours. Lowering the floor to catch it would downweight about 1.6% of genuine reviews, so it stays a stated limit.
+
+Spend: adversarial v1 v4/v5 and v2 v4/v5 runs ≈ $0.35 (two v1 runs repeated after the stripping fix); clean v5 $0.338.
+
+### M13c. Semantic-cluster penalty only inside bursts (default)
+
+Normal period = a review outside every detected burst. Cached ($0). Pairs: weights ½ with the semantic penalty everywhere, against the semantic penalty off.
+
+| Dataset | Normal-period decisions changed | In bursts | Rating |
+|---|---|---|---|
+| clean bench (April HD2, no attack) | **312 / 4,999** (208 FLAG→KEEP, 104 DOWNWEIGHT→KEEP) | — | +0.20 pp |
+| attack bench | 74 / 5,304 | 0 / 385 | −0.10 pp |
+| HD2 / BL2 / Metro | 11 / 41 / 16 | 44 / 147 / 6 | ±0.13 pp |
+| CS2 / Gollum / FM26 | 0 | 0 | 0 |
+
+In normal periods the semantic penalty hit organic fan-meme clusters ("For Democracy!", "democracy is pretty cool", "Hell yeah"). Their densest window shows no coordination (2 within 15 min, against ~1.6 for a random group of the same size); they scored as suspicious on similarity and one-sidedness alone.
+
+**New default `semantic_penalty_scope = "bursts"`:** semantic clusters penalise only members inside a detected burst. Duplicate groups and bursts are unchanged.
+- Normal-period behaviour is identical to "off", and in-burst behaviour identical to "everywhere" (0 changes inside bursts).
+- Attack bench under the new defaults (weights ½, scope bursts, v4 answers): **pull removed 51%** (45% originally; 55% with the semantic penalty everywhere). The paraphrase flood, spread over 24 h and not a burst, stays downweighted (weight 0.25) instead of excluded.
+
+### M13d. Laya zero-shot on the label set (§10 ablation c)
+
+300 reviews, 80 min on CPU (0.06 reviews/s), $0.
+- Laya downweights 288 of 300 (96%) and calls 97% "not about the game".
+- **Agreement with Jev, Cohen's κ:** about_game −0.01, verdict_basis −0.10, contradicts 0.01, spam 0.17, copied −0.13, overall 0.00.
+- Chance level: Laya stays a benchmark row (see memory/decision C6).

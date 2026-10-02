@@ -7,6 +7,7 @@ import json
 
 import polars as pl
 
+from app.features import influence
 from app.models import FeatureConfig
 
 # Named so the inspector can show *which* pattern fired, not just "promo".
@@ -55,6 +56,7 @@ def text_features(texts: pl.Series) -> pl.DataFrame:
         json.dumps([name for name, hit in zip(matched.columns, row, strict=True) if hit])
         for row in matched.iter_rows()
     ]
+    influence_found = [influence.hits(t) for t in s.to_list()]
     return pl.DataFrame(
         {
             "n_tokens": n_tokens.cast(pl.Int32),
@@ -68,6 +70,11 @@ def text_features(texts: pl.Series) -> pl.DataFrame:
             "has_url": s.str.contains(_URL),
             "has_promo": promo.select(pl.any_horizontal(pl.all())).to_series(),
             "promo_hits": pl.Series(hits, dtype=pl.String),
+            # text written to influence the judgment (features/influence.py)
+            "model_note": pl.Series([bool(m) for m, _ in influence_found], dtype=pl.Boolean),
+            "influence_hits": pl.Series(
+                [json.dumps(m + legit) for m, legit in influence_found], dtype=pl.String
+            ),
         }
     )
 

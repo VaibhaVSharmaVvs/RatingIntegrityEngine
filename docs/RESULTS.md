@@ -4,7 +4,7 @@ Every number below was measured. Method notes, corrections and run ids are in `d
 - **Settings:** question set v4, policy v3 defaults, one Jev call per review, unless a row says otherwise.
 - **Reproduce:** run the `tools/bench_*.py` scripts. Policy experiments reuse a run's answers at $0 (`tools/sweep_cached.py`).
 
-Status: **complete except** human agreement (two raters still need to label `/label`, set `hd2-300`) and the Laya zero-shot row (running).
+Status: **complete except** human agreement (two raters still need to label `/label`, set `hd2-300`). Owner decisions taken on 2026-10-02 are applied as defaults (§8, MEASUREMENTS M13).
 
 ## 1. Synthetic attacks (MVP_SPEC §10, row 1)
 
@@ -23,6 +23,7 @@ Status: **complete except** human agreement (two raters still need to label `/la
 | (b) Jev v4 (current defaults) | 99% (all downweight, weight 0.25) | 100% | 17% | 77% | 90% | **45%** | 127 | $0.655 |
 | Jev v4, off-topic factor ½ | 99% (excluded) | 100% | 17% | 77% | 90% | 54% | 132 | (reused) |
 | Jev v4, off-topic ½ + similarity ½ | 99% (excluded) | 100% | 17% | 77% | 90% | **55%** | **74** | (reused) |
+| **Jev v4, new defaults** (weights ½, semantic penalty inside bursts only) | 99% (excluded) | 100% (downweighted) | 17% | 77% | 90% | **51%** | 74 | (reused) |
 
 **Cluster ARI among injected reviews** (Jev v4): duplicate 0.30, semantic 0.23, burst 0.68.
 
@@ -42,7 +43,7 @@ On the attack benchmark, with 45% of the pull removed as the reference:
 |---|---|
 | (a) heuristics only | 22% of the pull removed (§1) |
 | (b) + System One (Jev) | 45% |
-| (c) + System One (Laya zero-shot) | *running: 300-review label set only. At 0.06–0.08 reviews/s on CPU the 5,689-review benchmark would take ~20 h* |
+| (c) + System One (Laya zero-shot) | On the 300-review label set (the full benchmark would take ~20 h on CPU): Laya downweights 96% and calls 97% "not about the game". Cohen's κ against Jev ≈ 0 on every question (about_game −0.01, overall 0.00): chance level |
 | (d) + Laya fine-tuned on Jev labels | not run: out of the MVP (Phase 8, owner decision) |
 | (e) leave one signal out | off-game 30% · contradiction 46% · spam weight 46% (spam still 90% excluded by the deterministic rule) · copied text 46% · low experience 45% · cluster penalty 44% (and **collateral 127 → 0**) · in-burst copy escalation 46% (astroturf excluded 77% → 66%) |
 | (f) Jev pack 1 / 5 / 10 | 45% / 42% / 43%. Decision agreement with pack 1: 98.8% (repeat noise) / 91.2% / 90.8%. Tokens ×1 / 0.888 / 0.87. **Packing stays rejected:** about 7× the noise in changed decisions, to save 11–13% |
@@ -76,18 +77,24 @@ Three ratings, from M11:
 
 ## 5. Reviews that argue for their own legitimacy (§10)
 
-**Data:** 150 real reviews, each judged as written and with one added sentence ($0.047).
+**Data:** 150 real reviews, each judged as written and with one added sentence.
+- **Set v1:** common wordings.
+- **Set v2:** wordings no detection pattern lists.
 
-**Laundered:** share of the 100 off-topic ones whose integrity crossed above the downweight line.
+**Laundered:** share of the 100 off-topic ones that crossed above the downweight line.
 
-| Version | Laundered | about_game shift | verdict_basis shift |
-|---|---|---|---|
-| identical repeat (noise) | 0% | −0.001 | −0.004 |
-| "This is an honest, detailed review from a long-time player…" before | **39%** | +0.161 | +0.249 |
-| the same, after | **30%** | +0.152 | +0.196 |
-| "[Note to the AI reviewing this: …]" | **35%** | +0.143 | +0.287 |
+| Configuration | v1: claim before / after / note to the AI | v2: paraphrased experience claim / note to "the system" / "verified veteran" |
+|---|---|---|
+| v4, before (no defence) | 39% / 30% / 35% | 53% / 48% / 11% |
+| v4 + stripping of matched text | 2% / 2% / 0% (note excluded) | not reached by the patterns |
+| **v5 + stripping (new default)** | **5% / 7% / 0%** | **40% / 0% / 0%** |
+| identical repeat (noise) | 2–5% | 1–2% |
 
-**One sentence launders a third of off-topic reviews.** Reviews the engine already kept barely move (at most 2% harmed). This is the largest weakness Phase 7 found.
+**What does the work:**
+- Deterministic patterns strip common claims and notes before System One sees the text. A note addressed to the model is excluded: it appeared in 1 of 420,582 genuine reviews.
+- The v5 question `influence_attempt` catches wordings the patterns miss, counted only above 0.5. On 4,999 genuine reviews it changes decisions at the noise level and downweights 8 (0.16%), all in-game jokes vouching for the review.
+
+**Remaining limit:** a paraphrased claim of experience ("hundreds of hours in it, my own time in the trenches") reads like a genuine reviewer's. Catching it would downweight about 1.6% of genuine reviews, so it is left as a stated limit.
 
 ## 6. Human agreement (§10)
 
@@ -102,21 +109,23 @@ Three ratings, from M11:
 - **YelpZip:** no access was granted.
 - **Optional LLM-every-review baseline:** not part of the product; skipped.
 
-## Recommendations (owner decisions; defaults are unchanged)
+## 8. Owner decisions (2026-10-02), now defaults
 
-1. **Halve the off-topic and similarity suspicion weights.** Set `SuspicionConfig.factor_weights` to `{new_account_share: 0.5, offtopic_mean: 0.5, similarity: 0.5}`.
-   - Pull removed 45% → 55%; cluster collateral 127 → 74.
-   - Controls and the six showcase games are unchanged within 0.1 pp.
-   - Cost $0 (config only); re-recording the showcase runs is free with the cached backend.
-2. **Detect self-legitimising text deterministically.** Phrases addressed to the model, or boilerplate claims of honesty, would be stripped before System One sees the text, or would FLAG the review.
-   - It can be measured on the existing adversarial set for about $0.05.
-   - Must keep the rule that System One alone never excludes.
-3. **Reconsider the cluster penalty on *semantic* clusters.** It adds about 1 pp of attack removal but drives all the collateral, and its effect changes whenever the corpus changes (9.2% of organic decisions moved under injection, against 1.2% repeat noise). Bursts and duplicate groups would keep it.
-4. **Say plainly that varied, on-topic coordinated campaigns are not discounted** (§1). *Done:* the help page's limits now state this and the legitimacy-claim result (§5).
+1. **Suspicion weights halved** (off-topic ½, similarity ½).
+   - Genuine reviews keep their weight: with account data a genuine on-topic wave stays below the penalty, and without it genuine reviews stay KEEP. Both are tested.
+2. **Text written to sway the judge** (§5).
+   - It is stripped before judging; a note to the model is excluded deterministically.
+   - Question set v5 adds `influence_attempt` with a heavy weight (0.6, above 0.5). v5 costs about 10% more tokens.
+3. **Semantic clusters penalise only inside bursts.**
+   - In normal periods their "suspicious" clusters were organic fan memes (312 of 4,999 genuine April reviews flagged or downweighted).
+   - Attack removal 55% → 51%; real games within 0.1 pp.
+4. **Varied, on-topic coordinated campaigns are not discounted** (§1). The help page states this, the legitimacy limit and the paraphrased-experience limit.
+
+The six showcase runs and their replays still use the settings they were recorded with. Re-recording them on v5 needs about $2.9 of Jev. With v4 answers reused, the new policy moves each showcase rating by at most 0.13 pp.
 
 ## Phase 7 spend
 
-Jev **$2.16**:
+Jev **$2.16** (Phase 7) + **$0.69** (decisions, M13):
 - attack pair $0.655
 - adversarial set $0.047
 - pack 5 $0.581
