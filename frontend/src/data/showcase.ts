@@ -36,6 +36,13 @@ export const SHOWCASE: ShowcaseGame[] = [
     runId: 'run_e638053d0ca6',
   },
   {
+    key: 'rome2',
+    title: 'Total War: ROME II',
+    story: 'Culture-war review bomb that Valve flagged',
+    window: 'Aug–Oct 2018 · 3,846 reviews',
+    runId: 'run_e54638b2b2ce',
+  },
+  {
     key: 'fm26',
     title: 'Football Manager 26',
     story: 'Genuine launch backlash (control)',

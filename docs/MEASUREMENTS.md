@@ -773,3 +773,33 @@ In normal periods the semantic penalty hit organic fan-meme clusters ("For Democ
 - Laya downweights 288 of 300 (96%) and calls 97% "not about the game".
 - **Agreement with Jev, Cohen's κ:** about_game −0.01, verdict_basis −0.10, contradicts 0.01, spam 0.17, copied −0.13, overall 0.00.
 - Chance level: Laya stays a benchmark row (see memory/decision C6).
+
+---
+
+## M14. Total War: ROME II: a culture-war bomb that Valve flagged (2026-10-02)
+
+**Why this game:** the demo lacked a political bomb, and a case where Valve's actual off-topic flag could be compared with our emulation.
+- Of 15 well-known review-bomb candidates, only ROME II (5,894 reviews flagged across all languages) and DOOM Eternal (3,172) have Valve-flagged reviews. The check: totals with `filter_offtopic_activity` 0 vs 1.
+- The ROME II event is the September 2018 "female generals" backlash.
+
+**Data:** English reviews, all free pulls.
+- Bomb window, 2018-08-01 → 10-31: 3,846 reviews, with a peak of 938 on 09-25.
+- Reference, 2018-06-01 → 07-31: 278 reviews, 68.0% positive; Steam purchasers 66.3% (n = 187).
+
+**Run:** `run_e54638b2b2ce`, question set v5, current rules, $0.265.
+
+| Rating | Value |
+|---|---|
+| Raw | 32.3% |
+| Integrity-adjusted | 35.7% (34.0–37.2) |
+| Steam policy, emulated | 42.2% (38.3–46.0) |
+| **What Steam shows (Valve's actual flag)** | **61.3%** (Steam purchasers among the 326 reviews still visible; 63.2% all visible) |
+| Reference before the bomb | 66.3% (purchasers) |
+
+- **Emulation:** removed five windows on 09-23 → 09-30 (1,831 reviews; 53–63% of their judged negatives not based on playing) plus 1,432 key activations.
+- **Valve's actual flag:** we listed the same English reviews with Valve's off-topic filter on and compared. Valve hides **3,520 of 3,846 (91.5%)**: essentially every review from 2018-09-22 to 10-17 (29.4% positive), plus 7 scattered in August.
+- **Gap closed** against the reference: engine 10%, emulation 29%, Valve 85%.
+
+**Finding:** Steam's written rule ("remove a spike whose negatives are mostly off-topic") is what we emulate. Valve's decision covers the whole sustained period, nearly four weeks, while our burst detector marks only the most intense week. The emulation therefore understates Valve here.
+
+**Proposed refinement (owner decision, not applied):** extend a removed window forward and backward while the daily share of off-topic negatives stays above the threshold.

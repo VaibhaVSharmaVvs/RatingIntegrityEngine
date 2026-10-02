@@ -11,6 +11,7 @@ delete them:** the Phase 9 public demo is built from these replays.
 | Helldivers 2 5K · current rules | `run_104cc1191ff8` | v4 | 4,999 | 76.4% | 77.7% (76.5%-78.9%) | 89.0% (87.4%-90.5%) | $0.000 | ✅ |
 | Borderlands 2 Apr-Aug 2025 · current rules | `run_31ffbd3bddd6` | v4 | 12,981 | 33.8% | 37.4% (36.6%-38.2%) | 50.7% (49.1%-52.3%) | $0.000 | ✅ |
 | Metro 2033 Redux Dec 2018-Mar 2019 · current rules | `run_e638053d0ca6` | v4 | 2,444 | 48.8% | 62.8% (60.7%-64.8%) | 61.5% (58.9%-64.2%) | $0.000 | ✅ |
+| Total War: ROME II Aug-Oct 2018 · v5 | `run_e54638b2b2ce` | v5 | 3,846 | 32.3% | 35.7% (34.0%-37.2%) | 42.2% (38.3%-46.0%) | $0.265 | ✅ |
 | Football Manager 26 launch→now · current rules | `run_55d11443d036` | v4 | 15,348 | 38.0% | 37.2% (36.4%-38.0%) | 38.4% (37.4%-39.3%) | $0.000 | ✅ |
 | Cities: Skylines II 5K control · current rules | `run_696384d545ae` | v4 | 5,000 | 59.6% | 59.2% (57.8%-60.6%) | 59.9% (58.4%-61.4%) | $0.000 | ✅ |
 | Gollum control · current rules | `run_51d5d8355914` | v4 | 297 | 35.7% | 34.3% (29.1%-39.9%) | 34.4% (27.9%-41.4%) | $0.000 | ✅ |
@@ -168,3 +169,4 @@ delete them:** the Phase 9 public demo is built from these replays.
 | `run_55d11443d036` | Football Manager 26 (launch to now) | cached | v4 | done | 15348 | 38.0% | 37.2% | 38.4% | ✅ |
 | `run_696384d545ae` | Cities: Skylines II, Oct-Dec 2023 (5K) | cached | v4 | done | 5000 | 59.6% | 59.2% | 59.9% | ✅ |
 | `run_51d5d8355914` | LOTR: Gollum, May-Jul 2023 | cached | v4 | done | 297 | 35.7% | 34.3% | 34.4% | ✅ |
+| `run_e54638b2b2ce` | Total War: ROME II, Aug-Oct 2018 (female generals bomb) | jev | v5 | done | 3846 | 32.3% | 35.7% | 42.2% | ✅ |
