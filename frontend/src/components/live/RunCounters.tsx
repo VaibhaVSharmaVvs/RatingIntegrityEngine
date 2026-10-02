@@ -4,7 +4,16 @@ import { useRunStore } from '@/state/runStore'
 import { Swatch } from './ActionChip'
 
 /** Processed / total with a hairline progress bar, then throughput, spend and elapsed time. */
-export function RunCounters() {
+/** A cached run replays another run's System One answers; its own pace and spend are not the real ones. */
+export interface ReusedFrom {
+  runId: string
+  backend: string
+  costUsd: number
+  reviewsPerS: number | null
+  elapsedS: number | null
+}
+
+export function RunCounters({ reusedFrom }: { reusedFrom?: ReusedFrom | null } = {}) {
   const c = useRunStore((s) => s.counters)
   const tally = useRunStore((s) => s.tally)
   const total = useRunStore((s) => s.counters?.total ?? s.grid.size)
@@ -31,10 +40,16 @@ export function RunCounters() {
         <div className="h-full origin-left bg-foreground transition-transform duration-200" style={{ transform: `scaleX(${share})` }} />
       </div>
       <dl className="num grid grid-cols-3 gap-2 text-xs">
-        <Stat label="Reviews/s" value={formatRate(c?.rps)} />
-        <Stat label="Spent" value={formatUsd(c?.cost_usd)} />
-        <Stat label="Elapsed" value={formatDuration(c?.elapsed_s)} />
+        <Stat label="Reviews/s" value={formatRate(reusedFrom ? reusedFrom.reviewsPerS : c?.rps)} />
+        <Stat label="Spent" value={formatUsd(reusedFrom ? reusedFrom.costUsd : c?.cost_usd)} />
+        <Stat label="Elapsed" value={formatDuration(reusedFrom ? reusedFrom.elapsedS : c?.elapsed_s)} />
       </dl>
+      {reusedFrom && (
+        <p className="text-[11px] leading-snug text-muted-foreground">
+          Replays the {reusedFrom.backend === 'jev' ? 'Jev' : reusedFrom.backend} answers of the original run; the integrity rules are re-applied at no
+          cost. Speed and spend are the original run’s.
+        </p>
+      )}
     </section>
   )
 }

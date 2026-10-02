@@ -253,10 +253,19 @@ function PlatformRemovals({ s, scale }: { s: RunSummary; scale: string }) {
 
 function Methodology({ run, s, exportUrl }: { run: RunOut; s: RunSummary; exportUrl: (f: 'csv' | 'json') => string | null }) {
   const t = run.config.thresholds
+  const ds = useDataSource()
+  const sourceId = run.backend === 'cached' ? run.config.reuse_judgments_from : null
+  const src = useQuery({ queryKey: ['run', sourceId], queryFn: () => ds.getRun(sourceId!), enabled: !!sourceId, staleTime: Infinity })
+  const reused = src.data
   const csv = exportUrl('csv')
   const json = exportUrl('json')
   const rows: [string, ReactNode][] = [
-    ['Backend', `${run.backend}${s.model_version ? ` · ${s.model_version}` : ''}`],
+    [
+      'Backend',
+      reused
+        ? `${reused.backend}${reused.model_version ? ` · ${reused.model_version}` : ''} answers, reused; rules re-applied`
+        : `${run.backend}${s.model_version ? ` · ${s.model_version}` : ''}`,
+    ],
     ['Question set', run.config.question_set],
     ['Calls per review', `${run.config.samples_per_review}`],
     ['Downweight line', `${t.downweight_below} → weight ${run.config.weights.DOWNWEIGHT}`],
@@ -265,7 +274,12 @@ function Methodology({ run, s, exportUrl }: { run: RunOut; s: RunSummary; export
     ['Cluster penalty', `above ${t.cluster_penalty_threshold}, ≥ ${t.min_penalty_cluster_size} reviews`],
     ['Later copies', `${t.duplicate_action.toLowerCase()}; inside a suspicious burst ${t.duplicate_in_burst_action.toLowerCase()}`],
     ['Confidence interval', `bootstrap, ${formatInt(run.config.bootstrap_resamples)} resamples`],
-    ['Cost', `${formatUsd(run.cost_usd)}${run.tokens_in ? ` · ${formatInt(run.tokens_in)} tokens` : ''}`],
+    [
+      'Cost',
+      reused
+        ? `${formatUsd(reused.cost_usd)} for the original run · ${formatInt(reused.tokens_in)} tokens (this re-run: $0)`
+        : `${formatUsd(run.cost_usd)}${run.tokens_in ? ` · ${formatInt(run.tokens_in)} tokens` : ''}`,
+    ],
   ]
   return (
     <section aria-label="Methodology" className="space-y-3 rounded-lg bg-card p-4 ring-1 ring-border">

@@ -22,7 +22,7 @@
 
 | # | Issue | Evidence | Action |
 |---|---|---|---|
-| C6 | **Jev → Laya distillation is prohibited.** MCA §2.3(b): customers may not "use the Services or any Output to perform model distillation, train a model to imitate the output of the Services…". | typesafe.ai/legal/mca | **Phase 8 re-scoped** (see below): fine-tune Laya on human labels + synthetic ground truth only. Confirm the reading with Solulever legal. |
+| C6 | **Jev → Laya distillation is prohibited.** MCA §2.3(b): customers may not "use the Services or any Output to perform model distillation, train a model to imitate the output of the Services…". | typesafe.ai/legal/mca | **Phase 8 re-scoped** (see below): fine-tune Laya on human labels + synthetic ground truth only. Confirm the reading with a lawyer before any Phase 8 work. |
 | C7 | **Jev limits changed:** 40 req/s and 100K tokens/s (spec: 1,200 rpm, 250K tok/s). **Measured:** 64 reviews/s at concurrency 32 with zero 429s → 50K in ≈ 13 min at pack=1. | models.md; MEASUREMENTS M4c | **Packing is not needed for throughput.** It is now a *cost* lever only: packing 5 reviews cut tokens by 41% (M4b). Phase 3 re-framed. |
 | C8 | **Laya on this CPU is unusable for bulk runs.** Measured 0.08 reviews/s (i7-1255U, 6 questions). | MEASUREMENTS.md | Local Laya is limited to the 200-review dev set. Every Laya bulk run (5K and 50K) moves to the Kaggle notebook. The "Laya" option in the live UI becomes replay-only. |
 | C9 | **50K costs more than the spec's $1.** **Measured on Jev:** 1,057 input tokens/review → **$2.22 per 50K**, just above the $2 spend guard ($0.22 per 5K). | MEASUREMENTS M4c | Phase 3: trim criteria text and/or pack (−41% tokens on 5 reviews, M4b) and re-measure agreement against the untrimmed pack=1 answers. Raise the guard only as a conscious decision. |
@@ -284,7 +284,7 @@ Open items: the color-mode toggle (informativeness/topic/cluster) and the "Compa
 
 **Exit criteria:** a 3-minute scripted walkthrough (dataset → live run → cluster → review → results → export) works on the HD2 5K subset with no console errors. **This is the M1 gate.**
 
-**Wording flag (legal):** UI copy never says "fake". Use "integrity weight" and "low evidential value", never name reviewers (research §9). Get Solulever legal to review the copy before any public link.
+**Wording flag (legal):** UI copy never says "fake". Use "integrity weight" and "low evidential value", never name reviewers (research §9). Have a lawyer review the copy before any public link.
 
 **Status (2026-10-01): built.**
 - **API:** `GET /runs/{id}/reviews` (filters: action, reason, cluster, verdict, text; sort by time or integrity); review detail with answers, S1 signals, meta and platform status; `GET /runs/{id}/scores`; export. Exports carry no `ext_id` or `author_hash`.

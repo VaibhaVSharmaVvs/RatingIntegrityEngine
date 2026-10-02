@@ -355,7 +355,7 @@ Side nav: Benchmarks · Flag queue · Datasets
   - Pending: neutral gray
   - Always pair colour with a legend and patterns in the inspector.
 - Motion: squares fade in over 150 ms. Respect `prefers-reduced-motion`, which snaps to the final state.
-- ~~Wireframes: low-fidelity only (Figma, per Solulever guidance), for screens 4–7.~~ Waived by the owner (2026-10-01); screens are designed in code.
+- ~~Wireframes: low-fidelity only (Figma), for screens 4–7.~~ Waived by the owner (2026-10-01); screens are designed in code.
 
 ---
 
@@ -431,13 +431,13 @@ rating-integrity-engine/
 
 ---
 
-## 12. Build plan (ProtrackLite)
+## 12. Build plan
 
-🎯 **Goal:** a public portfolio demo that judges 50K Steam reviews visibly, finds the Helldivers 2 bomb, reports a benchmarked integrity-adjusted rating, and compares Jev with Laya.
+**Goal:** a public portfolio demo that judges 50K Steam reviews visibly, finds the Helldivers 2 bomb, reports a benchmarked integrity-adjusted rating, and compares Jev with Laya.
 
 Estimates assume a solo developer working full-time-equivalent. Double them if part-time.
 
-| # | ✅ Task (deliverable) | 📌 Activities | Est. |
+| # | Task (deliverable) | Activities | Est. |
 |---|---|---|---|
 | 0 | Access and data | Get a Jev key; `pip install laya[serve]` and smoke-test the same client against both; **measure Laya reviews/s on your CPU**; start the backward Steam pulls for Helldivers 2, Gollum and Cities: Skylines II (English only, in the background) | 2 d |
 | 1 | Backend skeleton | FastAPI, DuckDB schema, CSV + Steam ingest, normalize, SSE bus, replay recorder | 3 d |

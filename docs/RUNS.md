@@ -8,6 +8,12 @@ delete them:** the Phase 9 public demo is built from these replays.
 
 | Run | Id | Q-set | Reviews | Raw | Adjusted (95% CI) | Platform policy (95% CI) | Cost | Replay |
 |---|---|---|---|---|---|---|---|---|
+| Helldivers 2 5K · current rules | `run_104cc1191ff8` | v4 | 4,999 | 76.4% | 77.7% (76.5%-78.9%) | 89.0% (87.4%-90.5%) | $0.000 | ✅ |
+| Borderlands 2 Apr-Aug 2025 · current rules | `run_31ffbd3bddd6` | v4 | 12,981 | 33.8% | 37.4% (36.6%-38.2%) | 50.7% (49.1%-52.3%) | $0.000 | ✅ |
+| Metro 2033 Redux Dec 2018-Mar 2019 · current rules | `run_e638053d0ca6` | v4 | 2,444 | 48.8% | 62.8% (60.7%-64.8%) | 61.5% (58.9%-64.2%) | $0.000 | ✅ |
+| Football Manager 26 launch→now · current rules | `run_55d11443d036` | v4 | 15,348 | 38.0% | 37.2% (36.4%-38.0%) | 38.4% (37.4%-39.3%) | $0.000 | ✅ |
+| Cities: Skylines II 5K control · current rules | `run_696384d545ae` | v4 | 5,000 | 59.6% | 59.2% (57.8%-60.6%) | 59.9% (58.4%-61.4%) | $0.000 | ✅ |
+| Gollum control · current rules | `run_51d5d8355914` | v4 | 297 | 35.7% | 34.3% (29.1%-39.9%) | 34.4% (27.9%-41.4%) | $0.000 | ✅ |
 | Helldivers 2 5K · v4 three ratings | `run_32a69a6357c9` | v4 | 4,999 | 76.4% | 77.6% (76.4%-78.8%) | 89.0% (87.4%-90.5%) | $0.307 | ✅ |
 | Borderlands 2 Apr-Aug 2025 · v4 three ratings | `run_cb355add8483` | v4 | 12,981 | 33.8% | 37.4% (36.6%-38.3%) | 50.7% (49.1%-52.3%) | $0.801 | ✅ |
 | Metro 2033 Redux Dec 2018-Mar 2019 · v4 three ratings | `run_319a013d4535` | v4 | 2,444 | 48.8% | 62.9% (60.8%-64.9%) | 61.5% (58.9%-64.2%) | $0.154 | ✅ |
@@ -63,3 +69,102 @@ delete them:** the Phase 9 public demo is built from these replays.
 | `run_fe99d4915e40` | Football Manager 26 (launch to now) | jev | v4 | done | 15348 | 38.0% | 37.2% | 38.4% | ✅ |
 | `run_71e6ab4bce80` | Metro 2033 Redux, Dec 2018-Mar 2019 (Exodus exclusivity bomb) | jev | v4 | failed | — | — | — | — | ✅ |
 | `run_319a013d4535` | Metro 2033 Redux, Dec 2018-Mar 2019 (Exodus exclusivity bomb) | jev | v4 | done | 2444 | 48.8% | 62.9% | 61.5% | ✅ |
+| `run_48cd42a5b35b` | Benchmark attack-bench-v1: HD2 Apr 2024 clean | heuristic | v4 | done | 4999 | 87.8% | 85.1% | 88.1% | ✅ |
+| `run_7de5a76ae03c` | Benchmark attack-bench-v1: HD2 Apr 2024 attacked | heuristic | v4 | done | 5689 | 80.2% | 79.1% | 79.4% | ✅ |
+| `run_390baa77c52e` | Benchmark attack-bench-v1: HD2 Apr 2024 clean | jev | v4 | done | 4999 | 87.8% | 87.7% | 88.1% | ✅ |
+| `run_8b23c1028c0c` | Benchmark attack-bench-v1: HD2 Apr 2024 attacked | jev | v4 | done | 5689 | 80.2% | 83.5% | 79.4% | ✅ |
+| `run_69af1b939cb8` | Benchmark attack-bench-v1: HD2 Apr 2024 attacked | cached | v4 | done | 5689 | 80.2% | 83.5% | 79.4% | ✅ |
+| `run_810f7fc254ba` | Benchmark attack-bench-v1: HD2 Apr 2024 attacked | cached | v4 | done | 5689 | 80.2% | 84.2% | 79.4% | ✅ |
+| `run_790a5e591f0a` | Benchmark attack-bench-v1: HD2 Apr 2024 clean | cached | v4 | done | 4999 | 87.8% | 87.7% | 88.1% | ✅ |
+| `run_e6fca7b3a2b8` | Cities: Skylines II, Oct-Dec 2023 (5K) | cached | v4 | done | 5000 | 59.6% | 59.2% | 59.9% | ✅ |
+| `run_c4ba90b803d4` | LOTR: Gollum, May-Jul 2023 | cached | v4 | done | 297 | 35.7% | 34.3% | 34.4% | ✅ |
+| `run_f04c89227fd8` | Football Manager 26 (launch to now) | cached | v4 | done | 15348 | 38.0% | 37.2% | 38.4% | ✅ |
+| `run_804a65413561` | Helldivers 2 Apr-Jun 2024 5K live | cached | v4 | done | 4999 | 76.4% | 77.7% | 89.0% | ✅ |
+| `run_674d02fffc20` | Borderlands 2, Apr-Aug 2025 (EULA bomb) | cached | v4 | done | 12981 | 33.8% | 37.4% | 50.7% | ✅ |
+| `run_c4b0ea3bfc44` | Metro 2033 Redux, Dec 2018-Mar 2019 (Exodus exclusivity bomb) | cached | v4 | done | 2444 | 48.8% | 62.9% | 61.5% | ✅ |
+| `run_e55f89c7ec66` | Benchmark attack-bench-v1: HD2 Apr 2024 attacked | cached | v4 | done | 5689 | 80.2% | 84.3% | 79.4% | ✅ |
+| `run_53d2b377c0d3` | Benchmark attack-bench-v1: HD2 Apr 2024 clean | cached | v4 | done | 4999 | 87.8% | 87.8% | 88.1% | ✅ |
+| `run_cca3771beaac` | Helldivers 2 | jev | v4 | done | 750 | 66.7% | 69.3% | 66.7% | ✅ |
+| `run_e0bc36011fc0` | Cities: Skylines II, Oct-Dec 2023 (5K) | cached | v4 | done | 5000 | 59.6% | 59.2% | 59.9% | ✅ |
+| `run_fee99424d3e5` | LOTR: Gollum, May-Jul 2023 | cached | v4 | done | 297 | 35.7% | 34.3% | 34.4% | ✅ |
+| `run_ee895d06ea1f` | Football Manager 26 (launch to now) | cached | v4 | done | 15348 | 38.0% | 37.2% | 38.4% | ✅ |
+| `run_ee6af3317b08` | Helldivers 2 Apr-Jun 2024 5K live | cached | v4 | done | 4999 | 76.4% | 77.7% | 89.0% | ✅ |
+| `run_4bd7e3fa5b88` | Borderlands 2, Apr-Aug 2025 (EULA bomb) | cached | v4 | done | 12981 | 33.8% | 37.5% | 50.7% | ✅ |
+| `run_cbe541f7b6bb` | Metro 2033 Redux, Dec 2018-Mar 2019 (Exodus exclusivity bomb) | cached | v4 | done | 2444 | 48.8% | 62.9% | 61.5% | ✅ |
+| `run_a5764ec88a97` | Benchmark attack-bench-v1: HD2 Apr 2024 attacked | cached | v4 | done | 5689 | 80.2% | 84.3% | 79.4% | ✅ |
+| `run_ba6a1b607117` | Benchmark attack-bench-v1: HD2 Apr 2024 clean | cached | v4 | done | 4999 | 87.8% | 87.8% | 88.1% | ✅ |
+| `run_70f6936288c1` | Cities: Skylines II, Oct-Dec 2023 (5K) | cached | v4 | done | 5000 | 59.6% | 59.2% | 59.9% | ✅ |
+| `run_a960833e464e` | LOTR: Gollum, May-Jul 2023 | cached | v4 | done | 297 | 35.7% | 34.3% | 34.4% | ✅ |
+| `run_4e4b0ff08c26` | Football Manager 26 (launch to now) | cached | v4 | done | 15348 | 38.0% | 37.2% | 38.4% | ✅ |
+| `run_c0a27a77d7bc` | Helldivers 2 Apr-Jun 2024 5K live | cached | v4 | done | 4999 | 76.4% | 77.7% | 89.0% | ✅ |
+| `run_ec8c43496b38` | Borderlands 2, Apr-Aug 2025 (EULA bomb) | cached | v4 | done | 12981 | 33.8% | 37.4% | 50.7% | ✅ |
+| `run_f559194ce896` | Metro 2033 Redux, Dec 2018-Mar 2019 (Exodus exclusivity bomb) | cached | v4 | done | 2444 | 48.8% | 62.9% | 61.5% | ✅ |
+| `run_f9fb5a8da523` | Benchmark attack-bench-v1: HD2 Apr 2024 attacked | cached | v4 | done | 5689 | 80.2% | 83.7% | 79.4% | ✅ |
+| `run_e8ce010051f0` | Benchmark attack-bench-v1: HD2 Apr 2024 clean | cached | v4 | done | 4999 | 87.8% | 87.9% | 88.1% | ✅ |
+| `run_0dbddfe4de6d` | Cities: Skylines II, Oct-Dec 2023 (5K) | cached | v4 | done | 5000 | 59.6% | 59.2% | 59.9% | ✅ |
+| `run_296963389c92` | LOTR: Gollum, May-Jul 2023 | cached | v4 | done | 297 | 35.7% | 34.3% | 34.4% | ✅ |
+| `run_9860b9d47e84` | Football Manager 26 (launch to now) | cached | v4 | done | 15348 | 38.0% | 37.2% | 38.4% | ✅ |
+| `run_d01da318af5f` | Helldivers 2 Apr-Jun 2024 5K live | cached | v4 | done | 4999 | 76.4% | 76.8% | 89.0% | ✅ |
+| `run_38e7c96a085d` | Borderlands 2, Apr-Aug 2025 (EULA bomb) | cached | v4 | done | 12981 | 33.8% | 37.0% | 50.7% | ✅ |
+| `run_85a8062888f9` | Metro 2033 Redux, Dec 2018-Mar 2019 (Exodus exclusivity bomb) | cached | v4 | done | 2444 | 48.8% | 65.3% | 61.5% | ✅ |
+| `run_1d527825ac99` | Benchmark attack-bench-v1: HD2 Apr 2024 attacked | cached | v4 | done | 5689 | 80.2% | 82.5% | 79.4% | ✅ |
+| `run_aa789f464dc4` | Benchmark attack-bench-v1: HD2 Apr 2024 clean | cached | v4 | done | 4999 | 87.8% | 87.8% | 88.1% | ✅ |
+| `run_af37723dd65a` | Benchmark attack-bench-v1: HD2 Apr 2024 attacked | cached | v4 | done | 5689 | 80.2% | 83.5% | 79.4% | ✅ |
+| `run_57408dfbed7c` | Benchmark attack-bench-v1: HD2 Apr 2024 clean | jev | v4 | done | 4999 | 87.8% | 87.3% | 88.1% | ✅ |
+| `run_875407b5dcd0` | Benchmark attack-bench-v1: HD2 Apr 2024 attacked | jev | v4 | done | 5689 | 80.2% | 82.8% | 79.4% | ✅ |
+| `run_3da251d46dc1` | Benchmark attack-bench-v1: HD2 Apr 2024 clean | cached | v4 | done | 4999 | 87.8% | 87.6% | 88.1% | ✅ |
+| `run_d60d05e166e8` | Benchmark attack-bench-v1: HD2 Apr 2024 attacked | cached | v4 | done | 5689 | 80.2% | 83.6% | 79.4% | ✅ |
+| `run_75f68ae33419` | Benchmark attack-bench-v1: HD2 Apr 2024 clean | cached | v4 | done | 4999 | 87.8% | 87.8% | 88.1% | ✅ |
+| `run_660814ae6336` | Benchmark attack-bench-v1: HD2 Apr 2024 attacked | cached | v4 | done | 5689 | 80.2% | 83.9% | 79.4% | ✅ |
+| `run_947d6286602e` | Benchmark attack-bench-v1: HD2 Apr 2024 clean | cached | v4 | done | 4999 | 87.8% | 88.0% | 88.1% | ✅ |
+| `run_bce79e413412` | Benchmark attack-bench-v1: HD2 Apr 2024 attacked | cached | v4 | done | 5689 | 80.2% | 83.5% | 79.4% | ✅ |
+| `run_38c0ca4aeec1` | Benchmark attack-bench-v1: HD2 Apr 2024 clean | cached | v4 | done | 4999 | 87.8% | 87.7% | 88.1% | ✅ |
+| `run_3a954abe7037` | Benchmark attack-bench-v1: HD2 Apr 2024 attacked | cached | v4 | done | 5689 | 80.2% | 83.7% | 79.4% | ✅ |
+| `run_b53f49798236` | Benchmark attack-bench-v1: HD2 Apr 2024 clean | cached | v4 | done | 4999 | 87.8% | 88.0% | 88.1% | ✅ |
+| `run_750338a48cf7` | Benchmark attack-bench-v1: HD2 Apr 2024 attacked | cached | v4 | done | 5689 | 80.2% | 83.6% | 79.4% | ✅ |
+| `run_96f82c7d7826` | Benchmark attack-bench-v1: HD2 Apr 2024 clean | cached | v4 | done | 4999 | 87.8% | 87.7% | 88.1% | ✅ |
+| `run_d59c8cdd6f5d` | Benchmark attack-bench-v1: HD2 Apr 2024 clean | jev | v4 | done | 4999 | 87.8% | 87.4% | 88.1% | ✅ |
+| `run_78d92825bee4` | Benchmark attack-bench-v1: HD2 Apr 2024 attacked | jev | v4 | done | 5689 | 80.2% | 83.0% | 79.4% | ✅ |
+| `run_9e290104478b` | Helldivers 2 | laya | v4 | done | 300 | 69.7% | 65.8% | 69.7% | ✅ |
+| `run_d7f04cf828a6` | Benchmark attack-bench-v1: HD2 Apr 2024 clean | jev | v4 | done | 4999 | 87.8% | 87.7% | 88.1% | ✅ |
+| `run_18611137f842` | Helldivers 2 | jev | v4 | done | 750 | 66.7% | 66.4% | 66.7% | ✅ |
+| `run_b4244c6a6418` | Helldivers 2 | jev | v5 | done | 750 | 66.7% | 65.5% | 66.7% | ✅ |
+| `run_ec07c94a7d4b` | Helldivers 2 | jev | v4 | done | 750 | 66.7% | 70.4% | 66.7% | ✅ |
+| `run_0ef702a7c323` | Helldivers 2 | jev | v5 | done | 750 | 66.7% | 67.5% | 66.7% | ✅ |
+| `run_2e2dc15cd92a` | Benchmark attack-bench-v1: HD2 Apr 2024 clean | jev | v5 | done | 4999 | 87.8% | 87.7% | 88.1% | ✅ |
+| `run_8b22a377d1e2` | Benchmark attack-bench-v1: HD2 Apr 2024 attacked | cached | v4 | done | 5689 | 80.2% | 84.3% | 79.4% | ✅ |
+| `run_342f2b54c0b9` | Benchmark attack-bench-v1: HD2 Apr 2024 clean | cached | v4 | done | 4999 | 87.8% | 87.8% | 88.1% | ✅ |
+| `run_d85708fd7991` | Cities: Skylines II, Oct-Dec 2023 (5K) | cached | v4 | done | 5000 | 59.6% | 59.2% | 59.9% | ✅ |
+| `run_4cd9e147dd21` | LOTR: Gollum, May-Jul 2023 | cached | v4 | done | 297 | 35.7% | 34.3% | 34.4% | ✅ |
+| `run_4c6c3abae675` | Football Manager 26 (launch to now) | cached | v4 | done | 15348 | 38.0% | 37.2% | 38.4% | ✅ |
+| `run_4967683f7ef2` | Helldivers 2 Apr-Jun 2024 5K live | cached | v4 | done | 4999 | 76.4% | 77.7% | 89.0% | ✅ |
+| `run_d988dab68854` | Borderlands 2, Apr-Aug 2025 (EULA bomb) | cached | v4 | done | 12981 | 33.8% | 37.4% | 50.7% | ✅ |
+| `run_c463ba7f21a1` | Metro 2033 Redux, Dec 2018-Mar 2019 (Exodus exclusivity bomb) | cached | v4 | done | 2444 | 48.8% | 62.9% | 61.5% | ✅ |
+| `run_9540fb1f3db8` | Benchmark attack-bench-v1: HD2 Apr 2024 attacked | cached | v4 | done | 5689 | 80.2% | 84.2% | 79.4% | ✅ |
+| `run_ef393305fdb2` | Benchmark attack-bench-v1: HD2 Apr 2024 clean | cached | v4 | done | 4999 | 87.8% | 88.0% | 88.1% | ✅ |
+| `run_42f83537420f` | Cities: Skylines II, Oct-Dec 2023 (5K) | cached | v4 | done | 5000 | 59.6% | 59.2% | 59.9% | ✅ |
+| `run_450afac8fb4a` | LOTR: Gollum, May-Jul 2023 | cached | v4 | done | 297 | 35.7% | 34.3% | 34.4% | ✅ |
+| `run_305caded4468` | Football Manager 26 (launch to now) | cached | v4 | done | 15348 | 38.0% | 37.2% | 38.4% | ✅ |
+| `run_2c0eac4a2af8` | Helldivers 2 Apr-Jun 2024 5K live | cached | v4 | done | 4999 | 76.4% | 77.7% | 89.0% | ✅ |
+| `run_8e9147a0c60a` | Borderlands 2, Apr-Aug 2025 (EULA bomb) | cached | v4 | done | 12981 | 33.8% | 37.3% | 50.7% | ✅ |
+| `run_ebe80591ef41` | Metro 2033 Redux, Dec 2018-Mar 2019 (Exodus exclusivity bomb) | cached | v4 | done | 2444 | 48.8% | 62.8% | 61.5% | ✅ |
+| `run_7b9ed7f24f6f` | Helldivers 2 | jev | v4 | done | 750 | 66.7% | 66.6% | 66.7% | ✅ |
+| `run_b4c7e85fdd97` | Helldivers 2 | jev | v5 | done | 750 | 66.7% | 66.1% | 66.7% | ✅ |
+| `run_eaf73467ee3c` | Benchmark attack-bench-v1: HD2 Apr 2024 clean | cached | v5 | done | 4999 | 87.8% | 87.7% | 88.1% | ✅ |
+| `run_45c0c6a91b36` | Helldivers 2 | cached | v5 | done | 750 | 66.7% | 68.7% | 66.7% | ✅ |
+| `run_37363e1413ec` | Benchmark attack-bench-v1: HD2 Apr 2024 clean | cached | v4 | done | 4999 | 87.8% | 87.8% | 88.1% | ✅ |
+| `run_4dd4cd93f5ab` | Benchmark attack-bench-v1: HD2 Apr 2024 clean | cached | v4 | done | 4999 | 87.8% | 87.7% | 88.1% | ✅ |
+| `run_fcb22c272606` | Benchmark attack-bench-v1: HD2 Apr 2024 attacked | cached | v4 | done | 5689 | 80.2% | 84.2% | 79.4% | ✅ |
+| `run_9b4be8e8554b` | Benchmark attack-bench-v1: HD2 Apr 2024 clean | cached | v4 | done | 4999 | 87.8% | 88.0% | 88.1% | ✅ |
+| `run_4674736a0716` | Cities: Skylines II, Oct-Dec 2023 (5K) | cached | v4 | done | 5000 | 59.6% | 59.2% | 59.9% | ✅ |
+| `run_74173f95e93f` | LOTR: Gollum, May-Jul 2023 | cached | v4 | done | 297 | 35.7% | 34.3% | 34.4% | ✅ |
+| `run_6b60deb03731` | Football Manager 26 (launch to now) | cached | v4 | done | 15348 | 38.0% | 37.2% | 38.4% | ✅ |
+| `run_a14a69a4c228` | Helldivers 2 Apr-Jun 2024 5K live | cached | v4 | done | 4999 | 76.4% | 77.7% | 89.0% | ✅ |
+| `run_f007312670e5` | Borderlands 2, Apr-Aug 2025 (EULA bomb) | cached | v4 | done | 12981 | 33.8% | 37.4% | 50.7% | ✅ |
+| `run_3a9b31ec2909` | Metro 2033 Redux, Dec 2018-Mar 2019 (Exodus exclusivity bomb) | cached | v4 | done | 2444 | 48.8% | 62.8% | 61.5% | ✅ |
+| `run_104cc1191ff8` | Helldivers 2 Apr-Jun 2024 5K live | cached | v4 | done | 4999 | 76.4% | 77.7% | 89.0% | ✅ |
+| `run_31ffbd3bddd6` | Borderlands 2, Apr-Aug 2025 (EULA bomb) | cached | v4 | done | 12981 | 33.8% | 37.4% | 50.7% | ✅ |
+| `run_e638053d0ca6` | Metro 2033 Redux, Dec 2018-Mar 2019 (Exodus exclusivity bomb) | cached | v4 | done | 2444 | 48.8% | 62.8% | 61.5% | ✅ |
+| `run_55d11443d036` | Football Manager 26 (launch to now) | cached | v4 | done | 15348 | 38.0% | 37.2% | 38.4% | ✅ |
+| `run_696384d545ae` | Cities: Skylines II, Oct-Dec 2023 (5K) | cached | v4 | done | 5000 | 59.6% | 59.2% | 59.9% | ✅ |
+| `run_51d5d8355914` | LOTR: Gollum, May-Jul 2023 | cached | v4 | done | 297 | 35.7% | 34.3% | 34.4% | ✅ |

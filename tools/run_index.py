@@ -21,6 +21,13 @@ from app.core.config import settings  # noqa: E402
 # Curated: the runs MEASUREMENTS M11 reports, and the earlier method versions for
 # comparison. label -> run id.
 SHOWCASE = {
+    # current rules (M13), v4 answers reused from the runs below: what the demo shows
+    "Helldivers 2 5K · current rules": "run_104cc1191ff8",
+    "Borderlands 2 Apr-Aug 2025 · current rules": "run_31ffbd3bddd6",
+    "Metro 2033 Redux Dec 2018-Mar 2019 · current rules": "run_e638053d0ca6",
+    "Football Manager 26 launch→now · current rules": "run_55d11443d036",
+    "Cities: Skylines II 5K control · current rules": "run_696384d545ae",
+    "Gollum control · current rules": "run_51d5d8355914",
     "Helldivers 2 5K · v4 three ratings": "run_32a69a6357c9",
     "Borderlands 2 Apr-Aug 2025 · v4 three ratings": "run_cb355add8483",
     "Metro 2033 Redux Dec 2018-Mar 2019 · v4 three ratings": "run_319a013d4535",
@@ -41,7 +48,7 @@ def pct(v: float | None) -> str:
 
 def main() -> None:
     with httpx.Client(base_url="http://localhost:8001", timeout=60) as c:
-        runs = c.get("/runs").json()
+        runs = c.get("/runs", params={"limit": 500}).json()
         datasets = {d["id"]: d for d in c.get("/datasets").json()}
     by_id = {r["id"]: r for r in runs}
     replays = settings.replays_dir
