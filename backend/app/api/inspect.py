@@ -281,7 +281,7 @@ def run_scores(run_id: str, state: AppState = Depends(get_state)) -> RunScores:
     windows = _windows(run)
     purchasers_only = run.config.platform.purchasers_only
     reason_idx = {c: i for i, c in enumerate(REASON_CODES)}
-    rating, integ, base, act, reason, plat = [], [], [], [], [], []
+    rating, integ, base, act, reason, plat, key = [], [], [], [], [], [], []
     for _id, rn, created, meta, a, s, b, rs in rows:
         rating.append(rn)
         integ.append(s)
@@ -291,6 +291,7 @@ def run_scores(run_id: str, state: AppState = Depends(get_state)) -> RunScores:
         reason.append(reason_idx.get(codes[0], -1) if codes else -1)
         m = json.loads(meta or "{}")
         plat.append(_platform_counts(created, m.get("steam_purchase"), windows, purchasers_only))
+        key.append(purchasers_only and m.get("steam_purchase") is False)
     t = run.config.thresholds
     return RunScores(
         rating_norm=rating,
@@ -300,6 +301,7 @@ def run_scores(run_id: str, state: AppState = Depends(get_state)) -> RunScores:
         primary_reason=reason,
         reason_codes=REASON_CODES,
         counts_in_platform=plat,
+        platform_key_activation=key,
         weights=run.config.weights,
         downweight_below=t.downweight_below,
     )

@@ -679,6 +679,10 @@ def test_scores_reproduce_the_adjusted_rating(client: TestClient) -> None:
     r = np.array(s["rating_norm"], dtype=float)
     assert (r * ws).sum() / ws.sum() == pytest.approx(summary["adjusted"])
     assert all(-1 <= i < len(s["reason_codes"]) for i in s["primary_reason"])
+    # the grid's Steam view splits left-out reviews with this flag; it must agree with the summary
+    platform = summary["platform"] or {"key_activations_removed": 0}
+    assert len(s["platform_key_activation"]) == len(texts)
+    assert sum(s["platform_key_activation"]) == platform["key_activations_removed"]
 
 
 def test_export_has_decisions_but_no_identifiers(client: TestClient) -> None:

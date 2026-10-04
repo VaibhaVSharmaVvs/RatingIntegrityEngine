@@ -6,6 +6,7 @@ import { RailLegend, RatingRail } from '@/components/shared/RatingRail'
 import { ThemeToggle } from '@/components/ThemeToggle'
 import { buttonVariants } from '@/components/ui/button'
 import { REASONS } from '@/lib/methodology'
+import { useActiveSection } from '@/lib/scrollSpy'
 import { cn } from '@/lib/utils'
 
 /**
@@ -25,6 +26,7 @@ const TOC = [
   ['platform-policy', 'Steam policy, emulated'],
   ['limits', 'Limits'],
 ] as const
+const TOC_IDS = TOC.map(([id]) => id)
 
 interface Example {
   game: string
@@ -130,6 +132,7 @@ const EXAMPLES: Example[] = [
 
 export function HelpPage() {
   const { hash } = useLocation()
+  const active = useActiveSection(TOC_IDS)
   useEffect(() => {
     if (!hash) return
     const el = document.getElementById(decodeURIComponent(hash.slice(1)))
@@ -156,7 +159,14 @@ export function HelpPage() {
           <ol className="sticky top-20 space-y-1 border-l border-border text-xs">
             {TOC.map(([id, label]) => (
               <li key={id}>
-                <a href={`#${id}`} className="-ml-px block border-l border-transparent py-0.5 pl-3 text-muted-foreground hover:border-foreground hover:text-foreground">
+                <a
+                  href={`#${id}`}
+                  aria-current={active === id ? 'location' : undefined}
+                  className={cn(
+                    '-ml-px block border-l border-transparent py-0.5 pl-3 text-muted-foreground transition-colors hover:border-muted-foreground hover:text-foreground',
+                    active === id && 'border-foreground font-medium text-foreground hover:border-foreground',
+                  )}
+                >
                   {label}
                 </a>
               </li>

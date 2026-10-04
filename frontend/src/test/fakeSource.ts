@@ -184,6 +184,7 @@ export class FakeSource implements DataSource {
       primary_reason: action.map((a) => (a === 2 ? 0 : a === 4 ? 2 : -1)),
       reason_codes: ['OFF_TOPIC', 'NEAR_DUPLICATE', 'SPAM'],
       counts_in_platform: action.map((a) => a !== 2),
+      platform_key_activation: action.map(() => false),
       weights: { KEEP: 1, DOWNWEIGHT: 0.25, FLAG: 1, EXCLUDE: 0 },
       downweight_below: 0.55,
     }

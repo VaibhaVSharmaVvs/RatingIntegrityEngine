@@ -126,4 +126,16 @@ describe('useRunStore', () => {
     expect(s.runId).toBe('two')
     expect(s.phase).toBe('connecting')
   })
+
+  it('reset to a smaller run counts only that run as pending (no negative "decided")', () => {
+    const store = useRunStore.getState()
+    store.reset('big', 12)
+    store.ingest([encodeJudged([0, 1, 2], [1, 1, 2])], 0)
+    store.reset('small', 5)
+    const s = useRunStore.getState()
+    expect(s.grid.size).toBe(5)
+    expect(s.tally).toEqual([5, 0, 0, 0, 0])
+    store.ingest([encodeJudged([0, 1, 2, 3, 4], [1, 1, 2, 3, 4])], 0)
+    expect(useRunStore.getState().tally).toEqual([0, 2, 1, 1, 1])
+  })
 })

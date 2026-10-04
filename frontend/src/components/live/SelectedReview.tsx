@@ -3,11 +3,10 @@ import { PanelRightOpen, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useDataSource } from '@/data/source'
 import { formatHour, reviewText, verdictWords } from '@/lib/format'
-import { actionName } from '@/lib/palette'
 import { useRunStore } from '@/state/runStore'
 import { useViewStore } from '@/state/viewStore'
 import { ReasonChip } from '@/components/shared/ReasonChip'
-import { ActionChip } from './ActionChip'
+import { CellChip } from './ActionChip'
 
 /** Compact read-out of the clicked review; "Inspect" opens the full inspector drawer. */
 export function SelectedReview({ runId, ratingScale }: { runId: string; ratingScale: string }) {
@@ -21,12 +20,11 @@ export function SelectedReview({ runId, ratingScale }: { runId: string; ratingSc
     staleTime: 5_000, // the decision fills in when the run finishes
   })
   if (selected == null) return null
-  const live = actionName(useRunStore.getState().grid.actions[selected] ?? 0)
   const r = q.data?.review_id === selected ? q.data : null
   return (
     <section aria-label="Selected review" className="rounded-md border border-border bg-card p-3">
-      <header className="flex items-center gap-2">
-        <ActionChip action={live} />
+      <header className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
+        <CellChip index={selected} />
         <span className="num font-mono text-[11px] text-muted-foreground">#{selected}</span>
         {r?.created_at && <span className="num text-[11px] text-muted-foreground">{formatHour(r.created_at)}</span>}
         <Button

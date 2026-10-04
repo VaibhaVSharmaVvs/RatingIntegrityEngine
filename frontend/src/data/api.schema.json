@@ -3119,6 +3119,13 @@
           },
           "type": "array"
         },
+        "platform_key_activation": {
+          "default": [],
+          "items": {
+            "type": "boolean"
+          },
+          "type": "array"
+        },
         "weights": {
           "$ref": "#/$defs/ActionWeights-Output"
         },
@@ -3134,6 +3141,7 @@
         "primary_reason",
         "reason_codes",
         "counts_in_platform",
+        "platform_key_activation",
         "weights",
         "downweight_below"
       ],

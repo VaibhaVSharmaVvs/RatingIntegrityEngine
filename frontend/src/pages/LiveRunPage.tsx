@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { Play, SkipForward } from 'lucide-react'
-import { useMemo, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Drilldowns } from '@/components/shared/Drilldowns'
@@ -16,10 +16,13 @@ import { StageStepper } from '@/components/live/StageStepper'
 import { TimelineStrip, type TimeWindow } from '@/components/live/TimelineStrip'
 import { useDataSource } from '@/data/source'
 import { formatInt } from '@/lib/format'
+import { steamClasses } from '@/lib/steamLens'
 import { hourBuckets } from '@/lib/timeline'
+import { cn } from '@/lib/utils'
 import { useRunStore } from '@/state/runStore'
 import { DEFAULT_PLAY, PLAY_OPTIONS, playbackFor } from '@/state/playback'
 import { useRunConnection } from '@/state/useRunConnection'
+import { useViewStore, type GridLens } from '@/state/viewStore'
 
 export function LiveRunPage() {
   const { runId = '' } = useParams()
@@ -60,8 +63,26 @@ export function LiveRunPage() {
         elapsedS: source_.data.summary.elapsed_s,
       }
     : null
+  // stage times too: the cached run's own are milliseconds of reading stored answers
+  const stageTimings = reusedFrom ? source_.data?.summary?.timings_s : undefined
 
   const finished = run.data ? ['done', 'error'].includes(run.data.status) : false
+  // Steam-policy view: per-review "counts in Steam's score" from the finished run
+  const platform = run.data?.status === 'done' ? run.data.summary?.platform : null
+  const hasSteamView = platform?.rating != null
+  const scores = useQuery({
+    queryKey: ['scores', runId],
+    queryFn: () => source.getScores(runId),
+    enabled: hasSteamView,
+    staleTime: Infinity,
+  })
+  const lens = useViewStore((s) => s.lens)
+  const steamReady = useViewStore((s) => s.steam !== null)
+  useEffect(() => {
+    if (!scores.data || !platform || !buckets) return
+    useViewStore.getState().setSteam(steamClasses(scores.data.counts_in_platform, scores.data.platform_key_activation, platform.windows, buckets))
+    return () => useViewStore.getState().setSteam(null)
+  }, [scores.data, platform, buckets])
   const n = dataset.data?.n_reviews ?? 0
   const playback = playbackFor(params, finished, nonce)
   const activePlay = params.get('play') ?? (params.get('replay') === '1' ? 'realtime' : DEFAULT_PLAY)
@@ -112,7 +133,7 @@ export function LiveRunPage() {
   return (
     <div className="flex min-h-dvh flex-col bg-background text-foreground lg:h-dvh">
       <RunHeader runId={runId}>
-        <StageStepper timings={summary?.timings_s} />
+        <StageStepper timings={sourceId ? stageTimings : summary?.timings_s} />
       </RunHeader>
 
       {error && (
@@ -123,13 +144,11 @@ export function LiveRunPage() {
 
       <main className="grid min-h-0 flex-1 grid-cols-1 gap-4 p-4 lg:grid-cols-[minmax(0,1fr)_340px] lg:grid-rows-[minmax(0,1fr)]">
         <section aria-label="Live analysis" className="flex min-h-0 flex-col gap-3">
-          <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
-            <h2 className="text-sm font-semibold">
-              Integrity grid <span className="num font-normal text-muted-foreground">· {formatInt(n)} reviews, oldest first</span>
-            </h2>
+          {/* one line: legend left, replay controls right */}
+          <div className="flex flex-wrap items-center gap-x-6 gap-y-2 xl:flex-nowrap">
             <ActionLegend />
             {finished && (
-              <div className="ml-auto flex items-center gap-1" role="group" aria-label="Replay this run">
+              <div className="ml-auto flex shrink-0 items-center gap-1" role="group" aria-label="Replay this run">
                 <Play className="size-3.5 text-muted-foreground" aria-hidden />
                 <span className="mr-1 text-xs text-muted-foreground">Replay</span>
                 {PLAY_OPTIONS.map((o) => (
@@ -151,6 +170,15 @@ export function LiveRunPage() {
                 </Button>
               </div>
             )}
+          </div>
+
+          <div className="-mb-1.5 flex items-center gap-3">
+            {hasSteamView && (
+              <LensToggle value={lens} ready={steamReady} onChange={(l) => useViewStore.getState().setLens(l)} />
+            )}
+            <h2 className="ml-auto text-xs font-medium text-muted-foreground">
+              Integrity grid <span className="num font-normal">· {formatInt(n)} reviews</span>
+            </h2>
           </div>
 
           <div className="h-[60vh] min-h-0 rounded-lg bg-instrument p-2 lg:h-auto lg:flex-1">
@@ -178,7 +206,7 @@ export function LiveRunPage() {
           </div>
         </section>
 
-        <aside aria-label="Run summary" className="relative flex min-h-0 flex-col gap-5 lg:overflow-y-auto lg:pr-1 [&>*]:shrink-0">
+        <aside aria-label="Run summary" className="scrollbar-none relative flex min-h-0 flex-col gap-5 lg:overflow-y-auto [&>*]:shrink-0">
           <RatingTicker scale={scale} />
           <RunCounters reusedFrom={reusedFrom} />
           <SelectedReview runId={runId} ratingScale={scale} />
@@ -206,6 +234,39 @@ export function LiveRunPage() {
       </main>
       <Drilldowns runId={runId} scale={scale} />
       {showFps && <FpsMeter />}
+    </div>
+  )
+}
+
+const LENSES: { value: GridLens; label: string; title: string }[] = [
+  { value: 'integrity', label: 'Integrity', title: 'Colour each review by its integrity action' },
+  { value: 'steam', label: 'Steam policy', title: 'Colour each review by whether Steam’s own score rules count it' },
+]
+
+/** Segmented control: what the grid colours. */
+function LensToggle({ value, ready, onChange }: { value: GridLens; ready: boolean; onChange: (l: GridLens) => void }) {
+  return (
+    <div role="radiogroup" aria-label="Colour the grid by" className="inline-flex rounded-md bg-muted p-0.5">
+      {LENSES.map((l) => {
+        const on = value === l.value
+        return (
+          <button
+            key={l.value}
+            type="button"
+            role="radio"
+            aria-checked={on}
+            title={l.title}
+            disabled={l.value === 'steam' && !ready}
+            onClick={() => onChange(l.value)}
+            className={cn(
+              'rounded-[5px] px-2.5 py-0.5 text-xs font-medium text-muted-foreground transition-colors outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50',
+              on && 'bg-background text-foreground shadow-sm',
+            )}
+          >
+            {l.label}
+          </button>
+        )
+      })}
     </div>
   )
 }

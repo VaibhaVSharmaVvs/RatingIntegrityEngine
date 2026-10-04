@@ -552,6 +552,9 @@ class RunScores(Contract):
     primary_reason: list[int]  # index into reason_codes, -1 = none
     reason_codes: list[str]
     counts_in_platform: list[bool]
+    # left out of the platform score as a key activation (checked before the windows,
+    # so a key activation inside an off-topic window counts here, as in the summary)
+    platform_key_activation: list[bool] = []
     weights: ActionWeights
     downweight_below: float
 

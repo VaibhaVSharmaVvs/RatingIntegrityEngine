@@ -1075,6 +1075,7 @@ export interface RunScores {
   primary_reason: number[];
   reason_codes: string[];
   counts_in_platform: boolean[];
+  platform_key_activation: boolean[];
   weights: ActionWeights1;
   downweight_below: number;
 }

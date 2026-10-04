@@ -6,6 +6,9 @@ export interface IndexRange {
   end: number
 }
 
+/** What the grid colours: integrity actions, or which reviews Steam's score rules count. */
+export type GridLens = 'integrity' | 'steam'
+
 export interface Brush {
   cid: number
   /** 1 for members, 0 otherwise; same length as the grid */
@@ -25,6 +28,9 @@ interface ViewStore {
   inspecting: number | null
   /** cluster open in the cluster drawer */
   openCid: number | null
+  lens: GridLens
+  /** per-review Steam class (lib/steamLens.ts) for the current run; null when not available */
+  steam: Uint8Array | null
   setHovered: (i: number | null) => void
   select: (i: number | null) => void
   setHoverRange: (r: IndexRange | null) => void
@@ -32,6 +38,8 @@ interface ViewStore {
   pin: (cid: number | null) => void
   inspect: (i: number | null) => void
   openCluster: (cid: number | null) => void
+  setLens: (lens: GridLens) => void
+  setSteam: (steam: Uint8Array | null) => void
   clear: () => void
 }
 
@@ -49,6 +57,8 @@ export const useViewStore = create<ViewStore>()((set) => ({
   pinnedCid: null,
   inspecting: null,
   openCid: null,
+  lens: 'integrity',
+  steam: null,
   setHovered: (hovered) => set((s) => (s.hovered === hovered ? s : { hovered })),
   select: (selected) => set({ selected }),
   setHoverRange: (hoverRange) =>
@@ -59,6 +69,9 @@ export const useViewStore = create<ViewStore>()((set) => ({
   pin: (pinnedCid) => set({ pinnedCid }),
   inspect: (inspecting) => set({ inspecting }),
   openCluster: (openCid) => set({ openCid }),
+  setLens: (lens) => set({ lens }),
+  setSteam: (steam) => set((s) => ({ steam, lens: steam ? s.lens : 'integrity' })),
+  // the lens and Steam classes belong to the run, not to one replay: a restart keeps them
   clear: () =>
     set({ hovered: null, selected: null, hoverRange: null, brush: null, pinnedCid: null, inspecting: null, openCid: null }),
 }))

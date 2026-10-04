@@ -3,10 +3,11 @@ import { useEffect, useState } from 'react'
 import { useDataSource } from '@/data/source'
 import { formatHour, reviewText, snippet, verdictWords } from '@/lib/format'
 import { actionName } from '@/lib/palette'
+import { STEAM_CLASSES, STEAM_DETAIL } from '@/lib/steamLens'
 import { bucketOfIndex, type HourBuckets } from '@/lib/timeline'
 import { useRunStore } from '@/state/runStore'
 import { useViewStore } from '@/state/viewStore'
-import { ActionChip } from './ActionChip'
+import { CellChip } from './ActionChip'
 
 const REST_MS = 120
 const WIDTH = 288
@@ -24,6 +25,7 @@ interface Props {
 export function GridTooltip({ runId, ratingScale, buckets, x, y, boxWidth }: Props) {
   const source = useDataSource()
   const hovered = useViewStore((s) => s.hovered)
+  const steam = useViewStore((s) => (s.lens === 'steam' ? s.steam : null))
   useRunStore((s) => s.gridVersion) // the hovered cell's action can change under the pointer
   const [resting, setResting] = useState<number | null>(null)
 
@@ -44,6 +46,7 @@ export function GridTooltip({ runId, ratingScale, buckets, x, y, boxWidth }: Pro
   const b = buckets ? bucketOfIndex(buckets, hovered) : -1
   const when = b >= 0 && buckets ? formatHour(new Date(buckets.ms[b])) : null
   const data = review.data?.review_id === hovered ? review.data : null
+  const steamClass = steam && action !== 'PENDING' ? STEAM_CLASSES[steam[hovered]] : null
 
   const left = x + 16 + WIDTH > boxWidth ? Math.max(0, x - 16 - WIDTH) : x + 16
   return (
@@ -54,9 +57,10 @@ export function GridTooltip({ runId, ratingScale, buckets, x, y, boxWidth }: Pro
       style={{ left, top: Math.max(0, y - 12), width: WIDTH }}
     >
       <div className="flex items-center justify-between gap-2">
-        <ActionChip action={action} />
+        <CellChip index={hovered} />
         <span className="num font-mono text-[11px] text-muted-foreground">#{hovered}</span>
       </div>
+      {steamClass && <div className="mt-2 text-xs font-medium">{STEAM_DETAIL[steamClass]}</div>}
       {when && <div className="num mt-2 text-[11px] text-muted-foreground">{when}</div>}
       <div className="mt-1.5 text-[13px] leading-snug">
         {data ? (
