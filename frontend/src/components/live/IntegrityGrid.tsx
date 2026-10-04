@@ -1,11 +1,12 @@
 import { useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent, type PointerEvent } from 'react'
 import { cellOrigin, fitGrid, indexAt, rangeRects, stepIndex, type GridLayout } from '@/lib/gridLayout'
 import { FADE_MS, paintAll, paintCells, type PaintContext } from '@/lib/gridPaint'
-import { readPalette } from '@/lib/palette'
+import { buildPalette, readPalette } from '@/lib/palette'
+import { steamHex } from '@/lib/steamLens'
 import type { HourBuckets } from '@/lib/timeline'
 import { useRunStore } from '@/state/runStore'
 import { useTheme } from '@/state/theme'
-import { useViewStore } from '@/state/viewStore'
+import { useViewStore, type GridLens } from '@/state/viewStore'
 import { GridTooltip } from './GridTooltip'
 
 interface Props {
@@ -52,6 +53,7 @@ export function IntegrityGrid({ n, runId, ratingScale, buckets, onFrame }: Props
   const [layout, setLayout] = useState<GridLayout | null>(null)
   const [pointer, setPointer] = useState<{ x: number; y: number } | null>(null)
   const theme = useTheme((s) => s.theme)
+  const steamView = useViewStore((s) => s.lens === 'steam' && s.steam !== null)
 
   useLayoutEffect(() => {
     onFrameRef.current = onFrame
@@ -88,6 +90,7 @@ export function IntegrityGrid({ n, runId, ratingScale, buckets, onFrame }: Props
     canvas.style.height = `${layout.height / layout.dpr}px`
 
     const palette = readPalette()
+    const steamPalette = buildPalette(steamHex(palette.hex), palette.surfaceHex)
     const bitmap = document.createElement('canvas')
     bitmap.width = layout.cols
     bitmap.height = layout.rows
@@ -109,6 +112,13 @@ export function IntegrityGrid({ n, runId, ratingScale, buckets, onFrame }: Props
       full: true,
     }
     surfaceRef.current = s
+    const applyLens = (lens: GridLens, steam: Uint8Array | null) => {
+      const on = lens === 'steam' && steam !== null
+      s.paint.classes = on ? steam : null
+      s.paint.palette = on ? steamPalette : palette
+      s.full = true
+    }
+    applyLens(useViewStore.getState().lens, useViewStore.getState().steam)
 
     const draw = () => {
       frameRef.current = null
@@ -151,7 +161,10 @@ export function IntegrityGrid({ n, runId, ratingScale, buckets, onFrame }: Props
         s.paint.mask = st.brush?.mask ?? null
         s.full = true
       }
+      if (st.lens !== prev.lens || st.steam !== prev.steam) applyLens(st.lens, st.steam)
       if (
+        st.lens !== prev.lens ||
+        st.steam !== prev.steam ||
         st.hovered !== prev.hovered ||
         st.selected !== prev.selected ||
         st.hoverRange !== prev.hoverRange ||
@@ -226,7 +239,7 @@ export function IntegrityGrid({ n, runId, ratingScale, buckets, onFrame }: Props
       <canvas
         ref={canvasRef}
         role="img"
-        aria-label="One square per review, coloured by action"
+        aria-label={steamView ? 'One square per review, coloured by whether Steam’s score counts it' : 'One square per review, coloured by action'}
         className="block cursor-crosshair"
         onPointerMove={onPointerMove}
         onPointerLeave={onPointerLeave}

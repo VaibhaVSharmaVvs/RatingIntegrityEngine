@@ -75,6 +75,19 @@ export class GridBuffer {
     this.fullDirty = true
   }
 
+  /**
+   * Empty the grid and size it to exactly `n` cells. A buffer left at the previous run's
+   * size counted that run's extra cells as pending (negative "decided" on a smaller run).
+   */
+  reset(n: number): void {
+    if (n !== this.size) {
+      this.actions = new Uint8Array(n)
+      this.prev = new Uint8Array(n)
+      this.changedAt = new Float64Array(n)
+    }
+    this.clear()
+  }
+
   clear(): void {
     this.actions.fill(0)
     this.prev.fill(0)

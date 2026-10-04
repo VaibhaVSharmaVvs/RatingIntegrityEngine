@@ -22,7 +22,7 @@ interface Props {
   minPenaltySize: number
 }
 
-/** Cards appear as S3 detects clusters. Hover brushes the grid; click pins the brush. */
+/** Cards appear as S3 detects clusters, most suspicious first. Hover brushes the grid; click pins the brush. */
 export function ClusterFeed({ runId, threshold, minPenaltySize }: Props) {
   const clusters = useRunStore((s) => s.clusters)
   const pinned = useViewStore((s) => s.pinnedCid)
@@ -32,10 +32,11 @@ export function ClusterFeed({ runId, threshold, minPenaltySize }: Props) {
   if (clusters.length === 0) {
     return <p className="text-xs leading-relaxed text-muted-foreground">Clusters appear here when the corpus stage finds them.</p>
   }
-  const newestFirst = [...clusters].reverse()
+  // most suspicious first; ties by size, then detection order (stable while the list grows)
+  const bySuspicion = [...clusters].sort((a, b) => b.suspicion - a.suspicion || b.size - a.size || a.cid - b.cid)
   return (
     <ul className="space-y-2" onPointerLeave={() => setHoverCid(null)}>
-      {newestFirst.map((c) => (
+      {bySuspicion.map((c) => (
         <ClusterCard
           key={c.cid}
           cluster={c}

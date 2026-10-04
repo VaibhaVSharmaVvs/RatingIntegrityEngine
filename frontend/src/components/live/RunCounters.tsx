@@ -1,7 +1,9 @@
 import { formatDuration, formatInt, formatPct, formatRate, formatUsd } from '@/lib/format'
 import { ACTION_LABELS, type ActionName } from '@/lib/palette'
+import { STEAM_LABELS, steamTally } from '@/lib/steamLens'
 import { useRunStore } from '@/state/runStore'
-import { Swatch } from './ActionChip'
+import { useViewStore } from '@/state/viewStore'
+import { SteamSwatch, Swatch } from './ActionChip'
 
 /** Processed / total with a hairline progress bar, then throughput, spend and elapsed time. */
 /** A cached run replays another run's System One answers; its own pace and spend are not the real ones. */
@@ -70,12 +72,17 @@ const LEGEND: { code: 1 | 2 | 3 | 4; action: ActionName }[] = [
   { code: 4, action: 'EXCLUDE' },
 ]
 
-/** The grid's legend doubles as the per-action counters. */
+/** The grid's legend doubles as the per-action counters; in the Steam view, per Steam class. */
 export function ActionLegend() {
+  const steam = useViewStore((s) => (s.lens === 'steam' ? s.steam : null))
+  return steam ? <SteamLegend classes={steam} /> : <IntegrityLegend />
+}
+
+function IntegrityLegend() {
   const tally = useRunStore((s) => s.tally)
   const total = useRunStore((s) => s.counters?.total ?? s.grid.size)
   return (
-    <ul id="grid-legend" className="num flex flex-wrap items-center gap-x-4 gap-y-1 text-xs" aria-label="Actions">
+    <ul id="grid-legend" className={LEGEND_ROW} aria-label="Actions">
       {LEGEND.map(({ code, action }) => (
         <li key={code} className="flex items-center gap-1.5">
           <Swatch action={action} />
@@ -88,6 +95,38 @@ export function ActionLegend() {
         <Swatch action="PENDING" />
         <span className="text-muted-foreground">Pending</span>
         <span className="font-medium">{formatInt(tally[0] ?? total)}</span>
+      </li>
+    </ul>
+  )
+}
+
+const LEGEND_ROW = 'num flex flex-wrap items-center gap-x-4 gap-y-1 text-xs'
+
+const STEAM_LEGEND = [
+  [1, 'COUNTS'],
+  [2, 'WINDOW'],
+  [3, 'KEY'],
+] as const
+
+function SteamLegend({ classes }: { classes: Uint8Array }) {
+  useRunStore((s) => s.gridVersion) // recount as cells are revealed
+  const grid = useRunStore.getState().grid
+  const total = useRunStore((s) => s.counters?.total ?? s.grid.size)
+  const tally = steamTally(grid.actions, classes, total)
+  return (
+    <ul id="grid-legend" className={LEGEND_ROW} aria-label="Steam policy">
+      {STEAM_LEGEND.map(([code, cls]) => (
+        <li key={cls} className="flex items-center gap-1.5">
+          <SteamSwatch cls={cls} />
+          <span className="text-muted-foreground">{STEAM_LABELS[cls]}</span>
+          <span className="font-medium">{formatInt(tally[code])}</span>
+          <span className="text-muted-foreground">{formatPct(tally[code], total)}</span>
+        </li>
+      ))}
+      <li className="flex items-center gap-1.5">
+        <Swatch action="PENDING" />
+        <span className="text-muted-foreground">Pending</span>
+        <span className="font-medium">{formatInt(tally[0])}</span>
       </li>
     </ul>
   )

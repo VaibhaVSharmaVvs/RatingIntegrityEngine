@@ -40,7 +40,8 @@ export function RunHeader({ runId, children }: { runId: string; children?: React
         )}
       </nav>
       {/* stages: centred on wide screens, their own row on narrow ones */}
-      <div className="order-last w-full min-w-0 overflow-x-auto lg:order-none lg:mx-auto lg:w-auto">{children}</div>
+      {/* no overflow box: the running stage's pulse would toggle scroll arrows; the list wraps instead */}
+      <div className="order-last w-full min-w-0 lg:order-none lg:mx-auto lg:w-auto">{children}</div>
       <div className="ml-auto flex items-center gap-1 lg:ml-0">
         <Link to="/help" aria-label="How it works" className={buttonVariants({ variant: 'ghost', size: 'sm' })}>
           <CircleHelp />

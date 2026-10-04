@@ -13,6 +13,7 @@ function scores(): RunScores {
     primary_reason: [-1, -1, 0, 0, 1, 2, -1, -1],
     reason_codes: CODES,
     counts_in_platform: [true, true, false, false, true, true, true, true],
+    platform_key_activation: [false, false, true, false, false, false, false, false],
     weights: { KEEP: 1, DOWNWEIGHT: 0.25, FLAG: 1, EXCLUDE: 0 },
     downweight_below: 0.55,
   }

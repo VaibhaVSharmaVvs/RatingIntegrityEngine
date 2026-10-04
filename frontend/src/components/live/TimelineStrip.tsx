@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState, type PointerEvent } from 'react'
 import { formatDay, formatHour, formatInt } from '@/lib/format'
 import { ACTION_LABELS, ACTION_NAMES, readPalette } from '@/lib/palette'
+import { STEAM_CLASSES, STEAM_LABELS, steamHex } from '@/lib/steamLens'
 import {
   binColumns,
   bucketAtX,
@@ -14,7 +15,7 @@ import {
 import { useRunStore } from '@/state/runStore'
 import { useTheme } from '@/state/theme'
 import { useViewStore } from '@/state/viewStore'
-import { Swatch } from './ActionChip'
+import { SteamSwatch, Swatch } from './ActionChip'
 
 export interface TimeWindow {
   start: number
@@ -36,6 +37,8 @@ const LABEL_PX = 14
 const HEIGHT_CSS = 96
 /** stacking order, bottom to top: settled actions first, pending on top */
 const STACK = [1, 2, 3, 4, 0] as const
+/** the same in the Steam view: counts, off-topic window, key activation, pending */
+const STEAM_STACK = [1, 2, 3, 0] as const
 
 export function TimelineStrip({ buckets, bursts, changePoints }: Props) {
   const wrapRef = useRef<HTMLDivElement>(null)
@@ -44,6 +47,8 @@ export function TimelineStrip({ buckets, bursts, changePoints }: Props) {
   const [width, setWidth] = useState(0)
   const [hover, setHover] = useState<{ x: number; bucket: number; counts: Uint32Array | null } | null>(null)
   const theme = useTheme((s) => s.theme)
+  // in the grid's Steam view the bars stack by Steam class instead of action
+  const steam = useViewStore((s) => (s.lens === 'steam' ? s.steam : null))
 
   useLayoutEffect(() => {
     const wrap = wrapRef.current
@@ -66,6 +71,8 @@ export function TimelineStrip({ buckets, bursts, changePoints }: Props) {
     canvas.style.width = `${width}px`
     canvas.style.height = `${HEIGHT_CSS}px`
     const palette = readPalette()
+    const hex = steam ? steamHex(palette.hex) : palette.hex
+    let codes: Uint8Array | undefined
     const css = getComputedStyle(document.documentElement)
     const ink = css.getPropertyValue('--instrument-ink').trim() || '#8d97a5'
     const line = css.getPropertyValue('--instrument-line').trim() || '#232a33'
@@ -74,7 +81,14 @@ export function TimelineStrip({ buckets, bursts, changePoints }: Props) {
     const draw = () => {
       frame = null
       const grid = useRunStore.getState().grid
-      perHourRef.current = hourActionCounts(buckets, grid.actions, perHourRef.current)
+      let values = grid.actions
+      if (steam) {
+        // decided cells take their Steam class; pending stays pending
+        if (!codes || codes.length !== grid.actions.length) codes = new Uint8Array(grid.actions.length)
+        for (let i = 0; i < codes.length; i++) codes[i] = grid.actions[i] ? (steam[i] ?? 0) : 0
+        values = codes
+      }
+      perHourRef.current = hourActionCounts(buckets, values, perHourRef.current)
       const { columns, max } = binColumns(buckets, perHourRef.current, W)
       const plotH = H - AXIS_PX * dpr
       const top = LABEL_PX * dpr
@@ -98,11 +112,11 @@ export function TimelineStrip({ buckets, bursts, changePoints }: Props) {
         const scale = (plotH - top - 2 * dpr) / max
         for (let c = 0; c < W; c++) {
           let y = plotH
-          for (const a of STACK) {
+          for (const a of steam ? STEAM_STACK : STACK) {
             const v = columns[c * N_ACTIONS + a]
             if (!v) continue
             const h = v * scale
-            ctx.fillStyle = palette.hex[a]
+            ctx.fillStyle = hex[a]
             ctx.fillRect(c, y - h, 1, h)
             y -= h
           }
@@ -180,7 +194,7 @@ export function TimelineStrip({ buckets, bursts, changePoints }: Props) {
       unsubView()
       if (frame !== null) cancelAnimationFrame(frame)
     }
-  }, [buckets, bursts, changePoints, width, theme])
+  }, [buckets, bursts, changePoints, width, theme, steam])
 
   const onMove = (e: PointerEvent<HTMLCanvasElement>) => {
     const x = e.clientX - e.currentTarget.getBoundingClientRect().left
@@ -204,7 +218,7 @@ export function TimelineStrip({ buckets, bursts, changePoints }: Props) {
       <canvas
         ref={canvasRef}
         role="img"
-        aria-label={`Hourly review volume stacked by action${bursts.length ? `, ${bursts.length} burst window${bursts.length > 1 ? 's' : ''} shaded` : ''}`}
+        aria-label={`Hourly review volume stacked by ${steam ? "Steam-policy class" : "action"}${bursts.length ? `, ${bursts.length} burst window${bursts.length > 1 ? 's' : ''} shaded` : ''}`}
         className="block cursor-crosshair rounded-md"
         onPointerMove={onMove}
         onPointerLeave={onLeave}
@@ -217,11 +231,13 @@ export function TimelineStrip({ buckets, bursts, changePoints }: Props) {
           <div className="num text-[11px] text-muted-foreground">{formatHour(new Date(buckets.ms[hover.bucket]))}</div>
           <div className="num mt-1 text-sm font-semibold">{formatInt(buckets.counts[hover.bucket])} reviews</div>
           <ul className="mt-1.5 space-y-0.5">
-            {STACK.map((a) =>
+            {(steam ? STEAM_STACK : STACK).map((a) =>
               counts[a] ? (
                 <li key={a} className="num flex items-center gap-1.5 text-[12px]">
-                  <Swatch action={ACTION_NAMES[a]} />
-                  <span className="text-muted-foreground">{ACTION_LABELS[ACTION_NAMES[a]]}</span>
+                  {steam ? <SteamSwatch cls={STEAM_CLASSES[a as 0 | 1 | 2 | 3]} /> : <Swatch action={ACTION_NAMES[a]} />}
+                  <span className="text-muted-foreground">
+                    {steam ? STEAM_LABELS[STEAM_CLASSES[a as 0 | 1 | 2 | 3]] : ACTION_LABELS[ACTION_NAMES[a]]}
+                  </span>
                   <span className="ml-auto">{formatInt(counts[a])}</span>
                 </li>
               ) : null,

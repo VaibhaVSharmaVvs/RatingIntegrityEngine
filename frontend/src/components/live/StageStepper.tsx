@@ -40,14 +40,14 @@ function Marker({ status }: { status: StageStatus }) {
   return <span className="size-4 rounded-full border border-muted-foreground/40" />
 }
 
-/** Ingest → Features → System One → Corpus → Decide, with seconds per stage once known. */
+/** Ingest → Features → System One → Corpus → Decide, with each stage's seconds once it is done. */
 export function StageStepper({ timings }: { timings?: Record<string, number> }) {
   const stages = useRunStore((s) => s.stages)
   return (
     <ol className="flex flex-wrap items-center gap-1" aria-label="Pipeline stages">
       {STAGES.map((name, i) => {
         const status = stages[name]
-        const secs = timings?.[name]
+        const secs = status === 'done' ? timings?.[name] : undefined
         return (
           <li key={name} className="flex items-center gap-1">
             {i > 0 && (

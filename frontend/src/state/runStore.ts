@@ -150,8 +150,7 @@ export const useRunStore = create<RunStore>()((set, get) => ({
   ...initialRunState(),
   reset: (runId, n = 0) => {
     const grid = get().grid
-    grid.clear()
-    grid.ensure(n)
+    grid.reset(n)
     set({ ...initialRunState(runId, n, grid), gridVersion: get().gridVersion + 1, tally: Array.from(grid.tally) })
   },
   ingest: (events, now = performance.now()) => set((s) => reduceEvents(s, events, now)),

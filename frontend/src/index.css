@@ -169,6 +169,14 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* Scrolls (wheel, touch, keyboard) without drawing a scrollbar, for narrow side panels. */
+@utility scrollbar-none {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;

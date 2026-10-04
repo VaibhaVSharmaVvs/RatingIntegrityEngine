@@ -54,17 +54,25 @@ export interface PaintContext {
   /** brushed cluster: 1 = member; others are dimmed */
   mask: Uint8Array | null
   fadeMs: number
+  /**
+   * Optional per-cell colour class that replaces the action of every decided cell (the
+   * Steam-policy view); pending cells stay pending. `palette` is then indexed by class.
+   */
+  classes?: Uint8Array | null
 }
+
+/** Palette index of cell `i` for action `a`: the action, or its class when a lens is on. */
+const code = (ctx: PaintContext, a: number, i: number) => (a && ctx.classes ? ctx.classes[i] : a)
 
 /** Colour of one cell at time `now`, including its fade from the previous action. */
 export function cellColor(ctx: PaintContext, grid: GridBuffer, i: number, now: number): number {
   const dim = ctx.mask !== null && !ctx.mask[i]
-  const a = grid.actions[i]
+  const a = code(ctx, grid.actions[i], i)
   const age = now - grid.changedAt[i]
   if (ctx.fadeMs <= 0 || age >= ctx.fadeMs || age < 0) return (dim ? ctx.palette.dimmed : ctx.palette.cells)[a]
   const table = fadeTable(ctx.palette)
   const step = Math.floor((age / ctx.fadeMs) * FADE_STEPS)
-  return (dim ? table.dimmed : table.cells)[(grid.prev[i] * N + a) * FADE_STEPS + step]
+  return (dim ? table.dimmed : table.cells)[(code(ctx, grid.prev[i], i) * N + a) * FADE_STEPS + step]
 }
 
 /** Repaint every cell; cells past the end of the grid get the surface colour. */
@@ -79,7 +87,7 @@ export function paintAll(ctx: PaintContext, grid: GridBuffer, n: number, now: nu
   const actions = grid.actions
   for (let i = 0; i < count; i++) {
     if (fast) {
-      pixels[i] = (mask && !mask[i] ? dimmed : cells)[actions[i]]
+      pixels[i] = (mask && !mask[i] ? dimmed : cells)[code(ctx, actions[i], i)]
     } else {
       pixels[i] = cellColor(ctx, grid, i, now)
       if (now - grid.changedAt[i] < ctx.fadeMs) animating.push(i)
