@@ -864,3 +864,35 @@ In normal periods the semantic penalty hit organic fan-meme clusters ("For Democ
 **Finding:** the engine recovers most of the distortion by downweighting off-topic reviews one by one, while keeping the genuine complaints inside the bomb period that Valve's blanket hide also threw away.
 
 **Phase 7–16 Jev spend since the top-up:** ROME II $0.265 + DOOM pilots $0.041 + DOOM A $0.193.
+
+---
+
+## M17. Grey-zone FLAGs no longer lift penalised reviews; meme penalty rejected (2026-10-04)
+
+**Trigger:** in the Helldivers 2 demo, 20 "I'm doing my part!" reviews in a cluster with suspicion 0.71 were penalised to integrity 0.50–0.57. That would have made them DOWNWEIGHT (0.25), but the grey zone (±0.1 around the 0.55 line) turned them into FLAG. A FLAG counts as KEEP in the rating, so the grey zone *raised* their weight to 1.0.
+
+**Candidates, simulated offline on the 8 showcase runs from their stored answers ($0).** Each cell is the change in the integrity-adjusted rating.
+
+| Rule | HD2 | DOOM | BL2 | ROME II | Metro | FM26 | CS2 | Gollum |
+|---|---|---|---|---|---|---|---|---|
+| R1: a FLAG counts at the weight its score earns | −0.2 | 0 | +0.4 | +0.1 | +0.1 | 0 | 0 | 0 |
+| R2: low information (< 0.5 of 3) and copied text ≥ 0.5 → DOWNWEIGHT | −2.4 (644 reviews, 97% positive) | −1.0 | +0.1 | +0.1 | +0.1 | 0.0 | 0.0 | −0.2 |
+| R3: any repeated short text → DOWNWEIGHT | −1.4 | −1.2 | +0.2 | +0.3 | +0.3 | −1.0 (697 reviews) | −0.4 | −0.2 |
+
+**Decisions (owner):**
+- **R3 rejected:** it downweights "good game"-style reviews on a genuine control.
+- **R2 rejected after inspecting its hits.** On HD2, R2 would downweight in-game vocabulary from players ("for democracy" ×62, "I'm doing my part" ×41, "for super earth" ×18). It would spare identical texts elsewhere ("democracy" ×29, "freedom" ×4) because Jev's `templated` answer on one- to four-word texts is noisy. Owner: a fan who writes "FREEDOM" likes the game and used the game's own words. A short text is not low integrity.
+- **R1 adopted** as `PolicyThresholds.grey_zone_side = "above"`. It keeps the same lookup-table weights: the grey zone may turn a KEEP into a FLAG, never a DOWNWEIGHT. `"both"` restores the old rule.
+
+**Re-recorded, $0 (cached from each game's original Jev answers):**
+
+| Game | Run | Adjusted, before → after | FLAG | DOWNWEIGHT |
+|---|---|---|---|---|
+| Helldivers 2 | `run_5e6bcccc073b` | 77.7% → **77.5%** (76.3–78.6) | 117 → 40 | 757 → 834 |
+| Borderlands 2 | `run_1b0a30615dba` | 37.4% → **37.7%** (36.9–38.6) | 202 → 60 | 2,731 → 2,873 |
+| Metro 2033 Redux | `run_c43a4ef3961e` | 62.8% → **62.9%** (60.8–65.0) | 10 → 5 | 884 → 889 |
+| ROME II | `run_78a53d4b9b62` | 35.7% → 35.7% (34.1–37.3) | 17 → 10 | 713 → 720 |
+| DOOM Eternal | `run_50ccafd237cf` | 82.3% → 82.3% | 1 → 1 | unchanged |
+| FM26, CS2, Gollum (controls) | `run_f9e0c3d71f14`, `run_d6617c6a4778`, `run_27907071d5e2` | unchanged | unchanged | unchanged |
+
+The re-recorded runs reproduce the simulation exactly. KEEP and EXCLUDE counts are unchanged on every game: only near-line FLAGs became the DOWNWEIGHT their scores had already earned. FLAGs (needs a human) fall from 348 to 117 across the 8 games. Steam-policy ratings are unaffected, since they do not use integrity actions.

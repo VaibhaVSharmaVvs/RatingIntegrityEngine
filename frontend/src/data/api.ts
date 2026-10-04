@@ -603,6 +603,7 @@ export interface PolicyThresholds {
   cluster_penalty_kinds?: ("burst" | "duplicate" | "semantic")[];
   semantic_penalty_scope?: "all" | "bursts";
   grey_zone_width?: number;
+  grey_zone_side?: "both" | "above";
   duplicate_in_burst_action?: "EXCLUDE" | "FLAG" | "DOWNWEIGHT";
 }
 /**
@@ -635,6 +636,7 @@ export interface PolicyThresholds1 {
   cluster_penalty_kinds: ("burst" | "duplicate" | "semantic")[];
   semantic_penalty_scope: "all" | "bursts";
   grey_zone_width: number;
+  grey_zone_side: "both" | "above";
   duplicate_in_burst_action: "EXCLUDE" | "FLAG" | "DOWNWEIGHT";
 }
 /**
@@ -835,6 +837,7 @@ export interface PolicyThresholds2 {
   cluster_penalty_kinds?: ("burst" | "duplicate" | "semantic")[];
   semantic_penalty_scope?: "all" | "bursts";
   grey_zone_width?: number;
+  grey_zone_side?: "both" | "above";
   duplicate_in_burst_action?: "EXCLUDE" | "FLAG" | "DOWNWEIGHT";
 }
 /**
@@ -970,6 +973,7 @@ export interface PolicyThresholds3 {
   cluster_penalty_kinds: ("burst" | "duplicate" | "semantic")[];
   semantic_penalty_scope: "all" | "bursts";
   grey_zone_width: number;
+  grey_zone_side: "both" | "above";
   duplicate_in_burst_action: "EXCLUDE" | "FLAG" | "DOWNWEIGHT";
 }
 /**

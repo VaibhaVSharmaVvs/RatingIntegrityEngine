@@ -22,14 +22,14 @@ from app.core.config import settings  # noqa: E402
 # comparison. label -> run id.
 SHOWCASE = {
     # current rules (M13), v4 answers reused from the runs below: what the demo shows
-    "Helldivers 2 5K · current rules": "run_104cc1191ff8",
-    "Borderlands 2 Apr-Aug 2025 · current rules": "run_31ffbd3bddd6",
-    "Metro 2033 Redux Dec 2018-Mar 2019 · current rules": "run_e638053d0ca6",
-    "Total War: ROME II Aug-Oct 2018 · v5": "run_e54638b2b2ce",
-    "DOOM Eternal Oct-Dec 2022 · v5": "run_306263ab191d",
-    "Football Manager 26 launch→now · current rules": "run_55d11443d036",
-    "Cities: Skylines II 5K control · current rules": "run_696384d545ae",
-    "Gollum control · current rules": "run_51d5d8355914",
+    "Helldivers 2 5K · current rules": "run_5e6bcccc073b",
+    "Borderlands 2 Apr-Aug 2025 · current rules": "run_1b0a30615dba",
+    "Metro 2033 Redux Dec 2018-Mar 2019 · current rules": "run_c43a4ef3961e",
+    "Total War: ROME II Aug-Oct 2018 · v5, current rules": "run_78a53d4b9b62",
+    "DOOM Eternal Oct-Dec 2022 · v5, current rules": "run_50ccafd237cf",
+    "Football Manager 26 launch→now · current rules": "run_f9e0c3d71f14",
+    "Cities: Skylines II 5K control · current rules": "run_d6617c6a4778",
+    "Gollum control · current rules": "run_27907071d5e2",
     "Helldivers 2 5K · v4 three ratings": "run_32a69a6357c9",
     "Borderlands 2 Apr-Aug 2025 · v4 three ratings": "run_cb355add8483",
     "Metro 2033 Redux Dec 2018-Mar 2019 · v4 three ratings": "run_319a013d4535",

@@ -268,8 +268,8 @@ export function HelpPage() {
                     Integrity below 0.55, or a later copy of an earlier review. The review still counts, at a quarter: low evidential value, not zero.
                   </ActionRow>
                   <ActionRow action="FLAG" weight="1.00">
-                    Needs a human: the model is unsure on questions that carry weight, spam without a deterministic promo signal, or a clustered review in the grey
-                    zone. Counted as KEEP until someone looks.
+                    Needs a human: the model is unsure on questions that carry weight, spam without a deterministic promo signal, or a clustered review just above
+                    the line (the grey zone). Counted as KEEP until someone looks.
                   </ActionRow>
                   <ActionRow action="EXCLUDE" weight="0.00">
                     Only with deterministic evidence: spam confirmed by a promo pattern, or a later copy inside a suspicious burst or cluster.
@@ -338,8 +338,8 @@ export function HelpPage() {
                 re-checked against the 0.55 line. Smaller groups are shown but never penalised.
               </Term>
               <Term name="Grey zone" id="rule-grey">
-                A penalised cluster member whose integrity lands within 0.1 of the line is FLAGged rather than decided by a hair. Measured cost: +0.6% FLAGs on
-                Helldivers 2.
+                A penalised cluster member whose integrity lands up to 0.1 above the line is FLAGged rather than kept by a hair. Only above: a FLAG counts as
+                KEEP, so flagging a review the penalty had already put below the line would lift it back to full weight.
               </Term>
             </dl>
             <p className="text-muted-foreground">Every threshold and weight here is run configuration, recorded with each run, and shown on its results page.</p>

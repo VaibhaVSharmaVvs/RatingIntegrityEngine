@@ -94,9 +94,9 @@ All numbers were measured; see [`docs/RESULTS.md`](docs/RESULTS.md) and [`docs/M
 
 | Game (window) | Raw | Integrity-adjusted | Steam rules | Steam shows | Before the bomb |
 |---|---|---|---|---|---|
-| Helldivers 2 (Apr–Jun 2024, account requirement) | 76.4% | 77.7% | 89.0% | 77.7% | 88.0% |
-| Borderlands 2 (Apr–Aug 2025, EULA) | 33.8% | 37.4% | 50.7% | 28.7% | 91.1% |
-| Metro 2033 Redux (Dec 2018–Mar 2019, another game) | 48.8% | 62.8% | 61.5% | 49.1% | 93.8% |
+| Helldivers 2 (Apr–Jun 2024, account requirement) | 76.4% | 77.5% | 89.0% | 77.7% | 88.0% |
+| Borderlands 2 (Apr–Aug 2025, EULA) | 33.8% | 37.7% | 50.7% | 28.7% | 91.1% |
+| Metro 2033 Redux (Dec 2018–Mar 2019, another game) | 48.8% | 62.9% | 61.5% | 49.1% | 93.8% |
 | Total War: ROME II (Aug–Oct 2018, culture war) | 32.3% | 35.7% | 42.2% | 61.3% | 66.3% |
 | DOOM Eternal (Oct–Dec 2022, soundtrack dispute) | 76.1% | **82.3%** | 83.1% | 91.8% | 91.1% |
 | Cities: Skylines II · Gollum · FM26 (genuine reception) | 59.6 · 35.7 · 38.0% | 59.2 · 34.3 · 37.2% | 59.9 · 34.4 · 38.4% | 59.8 · 34.4 · 38.4% | — |

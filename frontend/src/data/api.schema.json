@@ -1622,6 +1622,14 @@
           "default": 0.1,
           "type": "number"
         },
+        "grey_zone_side": {
+          "default": "above",
+          "enum": [
+            "both",
+            "above"
+          ],
+          "type": "string"
+        },
         "duplicate_in_burst_action": {
           "default": "EXCLUDE",
           "enum": [
@@ -1757,6 +1765,14 @@
           "default": 0.1,
           "type": "number"
         },
+        "grey_zone_side": {
+          "default": "above",
+          "enum": [
+            "both",
+            "above"
+          ],
+          "type": "string"
+        },
         "duplicate_in_burst_action": {
           "default": "EXCLUDE",
           "enum": [
@@ -1791,6 +1807,7 @@
         "cluster_penalty_kinds",
         "semantic_penalty_scope",
         "grey_zone_width",
+        "grey_zone_side",
         "duplicate_in_burst_action"
       ],
       "title": "PolicyThresholds",
@@ -2606,6 +2623,7 @@
             ],
             "semantic_penalty_scope": "bursts",
             "grey_zone_width": 0.1,
+            "grey_zone_side": "above",
             "duplicate_in_burst_action": "EXCLUDE"
           }
         },
@@ -2831,6 +2849,7 @@
             ],
             "semantic_penalty_scope": "bursts",
             "grey_zone_width": 0.1,
+            "grey_zone_side": "above",
             "duplicate_in_burst_action": "EXCLUDE"
           }
         },
