@@ -105,6 +105,11 @@ class PolicyThresholds(Contract):
     # `downweight_below` (the spec's grey zone). Measured cost: +32 FLAGs on HD2 5K
     # (+0.6%); FLAG counts as KEEP in the rating (MEASUREMENTS M9d). 0 disables it.
     grey_zone_width: float = 0.1
+    # Which side of the line the grey zone covers (owner decision 2026-10-04, M17). A FLAG
+    # counts as KEEP in the rating, so "both" lifted members penalised just under the line
+    # from 0.25 to full weight ("I'm doing my part!" x20 in a 0.71-suspicion cluster on HD2).
+    # "above" flags only reviews that would otherwise be KEEP.
+    grey_zone_side: Literal["both", "above"] = "above"
     # A later copy inside a suspicious burst or cluster (owner decision 2026-09-30).
     duplicate_in_burst_action: Literal["EXCLUDE", "FLAG", "DOWNWEIGHT"] = "EXCLUDE"
 

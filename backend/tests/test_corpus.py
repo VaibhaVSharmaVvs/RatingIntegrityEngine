@@ -257,10 +257,31 @@ def test_stricter_base_action_is_kept() -> None:
 
 def test_grey_zone_flag() -> None:
     base = Decision(ActionCode.KEEP, 0.95, [])
+    # just above the line: FLAG instead of a hair-thin KEEP
+    above = apply_cluster_rules(
+        base, suspicion=0.6, cluster_kind="semantic", later_copy=False, thresholds=T
+    )
+    assert above.integrity_score == pytest.approx(0.665) and above.action is ActionCode.KEEP
+    near = apply_cluster_rules(
+        Decision(ActionCode.KEEP, 0.8, []),
+        suspicion=0.6,
+        cluster_kind="semantic",
+        later_copy=False,
+        thresholds=T,
+    )
+    assert near.integrity_score == pytest.approx(0.56) and near.action is ActionCode.FLAG
+    # just below: a FLAG counts as KEEP, so it must not lift the review to full weight
     d = apply_cluster_rules(
         base, suspicion=0.9, cluster_kind="semantic", later_copy=False, thresholds=T
     )
-    assert d.integrity_score == pytest.approx(0.5225) and d.action is ActionCode.FLAG
+    assert d.integrity_score == pytest.approx(0.5225) and d.action is ActionCode.DOWNWEIGHT
+    both = PolicyThresholds(grey_zone_side="both")
+    assert (
+        apply_cluster_rules(
+            base, suspicion=0.9, cluster_kind="semantic", later_copy=False, thresholds=both
+        ).action
+        is ActionCode.FLAG
+    )
     off = PolicyThresholds(grey_zone_width=0.0)
     assert (
         apply_cluster_rules(

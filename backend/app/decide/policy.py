@@ -191,7 +191,8 @@ def apply_cluster_rules(
     - the penalised score is re-thresholded; the stricter of that and `base` wins;
     - a later copy inside a suspicious burst/cluster gets `duplicate_in_burst_action`
       (outside one it stays at the S2 floor, DOWNWEIGHT by default);
-    - optional grey-zone FLAG around the DOWNWEIGHT threshold.
+    - optional grey-zone FLAG near the DOWNWEIGHT threshold; by default only above it,
+      so a FLAG (counted as KEEP) never lifts a review the penalty put below the line.
     System One alone still cannot EXCLUDE: the only EXCLUDE added here needs a
     deterministic copy *and* a suspicious cluster.
     """
@@ -207,6 +208,7 @@ def apply_cluster_rules(
         t.grey_zone_width > 0
         and action is not ActionCode.EXCLUDE
         and abs(penalised - t.downweight_below) <= t.grey_zone_width
+        and (t.grey_zone_side == "both" or action is ActionCode.KEEP)
     ):
         action = ActionCode.FLAG
     code = "BURST_WINDOW" if cluster_kind == "burst" else "COORDINATED_CLUSTER"
