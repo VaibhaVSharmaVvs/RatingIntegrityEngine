@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
 import { useDataSource } from '@/data/source'
-import { formatHour, snippet, verdictWords } from '@/lib/format'
+import { formatHour, reviewText, snippet, verdictWords } from '@/lib/format'
 import { actionName } from '@/lib/palette'
 import { bucketOfIndex, type HourBuckets } from '@/lib/timeline'
 import { useRunStore } from '@/state/runStore'
@@ -63,7 +63,7 @@ export function GridTooltip({ runId, ratingScale, buckets, x, y, boxWidth }: Pro
           <>
             <span className="font-medium">{verdictWords(data.rating_norm, data.rating_raw, ratingScale)}</span>
             <span className="text-muted-foreground"> · </span>
-            <span className="text-pretty text-foreground/85">“{snippet(data.text)}”</span>
+            <span className="text-pretty text-foreground/85">“{snippet(reviewText(data.text))}”</span>
           </>
         ) : review.isError ? (
           <span className="text-muted-foreground">Review text unavailable.</span>

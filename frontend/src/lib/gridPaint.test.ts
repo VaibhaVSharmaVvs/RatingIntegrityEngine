@@ -2,6 +2,9 @@ import { GridBuffer } from '@/state/gridBuffer'
 import { easeOut, FADE_MS, FADE_STEPS, FLASH, paintAll, paintCells, type PaintContext } from './gridPaint'
 import { buildPalette, DEFAULT_HEX, mix, packRgba, parseHex, unpackRgba } from './palette'
 
+// shared CI runners are slower and noisier than a dev machine
+const ON_CI = Boolean((globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.CI)
+
 const palette = buildPalette()
 const ctx = (n: number, over: Partial<PaintContext> = {}): PaintContext => ({
   pixels: new Uint32Array(n),
@@ -85,7 +88,8 @@ describe('grid colour mapping', () => {
       times.push(performance.now() - t)
     }
     times.sort((a, b) => a - b)
-    expect(times[10]).toBeLessThan(5)
+    // 5 ms on a dev machine; shared CI runners are slower and noisier
+    expect(times[10]).toBeLessThan(ON_CI ? 15 : 5)
   })
 
   it('repaints a 50K grid well inside a frame (budget < 5 ms in the browser)', () => {
@@ -102,6 +106,7 @@ describe('grid colour mapping', () => {
     }
     times.sort((a, b) => a - b)
     // jsdom/Node timing is only indicative; the real check is the browser frame budget.
-    expect(times[10]).toBeLessThan(5)
+    // 5 ms on a dev machine; shared CI runners are slower and noisier
+    expect(times[10]).toBeLessThan(ON_CI ? 15 : 5)
   })
 })

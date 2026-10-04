@@ -1,0 +1,5 @@
+{
+  "buildCommand": "npm run build:static",
+  "outputDirectory": "dist",
+  "rewrites": [{ "source": "/((?!bundle/|assets/).*)", "destination": "/index.html" }]
+}

@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import type { ReviewDetail, RunOut } from '@/data/api'
 import { useDataSource } from '@/data/source'
-import { formatHour, verdictWords } from '@/lib/format'
+import { formatHour, reviewText, verdictWords } from '@/lib/format'
 import { integrityLedger, type Answer } from '@/lib/ledger'
 import { KIND_LABEL, QUESTIONS, questionOrder, reasonLabel } from '@/lib/methodology'
 import type { ActionName } from '@/lib/palette'
@@ -69,7 +69,7 @@ function InspectorBody({ r, run, scale }: { r: ReviewDetail; run: RunOut; scale:
   return (
     <div className="divide-y divide-border">
       <Section>
-        <p className="max-h-64 overflow-y-auto text-[13px] leading-relaxed text-pretty whitespace-pre-line">{r.text}</p>
+        <p className="max-h-64 overflow-y-auto text-[13px] leading-relaxed text-pretty whitespace-pre-line">{reviewText(r.text)}</p>
         {r.reasons.length > 0 && <ReasonList codes={r.reasons} className="mt-3" />}
       </Section>
 

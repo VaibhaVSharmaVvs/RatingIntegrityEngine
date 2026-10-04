@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { PanelRightOpen, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useDataSource } from '@/data/source'
-import { formatHour, verdictWords } from '@/lib/format'
+import { formatHour, reviewText, verdictWords } from '@/lib/format'
 import { actionName } from '@/lib/palette'
 import { useRunStore } from '@/state/runStore'
 import { useViewStore } from '@/state/viewStore'
@@ -50,7 +50,7 @@ export function SelectedReview({ runId, ratingScale }: { runId: string; ratingSc
       {r ? (
         <>
           <p className="mt-2 text-xs font-medium">{verdictWords(r.rating_norm, r.rating_raw, ratingScale)}</p>
-          <p className="mt-1 line-clamp-6 text-[13px] leading-relaxed text-pretty whitespace-pre-line">{r.text}</p>
+          <p className="mt-1 line-clamp-6 text-[13px] leading-relaxed text-pretty whitespace-pre-line">{reviewText(r.text)}</p>
           {(r.integrity_score != null || r.reasons.length > 0) && (
             <dl className="mt-2.5 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[11px]">
               {r.integrity_score != null && (

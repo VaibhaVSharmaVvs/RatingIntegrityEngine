@@ -119,6 +119,12 @@ export function HomePage() {
         <h1 className="mt-2 text-2xl leading-snug font-semibold tracking-tight text-balance">
           Watch every review get an integrity weight, and the rating move with it.
         </h1>
+        {!source.canStartRuns && (
+          <p className="mt-3 text-sm text-muted-foreground">
+            These runs are pre-recorded: each replays an analysis made with the hosted System One model. Nothing here calls a model, uploads data or
+            costs money.
+          </p>
+        )}
 
         <form
           className="mt-8 space-y-4"

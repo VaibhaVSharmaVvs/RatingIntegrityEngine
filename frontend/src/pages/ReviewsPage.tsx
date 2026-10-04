@@ -9,7 +9,7 @@ import { RunHeader } from '@/components/shared/RunHeader'
 import { Button } from '@/components/ui/button'
 import type { ReviewFilter } from '@/data/DataSource'
 import { useDataSource } from '@/data/source'
-import { formatHour, formatInt, verdictWords } from '@/lib/format'
+import { formatHour, formatInt, reviewText, verdictWords } from '@/lib/format'
 import { REASONS, reasonLabel } from '@/lib/methodology'
 import { ACTION_LABELS, type ActionName } from '@/lib/palette'
 import { cn } from '@/lib/utils'
@@ -184,7 +184,7 @@ export function ReviewsPage() {
                     <td className="px-3 py-2">{r.action && <ActionChip action={r.action as ActionName} />}</td>
                     <td className="num px-3 py-2 text-right font-mono">{r.integrity_score?.toFixed(2) ?? '—'}</td>
                     <td className="max-w-xl px-3 py-2">
-                      <p className="line-clamp-2 leading-snug">{r.snippet}</p>
+                      <p className="line-clamp-2 leading-snug">{reviewText(r.snippet)}</p>
                       {r.reasons.length > 0 && (
                         <div onClick={(e) => e.stopPropagation()}>
                           <ReasonList codes={r.reasons} className="mt-1" />

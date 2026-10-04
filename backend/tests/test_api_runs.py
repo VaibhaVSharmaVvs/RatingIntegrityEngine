@@ -798,3 +798,12 @@ def test_model_notes_are_stripped_before_judging_and_excluded(tmp_path: Path) ->
         assert note in d7["text"]  # the stored review is unchanged
         d9 = c.get(f"/runs/{run['id']}/reviews/9").json()
         assert d9["signals"]["model_note"] is False and d9["action"] != "EXCLUDE"
+
+
+def test_review_details_in_bulk_match_the_single_endpoint(client: TestClient) -> None:
+    _, run_id, texts = _finished_run(client)
+    bulk = client.get(f"/runs/{run_id}/review-details", params={"offset": 2, "limit": 3}).json()
+    assert [d["review_id"] for d in bulk] == [2, 3, 4]
+    assert bulk[1] == client.get(f"/runs/{run_id}/reviews/3").json()
+    tail = client.get(f"/runs/{run_id}/review-details", params={"offset": len(texts) - 1}).json()
+    assert len(tail) == 1
