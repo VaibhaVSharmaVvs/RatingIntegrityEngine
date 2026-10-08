@@ -377,7 +377,7 @@ Open items: the color-mode toggle (informativeness/topic/cluster) and the "Compa
 
 **Exit criteria:** the static build contains **no API key and no backend URL** (grep the `dist/` output in CI); Lighthouse performance ≥ 90 on landing; bundle review text has been PII-scrubbed and author hashes only.
 
-**Status (2026-10-08): built; host chosen, Cloudflare Workers static assets (`frontend/wrangler.jsonc`, `npm run deploy`); review text published scrubbed (owner decision). Not yet deployed.**
+**Status (2026-10-08): live at https://rating-integrity-engine.vaibhavvs.workers.dev** on Cloudflare Workers static assets (`frontend/wrangler.jsonc`, `npm run deploy`). Review text is published scrubbed (owner decision). Checked on production: every route and data file returns 200 with the right type, and the replay, results, reviews and benchmarks pages load with no console errors. Open: the demo video.
 - **Bundle:** `tools/export_bundle.py` writes `frontend/public/bundle/` (gitignored). The 8 showcase runs come to 107 MB on disk, about 17 MB gzipped. There are 1,214 files, the largest 4.2 MB, and review details are split into 1,000-review chunks that load on demand. A bulk `GET /runs/{id}/review-details` makes the export take minutes instead of an hour.
 - **`StaticBundle`:** serves every page from those files, including table filtering and "Skip to end" from the recording. Runs, uploads, the pre-flight and labelling are refused.
 - **Static build:** shows a "pre-recorded" note on the home page.

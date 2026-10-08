@@ -155,9 +155,11 @@ data/       local only (gitignored): DuckDB, caches, replays, raw pulls
 
 ## Status
 
-Phases 0–7 are done: the pipeline end to end, the live screen, drill-downs and results, and the evaluation (see [RESULTS](docs/RESULTS.md)). Phase 9, the public replay-only demo, is in progress; human-agreement labels are being collected. See [the plan](docs/PLAN.md).
+Phases 0–7 are done: the pipeline end to end, the live screen, drill-downs and results, and the evaluation (see [RESULTS](docs/RESULTS.md)). Phase 9, the public replay-only demo, is live at **https://rating-integrity-engine.vaibhavvs.workers.dev** (the demo video is still to come); human-agreement labels are being collected. See [the plan](docs/PLAN.md).
 
 ## Public demo (static)
+
+**Live:** https://rating-integrity-engine.vaibhavvs.workers.dev
 
 The public demo is a static site: the showcase runs replayed from exported files, with no backend, database or API key.
 
