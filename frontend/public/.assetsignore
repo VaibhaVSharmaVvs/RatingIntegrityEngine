@@ -1,0 +1,3 @@
+# Not uploaded to Cloudflare Workers: the SPA setting in wrangler.jsonc replaces the
+# 404.html fallback that GitHub Pages reads.
+404.html
