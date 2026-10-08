@@ -88,7 +88,7 @@ The phase blocks below are dated records. What changed after them:
 **Goal:** every external dependency is either confirmed working or has a known fallback, and the long-running Steam pull is under way.
 
 **Requirements**
-- [x] Git repo (local identity `vaibhavsharmavvs@gmail.com`), `.gitignore` that keeps data, secrets and PII out.
+- [x] Git repo, `.gitignore` that keeps data, secrets and PII out.
 - [x] Backend: Python 3.12, `uv`, FastAPI, the full ML stack (torch CPU, sentence-transformers, faiss-cpu, umap, ruptures, datasketch, duckdb, polars), `pytest`, `ruff`.
 - [x] Optional extras installed: `laya[serve]` 0.3.21, `typesafe-sdk` 0.7.2.
 - [x] Frontend: React 19, Vite 8, TypeScript 6, Tailwind v4, shadcn/ui, TanStack Query, Zustand, Recharts, Vitest.
