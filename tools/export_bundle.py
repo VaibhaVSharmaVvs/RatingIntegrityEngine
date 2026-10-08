@@ -1,4 +1,4 @@
-"""Export the showcase runs as static files for the public demo (Phase 9, MVP_SPEC §9).
+"""Export the showcase runs as static files for the public demo (Phase 8, MVP_SPEC §9).
 
 The static build (`npm run build:static`) reads these instead of the API: no backend,
 no database, no API key. One folder per run with the same JSON the API would return:
@@ -17,7 +17,7 @@ no database, no API key. One folder per run with the same JSON the API would ret
 Privacy: the API never returns author hashes or Steam ids. Review text is public Steam
 content, but before it leaves this machine every text field is scrubbed of e-mail
 addresses, links, phone numbers and @handles (`scrub`). Names written in free text
-cannot be found reliably by pattern and are not removed; see docs/PLAN.md Phase 9.
+cannot be found reliably by pattern and are not removed; see docs/PLAN.md Phase 8.
 
 Usage (from backend/, API on :8001):
     uv run python ../tools/export_bundle.py [--out ../frontend/public/bundle]

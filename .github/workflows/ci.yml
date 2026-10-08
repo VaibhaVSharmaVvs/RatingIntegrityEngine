@@ -40,7 +40,7 @@ jobs:
       - run: npm ci
       - run: npm run lint
       - run: npm test
-      # Phase 9 exit criterion: the public build has no API key, no model or backend URL
+      # Phase 8 exit criterion: the public build has no API key, no model or backend URL
       # and no live-API code. (The review bundle is exported locally and is not in git.)
       - run: npm run build:static
       - run: npm run check:static

@@ -1,4 +1,4 @@
-// Phase 9 exit check: the public build must contain no API key, no model or backend URL,
+// Phase 8 exit check: the public build must contain no API key, no model or backend URL,
 // and no live-API code; an exported bundle must carry no identifiers or contact details.
 // Run after `npm run build:static`. Exits non-zero on any finding.
 import { readdirSync, readFileSync, statSync } from 'node:fs'

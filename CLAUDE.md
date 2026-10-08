@@ -8,7 +8,7 @@ Portfolio project. System One models (Jev hosted, Laya local) make typed judgmen
 ## Layout
 - `backend/` Python 3.12, uv, FastAPI. Pipeline stages: `ingest/` (S0) → `features/` (S1) → `systemone/` (S2) → `corpus/` (S3) → `decide/` (S4), orchestrated by `app/pipeline.py`.
 - `frontend/` React 19 + Vite + TS, Tailwind v4, shadcn/ui, Zustand, TanStack Query. `@/` = `frontend/src`.
-- `tools/` one-off scripts; `notebooks/` reserved for the future Laya fine-tune (PLAN Phase 10); `data/` gitignored.
+- `tools/` one-off scripts; `notebooks/` reserved for the future Laya fine-tune (PLAN Phase 9); `data/` gitignored.
 
 ## Commands
 - Backend (from `backend/`): `uv run uvicorn app.main:app --reload --port 8001` · `uv run pytest` · `uv run ruff check . && uv run ruff format .`
