@@ -6,6 +6,12 @@ delete them:** the Phase 9 public demo is built from these replays.
 
 ## Showcase runs
 
+The eight runs marked "current rules" are what the public demo replays: each re-judges its
+game's original Jev answers under the current policy at $0 (M17). The Q-set column is the
+question set of those answers: v4 for the six games recorded before 2026-10-02, v5 for ROME II
+and DOOM Eternal. The cost column is $0 for these re-records; the original runs are listed
+further down with what they cost.
+
 | Run | Id | Q-set | Reviews | Raw | Adjusted (95% CI) | Platform policy (95% CI) | Cost | Replay |
 |---|---|---|---|---|---|---|---|---|
 | Helldivers 2 5K · current rules | `run_5e6bcccc073b` | v4 | 4,999 | 76.4% | 77.5% (76.3%-78.6%) | 89.0% (87.4%-90.5%) | $0.000 | ✅ |
@@ -190,3 +196,7 @@ delete them:** the Phase 9 public demo is built from these replays.
 | `run_f9e0c3d71f14` | Football Manager 26 (launch to now) | cached | v4 | done | 15348 | 38.0% | 37.2% | 38.4% | ✅ |
 | `run_d6617c6a4778` | Cities: Skylines II, Oct-Dec 2023 (5K) | cached | v4 | done | 5000 | 59.6% | 59.2% | 59.9% | ✅ |
 | `run_27907071d5e2` | LOTR: Gollum, May-Jul 2023 | cached | v4 | done | 297 | 35.7% | 34.3% | 34.4% | ✅ |
+| `run_d859c3de63e6` | Benchmark attack-bench-v1: HD2 Apr 2024 clean | cached | v4 | done | 4999 | 87.8% | 87.9% | 88.1% | ✅ |
+| `run_b45988ccc58a` | Benchmark attack-bench-v1: HD2 Apr 2024 attacked | cached | v4 | done | 5689 | 80.2% | 84.2% | 79.4% | ✅ |
+| `run_1628e51f417b` | Helldivers 2 | cached | v5 | done | 750 | 66.7% | 66.8% | 66.7% | ✅ |
+| `run_8fbf9eb451c0` | Helldivers 2 | cached | v5 | done | 750 | 66.7% | 68.7% | 66.7% | ✅ |

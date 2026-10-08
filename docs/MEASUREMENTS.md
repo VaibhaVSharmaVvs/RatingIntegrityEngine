@@ -277,7 +277,7 @@ Noise is small per answer. It matters only for reviews close to a threshold, and
 
 **Consequences:**
 - **Reuse is now off by default** (`reuse_identical_inputs=false`). Sharing one draw across identical copies makes a borderline answer flip *all* copies together (e.g. 997 × "Just doing my part"). Independent calls split them in proportion to the probability. Cost: +10.5% calls on HD2 (M6c). **This corrects M6c**, which claimed reuse had "no accuracy risk"; that assumed determinism, which is false.
-- **`samples_per_review` (k)** is available and defaults to 1. k = 2 halves decision flips for 2× cost. **Owner's call.**
+- **`samples_per_review` (k)** is available and defaults to 1. k = 2 halves decision flips for 2× cost. **Owner's call.** *(Decided: k stays 1; twice the cost needs a measured accuracy gain.)*
 
 ---
 
@@ -319,7 +319,7 @@ Targeted checks (v1 → v2): short own-words opinions, `templated` "good game" 0
 
 | Dataset | v1 k=1 | **v2 k=1 (default)** | v2 k=2 |
 |---|---|---|---|
-| 50K | $2.03, 20.8 min | **$2.55, 20.8 min** | $5.09, 41.7 min (needs confirm at the $4 limit) |
+| 50K | $2.03, 20.8 min | **$2.55, 20.8 min** | $5.09, 41.7 min (needs confirm above the $4 limit used for these runs; the shipped default is $2) |
 | 5K | $0.20, 2.1 min | $0.25, 2.1 min | $0.51, 4.2 min |
 
 ### M8e. First live Jev run through the full pipeline (HD2 5K live subset, v2, k=1, concurrency 32)
@@ -414,13 +414,13 @@ HD2's two bursts score 0.18–0.23: their wording is diverse (0% within cosine 0
 | **HD2 5K, full S0–S4 (Jev v2)** | 2,987 / 1,707 / 301 / 4 | **76.4% → 72.9% (71.5–74.2)** |
 | HD2 5K, cluster rules off | 2,997 / 1,701 / 301 / 0 | 76.4% → 72.9% (71.5–74.3) |
 | HD2 5K, platform policy *not* off-topic | 2,987 / 1,707 / 301 / 4 | 72.9% (30 vs 32 suspicious clusters) |
-| HD2 5K, grey-zone FLAG 0.1 (now the default) | 2,965 / 1,697 / **333** / 4 | 72.9% (+32 FLAGs, +0.6%) |
+| HD2 5K, grey-zone FLAG 0.1 (the default from here to M17; above the line only since then) | 2,965 / 1,697 / **333** / 4 | 72.9% (+32 FLAGs, +0.6%) |
 | HD2 5K, in-burst copies → FLAG | 2,987 / 1,707 / 305 / 0 | 72.9% |
 | **CS2 5K control (organic backlash)** | 4,595 / 289 / 116 / 0 | 59.6% → 58.8% (57.5–60.3); **0 reviews penalised by clusters** ✅ |
 | **Gollum control (known-bad)** | 259 / 32 / 6 / 0 | 35.7% → 34.4% (29.1–40.1); **not inflated** ✅ |
 | HD2 50K, heuristic backend | 38,617 / 11,058 / 66 / 265 | 77.2% → 75.4% (75.0–75.8); 1,152 clusters, 267 suspicious, 5,836 penalised (no off-topic factor without System One) |
 
-**The honest takeaway:** on HD2 the cluster stage changes the aggregate by < 0.1 pp. The coordinated slogans are already downweighted per review (low informativeness). Clusters add *explanation* here; their rating impact has to be shown on coordinated campaigns that look informative (Phase 7 synthetic attacks). Platform-policy-as-off-topic makes no difference on this data. The grey-zone FLAG was first disabled on an unmeasured worry ("thousands of FLAGs"); measured at +0.6%, it is now enabled as the spec intended.
+**The honest takeaway:** on HD2 the cluster stage changes the aggregate by < 0.1 pp. The coordinated slogans are already downweighted per review (low informativeness). Clusters add *explanation* here; their rating impact has to be shown on coordinated campaigns that look informative (Phase 7 synthetic attacks). Platform-policy-as-off-topic makes no difference on this data. The grey-zone FLAG was first disabled on an unmeasured worry ("thousands of FLAGs"); measured at +0.6%, it was enabled as the spec intended (made one-sided in M17).
 
 Jev spend for Phase 4: HD2 5K $0.252 + CS2 5K $0.264 + Gollum $0.016 = **$0.53**. Every sensitivity run was $0 (cached).
 
@@ -597,7 +597,7 @@ Results tables for readers are in `docs/RESULTS.md`; this section keeps the meth
 
 | Variant | bench attacked | bench clean | CS2 | Gollum | FM26 | HD2 | BL2 | Metro |
 |---|---|---|---|---|---|---|---|---|
-| current (off-topic 1, similarity 1) | 83.5 | 87.7 | 59.2 | 34.3 | 37.2 | 77.6 | 37.4 | 62.9 |
+| then-current (off-topic 1, similarity 1) | 83.5 | 87.7 | 59.2 | 34.3 | 37.2 | 77.6 | 37.4 | 62.9 |
 | off-topic ½ | 84.2 | 87.7 | 59.2 | 34.3 | 37.2 | 77.7 | 37.4 | 62.9 |
 | off-topic 0 | 84.3 | 87.8 | 59.2 | 34.3 | 37.2 | 77.7 | 37.5 | 62.9 |
 | off-topic ½ + similarity ½ | 84.3 | 87.8 | 59.2 | 34.3 | 37.2 | 77.7 | 37.4 | 62.9 |
@@ -657,7 +657,7 @@ On-topic negatives = negatives with `about_game` ≥ 0.5. False positive = such 
 
 - Packing costs about 7× the noise in decision changes, to save 11–13%. It stays rejected.
 - `preflight.PACKED_TOKEN_FACTOR`: 0.59 (v1, 5 reviews, M4b) → **0.888**. Packed estimates had been about 35% low ($0.387 estimated vs $0.581 actual).
-- The 1.25× spend cap applies to the *approved* amount (the $4 limit for runs under it), not to the estimate, so these runs were correctly allowed.
+- The 1.25× spend cap applies to the *approved* amount (the $4 limit used for these runs; the shipped default is $2), not to the estimate, so these runs were correctly allowed.
 
 ### M12e. Leave one signal out (cached, $0, attack bench)
 
@@ -896,3 +896,7 @@ In normal periods the semantic penalty hit organic fan-meme clusters ("For Democ
 | FM26, CS2, Gollum (controls) | `run_f9e0c3d71f14`, `run_d6617c6a4778`, `run_27907071d5e2` | unchanged | unchanged | unchanged |
 
 The re-recorded runs reproduce the simulation exactly. KEEP and EXCLUDE counts are unchanged on every game: only near-line FLAGs became the DOWNWEIGHT their scores had already earned. FLAGs (needs a human) fall from 348 to 117 across the 8 games. Steam-policy ratings are unaffected, since they do not use integrity actions.
+
+**Benchmarks re-scored under the current defaults (2026-10-08, $0, same Jev answers):**
+- **Attack benchmark** (`run_d859c3de63e6` clean, `run_b45988ccc58a` attacked; recorded as `bench_6de2a096f776`): per-attack results unchanged (template 99%, paraphrase 100%, coordinated burst 17%, astroturf 77%, spam 90%); **pull removed 51% → 52%**; collateral 74 organic reviews, unchanged.
+- **Adversarial sets v1 and v2** (`run_1628e51f417b`, `run_8fbf9eb451c0`): laundering unchanged, v1 5% / 7% / 0% and v2 40% / 0% / 0%.

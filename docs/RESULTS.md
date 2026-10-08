@@ -1,10 +1,10 @@
 # Results (Phase 7 evaluation)
 
-Every number below was measured. Method notes, corrections and run ids are in `docs/MEASUREMENTS.md` M11–M12. Each benchmark is also recorded in the `benchmarks` table and shown on the app's `/benchmarks` page.
-- **Settings:** question set v4, policy v3 defaults, one Jev call per review, unless a row says otherwise.
+Every number below was measured. Method notes, corrections and run ids are in `docs/MEASUREMENTS.md` M11–M17. Each benchmark is also recorded in the `benchmarks` table and shown on the app's `/benchmarks` page.
+- **Settings:** Jev answers from question set v4 (the adversarial set and the ROME II and DOOM runs: v5), one call per review. Each row names its policy; "current defaults" means the policy as of 2026-10-04 (M13 + M17).
 - **Reproduce:** run the `tools/bench_*.py` scripts. Policy experiments reuse a run's answers at $0 (`tools/sweep_cached.py`).
 
-Status: **complete except** human agreement (two raters still need to label `/label`, set `hd2-300`). Owner decisions taken on 2026-10-02 are applied as defaults (§8, MEASUREMENTS M13).
+Status (2026-10-08): **complete except** human agreement (two raters still need to label `/label`, set `hd2-300`). Owner decisions of 2026-10-02 (§8, M13) and 2026-10-04 (§9, M17) are the defaults.
 
 ## 1. Synthetic attacks (MVP_SPEC §10, row 1)
 
@@ -23,7 +23,8 @@ Status: **complete except** human agreement (two raters still need to label `/la
 | (b) Jev v4 (current defaults) | 99% (all downweight, weight 0.25) | 100% | 17% | 77% | 90% | **45%** | 127 | $0.655 |
 | Jev v4, off-topic factor ½ | 99% (excluded) | 100% | 17% | 77% | 90% | 54% | 132 | (reused) |
 | Jev v4, off-topic ½ + similarity ½ | 99% (excluded) | 100% | 17% | 77% | 90% | **55%** | **74** | (reused) |
-| **Jev v4, new defaults** (weights ½, semantic penalty inside bursts only) | 99% (excluded) | 100% (downweighted) | 17% | 77% | 90% | **51%** | 74 | (reused) |
+| Jev v4, M13 defaults (weights ½, semantic penalty inside bursts only) | 99% (excluded) | 100% (downweighted) | 17% | 77% | 90% | 51% | 74 | (reused) |
+| **Jev v4, current defaults** (M13 + grey zone above the line, M17) | 99% (excluded) | 100% (downweighted) | 17% | 77% | 90% | **52%** | 74 | (reused) |
 
 **Cluster ARI among injected reviews** (Jev v4): duplicate 0.30, semantic 0.23, burst 0.68.
 
@@ -44,7 +45,7 @@ On the attack benchmark, with 45% of the pull removed as the reference:
 | (a) heuristics only | 22% of the pull removed (§1) |
 | (b) + System One (Jev) | 45% |
 | (c) + System One (Laya zero-shot) | On the 300-review label set (the full benchmark would take ~20 h on CPU): Laya downweights 96% and calls 97% "not about the game". Cohen's κ against Jev ≈ 0 on every question (about_game −0.01, overall 0.00): chance level |
-| (d) + Laya fine-tuned on Jev labels | not run: out of the MVP (Phase 8, owner decision) |
+| (d) + Laya fine-tuned on Jev labels | not run: Jev's terms forbid training on its output (PLAN C6). A fine-tune on other labels is Phase 10, future exploration |
 | (e) leave one signal out | off-game 30% · contradiction 46% · spam weight 46% (spam still 90% excluded by the deterministic rule) · copied text 46% · low experience 45% · cluster penalty 44% (and **collateral 127 → 0**) · in-burst copy escalation 46% (astroturf excluded 77% → 66%) |
 | (f) Jev pack 1 / 5 / 10 | 45% / 42% / 43%. Decision agreement with pack 1: 98.8% (repeat noise) / 91.2% / 90.8%. Tokens ×1 / 0.888 / 0.87. **Packing stays rejected:** about 7× the noise in changed decisions, to save 11–13% |
 
@@ -60,11 +61,13 @@ On-topic negatives = negative reviews System One judges to be about the game. A 
 | The Lord of the Rings: Gollum | 35.7% | 34.3% | **−1.4 pp** (target < 5 pp ✅) | yes | 0.5% (1 of 187) |
 | Football Manager 26 (launch → now) | 38.0% | 37.2% | −0.7 pp | yes | 0.6% (60 of 9,389) |
 
+The current rules (M17) leave all three controls unchanged.
+
 **Caveat:** no burst was detected in any control. These are launch windows, and the burst detector needs 3 days of history for its baseline. Organic bursts are therefore protected by the per-review judgments here, not tested against the cluster rules.
 
 ## 4. Known incidents (§10)
 
-Three ratings, from M11:
+Three ratings, from the current showcase runs (current defaults, M17; docs/RUNS.md):
 
 | Game | Raw | Adjusted | Steam policy | Reference (English, earlier window) |
 |---|---|---|---|---|
@@ -124,7 +127,14 @@ Three ratings, from M11:
    - Attack removal 55% → 51%; real games within 0.1 pp.
 4. **Varied, on-topic coordinated campaigns are not discounted** (§1). The help page states this, the legitimacy limit and the paraphrased-experience limit.
 
-The six showcase runs and their replays still use the settings they were recorded with. Re-recording them on v5 needs about $2.9 of Jev. With v4 answers reused, the new policy moves each showcase rating by at most 0.13 pp.
+The showcase runs were re-recorded under these rules from their original Jev answers at $0 (v4 answers for the six games recorded before 2026-10-02, v5 for ROME II and DOOM Eternal). Re-recording them on v5 answers would need about $2.9 of Jev and was not done.
+
+## 9. Owner decision (2026-10-04, M17), now default
+
+- **The grey zone flags only above the line.** A FLAG counts as KEEP in the rating, so the old symmetric zone lifted cluster members penalised just under the line back to full weight (20 "I'm doing my part!" reviews in a 0.71-suspicion Helldivers 2 cluster).
+  - Showcase ratings: Helldivers 2 77.7% → 77.5%, Borderlands 2 37.4% → 37.7%, Metro 62.8% → 62.9%; the rest unchanged. FLAGs across the eight games 348 → 117.
+  - Attack benchmark: pull removed 51% → 52% (§1). Adversarial set: unchanged (§5).
+- **Rejected:** downweighting short in-game slogans ("FREEDOM", "for democracy") as low-information copied text. Jev's copied-text answer is noisy on texts of one to four words, so identical slogans fell on both sides. A short review in the game's own words is not low integrity.
 
 ## Phase 7 spend
 
