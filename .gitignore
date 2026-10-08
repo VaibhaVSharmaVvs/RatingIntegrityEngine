@@ -38,3 +38,6 @@ Thumbs.db
 .idea/
 .claude/settings.local.json
 frontend/public/bundle/
+
+# Cloudflare wrangler local state
+.wrangler/

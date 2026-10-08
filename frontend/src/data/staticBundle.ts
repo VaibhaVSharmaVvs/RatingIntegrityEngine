@@ -16,6 +16,8 @@ import type { DataSource, ReviewFilter, RunStreamHandlers, TimedRunEvent } from 
 import { gunzipIfNeeded, parseReplay } from './liveApi'
 
 const CHUNK = 1000 // reviews per detail file (tools/export_bundle.py)
+/** A missing file on a single-page-app host comes back as index.html with 200, not 404. */
+const isMissing = (r: Response) => !r.ok || (r.headers.get('content-type') ?? '').startsWith('text/html')
 const readOnly = (what: string) => () => Promise.reject(new Error(`${what} is not available in the public demo: runs are pre-recorded.`))
 
 interface BundleIndex {
@@ -42,7 +44,7 @@ export class StaticBundle implements DataSource {
     let p = this.cache.get(path) as Promise<T> | undefined
     if (!p) {
       p = fetch(`${this.base}/${path}`).then((r) => {
-        if (!r.ok) throw new Error(`${path}: ${r.status} ${r.statusText}`)
+        if (isMissing(r)) throw new Error(`${path}: not found (${r.status})`)
         return r.json() as Promise<T>
       })
       p.catch(() => this.cache.delete(path)) // a failed fetch can be retried
@@ -107,7 +109,7 @@ export class StaticBundle implements DataSource {
 
   getReplay = async (runId: string): Promise<ReplayLine[]> => {
     const res = await fetch(`${this.base}/runs/${encodeURIComponent(runId)}/replay.jsonl.gz`)
-    if (!res.ok) throw new Error(`replay ${runId}: ${res.status}`)
+    if (isMissing(res)) throw new Error(`replay ${runId}: not found (${res.status})`)
     // some hosts serve .gz with Content-Encoding (already inflated), others as raw bytes
     return parseReplay(await gunzipIfNeeded(new Uint8Array(await res.arrayBuffer())))
   }

@@ -1,0 +1,4 @@
+# Not uploaded to Cloudflare Workers: the SPA setting in wrangler.jsonc replaces these
+# fallbacks for other hosts (Netlify / Pages read _redirects, GitHub Pages 404.html).
+_redirects
+404.html

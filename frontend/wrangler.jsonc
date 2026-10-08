@@ -1,0 +1,13 @@
+// Public demo on Cloudflare Workers static assets: no Worker script, files only.
+// Deploy from frontend/ after tools/export_bundle.py: `npm run deploy` (README, "Public demo").
+{
+  "name": "rating-integrity-engine",
+  "compatibility_date": "2026-10-08",
+  "assets": {
+    "directory": "./dist",
+    // client-side routes (/runs/<id>/results, /help) get index.html with a 200
+    "not_found_handling": "single-page-application"
+  },
+  "workers_dev": true,
+  "preview_urls": true
+}

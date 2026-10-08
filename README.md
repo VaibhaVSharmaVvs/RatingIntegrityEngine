@@ -168,13 +168,21 @@ uv run python ../tools/export_bundle.py           # writes frontend/public/bundl
 npm run build:static && npm run check:static      # dist/ is the site; the check fails on any key or backend URL
 ```
 
-- **Hosting:** any static host. `dist/` carries fallbacks for client-side routes: `_redirects` (Netlify, Cloudflare Pages), `vercel.json` (Vercel), `404.html` (GitHub Pages).
+- **Hosting: Cloudflare Workers static assets** (free: unlimited static requests and bandwidth, 20,000 files, 25 MiB per file). `frontend/wrangler.jsonc` serves `dist/` with no Worker script, and its single-page-app setting answers client-side routes with `index.html` and a 200.
+
+  ```bash
+  npx wrangler@4 login           # once, from frontend/
+  npm run deploy:preview         # build + leak check + upload a version with a preview URL (not live)
+  npm run deploy                 # build + leak check + deploy to rating-integrity-engine.<account>.workers.dev
+  ```
+
+  The bundle comes from the local database, so deploys run from a local machine, not from CI. Other hosts also work: `dist/` carries `_redirects` (Netlify, Cloudflare Pages), `vercel.json` (Vercel) and `404.html` (GitHub Pages); `.assetsignore` keeps those out of the Workers upload.
 - **Subfolder sites:** for a GitHub Pages project site, build with `VITE_BASE=/<repo>/`.
 
 ## Responsible use
 
 - The UI and docs talk about *integrity weight* and *low evidential value*, never about "fake" reviews, and never name reviewers. Author IDs are salted hashes from ingest onward.
-- Steam review data is used under Steam's terms for personal, non-commercial use and is **not redistributed** in this repository. The public demo's bundle is exported locally; whether it carries review text (scrubbed of e-mails, links, phone numbers and handles) or none (`export_bundle.py --text none`) is decided before publishing.
+- Steam review data is used under Steam's terms for personal, non-commercial use and is **not redistributed** in this repository. The public demo's bundle is exported locally and publishes review text without any reviewer identity, scrubbed of e-mails, links, phone numbers and handles (owner decision, 2026-10-08). `export_bundle.py --text none` builds a demo without text.
 - An adjusted rating is a method's output, not a verdict on any reviewer or product.
 
 ## Credits
