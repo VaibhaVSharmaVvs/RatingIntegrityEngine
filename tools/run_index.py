@@ -94,7 +94,7 @@ def main() -> None:
         "",
         "## Showcase runs",
         "",
-        "The eight runs marked \"current rules\" are what the public demo replays: each re-judges its",
+        'The eight runs marked "current rules" are what the public demo replays: each re-judges its',
         "game's original Jev answers under the current policy at $0 (M17). The Q-set column is the",
         "question set of those answers: v4 for the six games recorded before 2026-10-02, v5 for ROME II",
         "and DOOM Eternal. The cost column is $0 for these re-records; the original runs are listed",
