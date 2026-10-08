@@ -1,6 +1,6 @@
 // Static hosts serve files, but the app's routes (/runs/<id>/results, /help...) are
-// client-side. Each host has its own fallback: Netlify / Cloudflare Pages read
-// public/_redirects, Vercel reads vercel.json, GitHub Pages serves 404.html.
+// client-side. Each host has its own fallback: Cloudflare Workers uses the SPA setting in
+// wrangler.jsonc, Vercel reads vercel.json, GitHub Pages serves 404.html.
 import { copyFileSync, existsSync } from 'node:fs'
 
 if (!existsSync('dist/index.html')) throw new Error('run vite build first')

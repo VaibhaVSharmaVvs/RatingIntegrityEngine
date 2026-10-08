@@ -176,7 +176,7 @@ npm run build:static && npm run check:static      # dist/ is the site; the check
   npm run deploy                 # build + leak check + deploy to rating-integrity-engine.<account>.workers.dev
   ```
 
-  The bundle comes from the local database, so deploys run from a local machine, not from CI. Other hosts also work: `dist/` carries `_redirects` (Netlify, Cloudflare Pages), `vercel.json` (Vercel) and `404.html` (GitHub Pages); `.assetsignore` keeps those out of the Workers upload.
+  The bundle comes from the local database, so deploys run from a local machine, not from CI. Other hosts: `vercel.json` (Vercel) and `404.html` (GitHub Pages) are kept; `.assetsignore` keeps `404.html` out of the Workers upload. Netlify would need a `_redirects` file with `/* /index.html 200`, which Workers rejects as a redirect loop, so it is not shipped.
 - **Subfolder sites:** for a GitHub Pages project site, build with `VITE_BASE=/<repo>/`.
 
 ## Responsible use
