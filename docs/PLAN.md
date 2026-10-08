@@ -2,7 +2,7 @@
 
 *v1.0, 2026-09-29; status updated 2026-10-08. Derived from `MVP_SPEC.md` v0.1 (§12 build plan) and `RESEARCH_FINDINGS.md`. Section refs like §6.3 point into `MVP_SPEC.md`. Each phase's "Delivered" or "Status" block is dated and records the state on that date; later changes are listed under **Current state** below.*
 
-🎯 **Goal (as it stands, 2026-10-08):** a public, replay-only portfolio demo, **live at https://rating-integrity-engine.vaibhavvs.workers.dev**. Every review of eight Steam games (five review bombs, three genuine-reception controls) is judged visibly, and three ratings are compared: raw, integrity-adjusted with a CI, and Steam's written policy applied to the same reviews, alongside what Steam itself shows. Jev is benchmarked against Laya; making Laya good enough to bring the per-run cost to $0 is the future-exploration phase (Phase 10).
+🎯 **Goal (as it stands, 2026-10-08):** a public, replay-only portfolio demo, **live at https://rating-integrity-engine.vaibhavvs.workers.dev**. Every review of eight Steam games (five review bombs, three genuine-reception controls) is judged visibly, and three ratings are compared: raw, integrity-adjusted with a CI, and Steam's written policy applied to the same reviews, alongside what Steam itself shows. Jev is benchmarked against Laya; making Laya good enough to bring the per-run cost to $0 is the future-exploration phase (Phase 9).
 
 **How the goal changed:**
 
@@ -12,7 +12,8 @@
 | 2026-09-30 | Laya fine-tuned on Jev labels as a demo backend | Laya benchmark-only; fine-tune out of the MVP | Jev's terms forbid distillation (C6); Laya on CPU is too slow (C8) |
 | 2026-10-01 | one adjusted rating | three ratings: raw · integrity-adjusted · platform policy | Owner decision: show what the written platform rules would do |
 | 2026-10-01 → 10-02 | Helldivers 2 plus two controls | eight games: Helldivers 2, Borderlands 2, Metro 2033 Redux, Total War: ROME II, DOOM Eternal; controls Football Manager 26, Cities: Skylines II, Gollum | Bombs of different kinds, two of them flagged by Valve, so the emulation can be checked against Valve's actual decision |
-| 2026-10-08 | Phase 8, stretch fine-tune | Phase 10, future exploration: Laya trained on non-Jev labels to reach $0 per run | Owner decision |
+| 2026-10-08 | Phase 8, stretch fine-tune | the last phase, future exploration: Laya trained on non-Jev labels to reach $0 per run | Owner decision |
+| 2026-10-08 | phases 0–7, 9 and 10, with 8 left empty | phases 0–9 with no gap: ship the public demo is **Phase 8**, the Laya fine-tune **Phase 9** | Owner decision |
 
 **How to read this plan.** Each phase has a **goal** (the outcome), **requirements** (what must exist), **process** (how to build it, in order), and **exit criteria** (a checkable gate). Don't start phase N+1 until phase N's gate passes, except where *Parallel* says otherwise.
 
@@ -26,13 +27,13 @@
 | C2 | **Jev packing is not documented.** `state` accepts arrays, but there is no documented per-item batching and no documented max questions per request. | docs.typesafe.ai/api.md | Packing stays a Phase 3 **experiment** with a fallback, not an assumption. `tools/smoke_systemone.py --packed N` is the probe. |
 | C3 | **`jev-latest` is a moving alias.** Runs store `model_version`, but the alias can change between runs, which breaks benchmark comparability. | api.md: aliases resolved via `/models` | Resolve the alias to a pinned version at run start and store the resolved ID. |
 | C4 | **Python SDK is `typesafe-sdk`** (import `typesafe_sdk`), not `typesafe-ai`. | docs.typesafe.ai/sdk/python.md | Installed as an optional extra. Our own httpx client stays the default so Jev and Laya share one code path. |
-| C5 | **Timeline risk.** 31 working days assumes full-time. Phases 7–8 (evaluation, distillation) carry the most uncertainty. | Spec §12 | Phases 0–6 are the demoable MVP. Treat 7–9 as a second milestone with its own date. |
+| C5 | **Timeline risk.** 31 working days assumes full-time. Phase 7 and the Laya fine-tune (evaluation, distillation) carry the most uncertainty. | Spec §12 | Phases 0–6 are the demoable MVP. Treat 7–8 as a second milestone with its own date. |
 
 **Found during Phase 0 execution (2026-09-30).** Measurements are in `docs/MEASUREMENTS.md`.
 
 | # | Issue | Evidence | Action |
 |---|---|---|---|
-| C6 | **Jev → Laya distillation is prohibited.** MCA §2.3(b): customers may not "use the Services or any Output to perform model distillation, train a model to imitate the output of the Services…". | typesafe.ai/legal/mca | **Phase 8 re-scoped**, now **Phase 10, future exploration** (see below): fine-tune Laya on human labels + synthetic ground truth only. Confirm the reading with a lawyer before any Phase 8 work. |
+| C6 | **Jev → Laya distillation is prohibited.** MCA §2.3(b): customers may not "use the Services or any Output to perform model distillation, train a model to imitate the output of the Services…". | typesafe.ai/legal/mca | **Fine-tune phase re-scoped**, now **Phase 9, future exploration** (see below): fine-tune Laya on human labels + synthetic ground truth only. Confirm the reading with a lawyer before any fine-tune work. |
 | C7 | **Jev limits changed:** 40 req/s and 100K tokens/s (spec: 1,200 rpm, 250K tok/s). **Measured:** 64 reviews/s at concurrency 32 with zero 429s → 50K in ≈ 13 min at pack=1. | models.md; MEASUREMENTS M4c | **Packing is not needed for throughput.** It is now a *cost* lever only: packing 5 reviews cut tokens by 41% (M4b). Phase 3 re-framed. |
 | C8 | **Laya on this CPU is unusable for bulk runs.** Measured 0.08 reviews/s (i7-1255U, 6 questions). | MEASUREMENTS.md | Local Laya is limited to the 200-review dev set. Every Laya bulk run (5K and 50K) moves to the Kaggle notebook. The "Laya" option in the live UI becomes replay-only. |
 | C9 | **50K costs more than the spec's $1.** **Measured on Jev:** 1,057 input tokens/review → **$2.22 per 50K**, just above the $2 spend guard ($0.22 per 5K). | MEASUREMENTS M4c | Phase 3: trim criteria text and/or pack (−41% tokens on 5 reviews, M4b) and re-measure agreement against the untrimmed pack=1 answers. Raise the guard only as a conscious decision. |
@@ -43,7 +44,7 @@
 
 **Principle (owner, 2026-09-30): accuracy over speed.** When a choice trades accuracy against runtime or modest API cost, choose accuracy, but only when a measurement shows an accuracy gain. Speed and cost stay *reported*, not optimised at accuracy's expense. Applied so far: embedding context 128 → 256, LSH candidate bar 0.4, 2,000 bootstrap resamples, duplicates judged instead of skipped (MEASUREMENTS M6).
 
-**Decision (owner, 2026-09-30): Laya stays as a benchmark backend only.** It is kept as a pluggable backend (same client, no extra code path) and one zero-shot benchmark row on the 200-review dev set. Reasons: vendor-risk hedge, an on-prem/privacy option, and a second point on the cost-accuracy chart. The fine-tune (Phase 8) moves out of the MVP to an optional stretch goal. *(2026-10-08: it is now the last phase, Phase 10, future exploration.)* "Laya (fine-tuned)" is dropped from the run-config UI, and local `laya-serve` becomes opt-in (`docker compose --profile laya up`).
+**Decision (owner, 2026-09-30): Laya stays as a benchmark backend only.** It is kept as a pluggable backend (same client, no extra code path) and one zero-shot benchmark row on the 200-review dev set. Reasons: vendor-risk hedge, an on-prem/privacy option, and a second point on the cost-accuracy chart. The fine-tune (then Phase 8) moves out of the MVP to an optional stretch goal. *(2026-10-08: it is now the last phase, Phase 9, future exploration.)* "Laya (fine-tuned)" is dropped from the run-config UI, and local `laya-serve` becomes opt-in (`docker compose --profile laya up`).
 
 ---
 
@@ -59,9 +60,8 @@
 | 5 | Frontend core (live grid) | 4 d | 1 (API contract); 4 for real data | ✅ 2026-10-01 |
 | 6 | Drill-downs + results | 4 d | 4, 5 | ✅ 2026-10-01 · **M1: demoable MVP** |
 | 7 | Evaluation + benchmarks | 4 d | 6 | ✅ 2026-10-02 · human labels open |
-| 8 | ~~Laya fine-tune (stretch)~~ | — | — | moved to Phase 10 (2026-10-08) |
-| 9 | Ship public demo | 3 d | 6, 7 | ✅ live 2026-10-08 · **M2: public launch** · demo video open |
-| 10 | Future exploration: fine-tune Laya to $0 per run | 3 d + labelling | 7 (labels) | not started |
+| 8 | Ship public demo | 3 d | 6, 7 | ✅ live 2026-10-08 · **M2: public launch** · demo video open |
+| 9 | Future exploration: fine-tune Laya to $0 per run | 3 d + labelling | 7 (labels) | not started |
 
 Estimated: ~21 working days to M1 and ~28 to M2. Actual: M1 on 2026-10-01 and M2 on 2026-10-08, nine days after the plan was written.
 
@@ -263,7 +263,7 @@ Deviations and findings:
 **Goal:** the hero screen. Thousands of squares fill in live, with counters and a rating ticker.
 
 **Requirements**
-- `DataSource` interface with `LiveApi` (REST + `EventSource`) now; `StaticBundle` stub for Phase 9.
+- `DataSource` interface with `LiveApi` (REST + `EventSource`) now; `StaticBundle` stub for Phase 8.
 - `IntegrityGrid`: Canvas2D `ImageData`, one cell per review in chronological row-major order, redraw < 5 ms at 50K, colours from the action palette tokens, 150 ms fade, `prefers-reduced-motion` snaps.
 - `TimelineStrip` (canvas): hourly volume stacked by action, burst windows shaded.
 - Counters (tabular numerals), rating ticker with CI whisker, stage stepper, cluster feed cards.
@@ -286,14 +286,14 @@ Deviations and findings:
 | API | Phase 1 contract | Added `GET /runs`, `GET /datasets/{id}/hours` (hourly buckets as contiguous grid ranges) and a minimal `GET /runs/{id}/reviews/{rid}` | The timeline strip needs hours; the tooltip needs text; nothing listed runs. Phase 6 extends the review endpoint with judgments |
 | Palette | Spec hex in both themes | Spec hex; the grid and timeline sit on a dark **instrument surface in both themes** | Validator: in light mode teal and amber are < 3:1 on white. Darker steps of the same hues collapse amber into vermilion for deuteranopes (ΔE 0.2) |
 | Fixtures | Recorded SSE fixtures from Phase 1 | Synthetic recorded run (`src/test/fixtures.ts`) + `FakeSource`; real replays under `data/` for manual runs | `data/` is gitignored; the synthetic fixture has exact ground truth |
-| Replay | Phase 9 player | Finished runs auto-play from `/runs/{id}/replay`: **fill in 30 s** (or 10 s / real time), idle stages capped at 1.2 s, Skip to end; `?play=end` shows the final state | Owner feedback: the fill was too fast to watch. Scrub and pause stay in Phase 9 |
+| Replay | Phase 8 player | Finished runs auto-play from `/runs/{id}/replay`: **fill in 30 s** (or 10 s / real time), idle stages capped at 1.2 s, Skip to end; `?play=end` shows the final state | Owner feedback: the fill was too fast to watch. Scrub and pause stay in Phase 9 |
 | Reveal | Cells appear per SSE batch | **Cell drip**: each batch is revealed cell by cell over its window; following events (counters, rating) wait for it; live streams use the arrival rate, and backlogs catch up | Batches of 25–250 cells popped in as blocks |
 | Fade | 150 ms from pending | **Flash, then settle over 320 ms** (ease-out); rating number tweens | A 150 ms fade on a 4 px cell read as an instant switch. Reduced motion still snaps |
 | Heuristic live rating | — | `pipeline.py` fills the grid per emitted chunk | Live ratings were already final on the first event (M10) |
 | Starting runs | Phase 6 drawer | Runs page can start **$0 runs only** (heuristic, mock) | Exercises the live SSE path; Jev runs wait for the pre-flight drawer |
 | Wireframes | Low-fi Figma for screens 4–7 before styling | **Waived** (owner, 2026-10-01) | Screens are designed in code and verified in the browser |
 
-Open items: the color-mode toggle (informativeness/topic/cluster) and the "Compare backends" view are not built. (The runs-page hint that named the API port was dropped, so a Phase 9 `dist/` grep for the backend URL stays clean.)
+Open items: the color-mode toggle (informativeness/topic/cluster) and the "Compare backends" view are not built. (The runs-page hint that named the API port was dropped, so a Phase 8 `dist/` grep for the backend URL stays clean.)
 
 ---
 
@@ -360,7 +360,7 @@ Open items: the color-mode toggle (informativeness/topic/cluster) and the "Compa
 |---|---|---|---|
 | Labelling | `tools/label_cli.py` | `/label` page in the app (local only) | A second rater need not be a developer; labels go to the existing `labels` table |
 | Laya ablation (c) | the full attack set | the 300-review label set | Laya runs at 0.06–0.08 reviews/s on CPU, about 20 h for 5,689 reviews |
-| Ablation (d) | Laya fine-tuned on Jev labels | not run | Jev labels can't be used for training (C6); a fine-tune on other labels is Phase 10 |
+| Ablation (d) | Laya fine-tuned on Jev labels | not run | Jev labels can't be used for training (C6); a fine-tune on other labels is Phase 9 |
 | YelpZip | if access is granted | not run | No access |
 
 **Owner decisions on the findings** (2026-10-02, MEASUREMENTS M13, RESULTS §8), now defaults:
@@ -373,7 +373,7 @@ Later (2026-10-04, M17): the grey zone flags only above the line. Pull removed *
 
 ---
 
-## Phase 9: Ship the public demo → **M2**
+## Phase 8: Ship the public demo → **M2**
 
 **Goal:** a $0-running-cost public link that feels live.
 
@@ -407,9 +407,9 @@ Later (2026-10-04, M17): the grey zone flags only above the line. Pull removed *
 
 ---
 
-## Phase 10 (future exploration): train and fine-tune Laya to bring the cost to $0
+## Phase 9 (future exploration): train and fine-tune Laya to bring the cost to $0
 
-*Formerly Phase 8, the out-of-MVP stretch goal re-scoped by C6. Owner decision, 2026-10-08: it is the last phase.*
+*First Phase 8, the out-of-MVP stretch goal re-scoped by C6. Owner decisions, 2026-10-08: it is the last phase, and the phases are numbered 0–9 without a gap, so shipping the demo is Phase 8 and this is Phase 9.*
 
 **Goal:** a free, local System One model good enough to replace Jev for this task, so a run costs $0 instead of about $0.07 per 1,000 reviews. Success means the fine-tuned Laya matches Jev on the same held-out benchmarks (attack pull removed, control false positives, laundering) within Jev's own repeat noise, or the gap is measured and published.
 

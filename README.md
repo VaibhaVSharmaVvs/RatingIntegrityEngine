@@ -12,6 +12,7 @@ and three ratings side by side: **raw**, **integrity-adjusted** (with a 95% CI) 
 
 [![Live demo](https://img.shields.io/badge/Live_demo-open_it-2ba8a0?style=flat-square&logo=cloudflare&logoColor=white)](https://rating-integrity-engine.vaibhavvs.workers.dev)
 [![CI](https://img.shields.io/github/actions/workflow/status/VaibhaVSharmaVvs/RatingIntegrityEngine/ci.yml?branch=main&style=flat-square&label=CI)](.github/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-22c55e?style=flat-square)](LICENSE)
 ![Python](https://img.shields.io/badge/Python-3.12-3776AB?style=flat-square&logo=python&logoColor=white)
 ![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=flat-square&logo=fastapi&logoColor=white)
 ![DuckDB](https://img.shields.io/badge/DuckDB-FFF000?style=flat-square&logo=duckdb&logoColor=black)
@@ -37,7 +38,7 @@ and three ratings side by side: **raw**, **integrity-adjusted** (with a 95% CI) 
 - [Three ratings, eight games](#-three-ratings-eight-games) · [Features](#-features) · [How a review is judged](#-how-a-review-is-judged)
 - [Architecture & data flow](#-architecture--data-flow) · [Evaluation](#-evaluation) · [Engineering challenges](#-engineering-challenges)
 - [Tech stack](#-tech-stack) · [Run it locally](#-run-it-locally) · [Testing](#-testing) · [Deploying the demo](#-deploying-the-demo)
-- [Project structure](#-project-structure) · [Documentation](#-documentation) · [Roadmap](#-roadmap) · [Responsible use](#-responsible-use) · [Credits](#-credits)
+- [Project structure](#-project-structure) · [Documentation](#-documentation) · [Roadmap](#-roadmap) · [Responsible use](#-responsible-use) · [License](#-license) · [Credits](#-credits)
 
 ---
 
@@ -385,6 +386,8 @@ npm run build:static && npm run check:static   # the leak check CI runs
 
 ## 🌍 Deploying the demo
 
+> **Live demo: [rating-integrity-engine.vaibhavvs.workers.dev](https://rating-integrity-engine.vaibhavvs.workers.dev)**. Pick a game and press play: eight recorded runs, replayed in your browser at $0.
+
 The public demo is a static site: the showcase runs replayed from exported files, with no backend, database or API key.
 
 ```bash
@@ -444,9 +447,9 @@ data/            local only (gitignored): DuckDB, caches, replays, raw pulls
 
 ## 📈 Roadmap
 
-Phases 0–7 and 9 are done: the pipeline end to end, the live screen, drill-downs, the evaluation and the public demo.
+Phases 0–8 are done: the pipeline end to end, the live screen, drill-downs, the evaluation and the public demo.
 
-- **Laya fine-tune (Phase 10, future exploration).** Train the free, local System One model to bring the per-run cost to $0. Jev's terms forbid distillation, so the training labels come only from human labels, the synthetic-attack injector and deterministic weak labels, with a lineage note proving that no Jev output is used. Laya zero-shot is at chance today, so this is the real gap.
+- **Laya fine-tune (Phase 9, future exploration).** Train the free, local System One model to bring the per-run cost to $0. Jev's terms forbid distillation, so the training labels come only from human labels, the synthetic-attack injector and deterministic weak labels, with a lineage note proving that no Jev output is used. Laya zero-shot is at chance today, so this is the real gap.
 - **Human agreement.** Two blind raters on the 300-review set at `/label`, then Cohen's κ for human–human, human–Jev and human–Laya.
 - **Replay scrubbing and a 90-second demo video.**
 - **Beyond games and English.** The picker already says "Product". The question set is still game-worded, and the method has only been measured on English reviews.
@@ -459,6 +462,12 @@ Phases 0–7 and 9 are done: the pipeline end to end, the live screen, drill-dow
 - **Data.** Steam review data is used under Steam's terms for personal, non-commercial use and is **not redistributed in this repository**.
 - **The public demo's review text.** The bundle publishes review text with no reviewer identity, scrubbed of e-mails, links, phone numbers and handles. `export_bundle.py --text none` builds a demo without any text.
 - **What a number means.** An adjusted rating is a method's output, not a verdict on any reviewer or product.
+
+---
+
+## 📄 License
+
+MIT, see [LICENSE](LICENSE). The licence covers the code and documentation in this repository. Steam review data is not part of it: it is not redistributed here, and the review text in the public demo stays subject to Steam's terms.
 
 ---
 

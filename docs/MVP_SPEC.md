@@ -12,7 +12,7 @@
 | Frontend | React + TypeScript |
 | Headline demo | Steam review bombs: Helldivers 2 (May 2024) first, then Borderlands 2, Metro 2033 Redux, Total War: ROME II and DOOM Eternal |
 | Control games | Games whose reception was genuine: Gollum (known-bad), Cities: Skylines II (organic backlash), Football Manager 26 (launch backlash) (§10) |
-| Compute | **CPU only.** No local GPU. Free Kaggle/Colab T4 GPUs are reserved for the future Laya fine-tune (PLAN Phase 10) |
+| Compute | **CPU only.** No local GPU. Free Kaggle/Colab T4 GPUs are reserved for the future Laya fine-tune (PLAN Phase 9) |
 | Language | **English only** for v1 |
 | Hosting | **Replay-only public demo**, live at https://rating-integrity-engine.vaibhavvs.workers.dev (Cloudflare Workers static assets). No live runs for visitors; API spend happens only on the developer's machine |
 | Ratings | **Three, side by side** (owner, 2026-10-01): raw, integrity-adjusted, and the platform's written policy applied to the same reviews |
@@ -27,7 +27,7 @@
 1. **Speed and scale.** Thousands of reviews judged live, visibly (the square grid).
 2. **Corpus intelligence.** Clusters and bursts that single-review analysis can't see.
 3. **Honest output.** Raw vs adjusted vs platform-policy rating, with CI and effective sample size, and controls showing the method neither inflates a bad game nor suppresses a real backlash.
-4. **Engineering rigor.** Benchmarks on synthetic attacks, controls and adversarial text, comparing Jev with heuristics and with Laya zero-shot on cost, latency and accuracy. A fine-tuned Laya is future exploration (PLAN Phase 10).
+4. **Engineering rigor.** Benchmarks on synthetic attacks, controls and adversarial text, comparing Jev with heuristics and with Laya zero-shot on cost, latency and accuracy. A fine-tuned Laya is future exploration (PLAN Phase 9).
 
 **Non-goals for the MVP:** multi-tenant accounts, scraping sites other than Steam, real-time ingestion, a human review workflow beyond a simple flag queue, LLM explanations.
 
@@ -39,7 +39,7 @@
 |---|---|---|
 | Jev API: `POST /v1/systemone` with `{model, state, questions:{id:{type, instructions, criteria}}}`. Returns `noul` (0–1), `choice` + `probabilities` + `confidence`, or `score` + `probabilities` + `confidence`. Errors: 429 and 529, with backoff. | docs.typesafe.ai/api.md | One HTTP client, no SDK lock-in. Retry with backoff. |
 | **Laya's `laya-serve` speaks the same wire protocol as Jev** (default `:8000`) | github.com/NandhaKishorM/laya | Switching backend means changing `base_url` + `model`. Same adapter for both. |
-| Laya checkpoints: `laya` (421M, 512 ctx), `laya-multilingual` (322M), `laya-typed-decisions`. Base checkpoints are **"near random zero-shot"**; fine-tuning drives accuracy. | Laya README | Laya zero-shot is a benchmark row, not the default. *As built:* Jev's terms forbid training on its output (MCA §2.3(b), PLAN C6), so there is no Jev → Laya distillation; a fine-tune on non-Jev labels is PLAN Phase 10. |
+| Laya checkpoints: `laya` (421M, 512 ctx), `laya-multilingual` (322M), `laya-typed-decisions`. Base checkpoints are **"near random zero-shot"**; fine-tuning drives accuracy. | Laya README | Laya zero-shot is a benchmark row, not the default. *As built:* Jev's terms forbid training on its output (MCA §2.3(b), PLAN C6), so there is no Jev → Laya distillation; a fine-tune on non-Jev labels is PLAN Phase 9. |
 | Laya on a T4 GPU: 32–40 ms per question; batched 103–332 questions/s; `predict_batch()` | Laya README | 6 questions/review gives ~17–55 reviews/s on a T4. CPU will be much slower [unmeasured]. |
 | Jev: 1,200 requests/min, 250k tokens/s, $0.042 per 1M input tokens, output free. Limits "adjusting dynamically". | TypeSafe docs (via earlier research) | *Measured instead* (PLAN C7, C9; M8): the limits are 40 req/s and 100K tokens/s; one review per request runs at 40 reviews/s, **~21 min for 50K**. Prompt overhead dominates the cost: about **$0.07 per 1,000 reviews** with question set v5 (~$3.50 per 50K, ~$0.35 per 5K). |
 | Jev weaknesses: adversarial text can sway it; weak numeric reasoning; distracted by irrelevant state | TypeSafe docs | Put the rating in words, not numbers. Keep state minimal. Deterministic signals can override. Red-team in eval. |
@@ -366,7 +366,7 @@ Side nav: Benchmarks · Flag queue · Datasets
 | Mode | What runs | Use |
 |---|---|---|
 | **Local full** (developer only) | `docker compose up`: api + laya-serve (CPU) + web; Jev via `.env` key | Development, real runs, producing bundles |
-| **Offline GPU batch** (future, PLAN Phase 10) | A Kaggle/Colab notebook runs Laya `predict_batch()` over a dataset. `tools/import_judgments.py` loads the results into DuckDB as a normal run. | Laya runs at scale without a local GPU |
+| **Offline GPU batch** (future, PLAN Phase 9) | A Kaggle/Colab notebook runs Laya `predict_batch()` over a dataset. `tools/import_judgments.py` loads the results into DuckDB as a normal run. | Laya runs at scale without a local GPU |
 | **Public portfolio demo** (the only hosted mode) | Static frontend on **Cloudflare Workers static assets** (https://rating-integrity-engine.vaibhavvs.workers.dev) + precomputed run bundles (`tools/export_bundle.py`: run, replay, clusters, scores, the reviews table and review details in 1,000-review chunks) | Public link, **$0 running cost, no API key, no backend** |
 
 - **DataSource interface.** The frontend has one interface with two implementations: `LiveApi` for local development and `StaticBundle` for the public build. The public build (`npm run build:static`) leaves out upload, fetch and run controls; a *"These runs are pre-recorded"* note takes their place. CI fails the build if it contains an API key, a backend URL, live-API code, or identifiers in the data.
@@ -394,7 +394,7 @@ Side nav: Benchmarks · Flag queue · Datasets
 - (a) heuristics only
 - (b) + System One (Jev)
 - (c) + System One (Laya zero-shot)
-- (d) + Laya fine-tuned on Jev labels (distillation): dropped, since Jev's terms forbid it (PLAN C6); a fine-tune on other labels is PLAN Phase 10
+- (d) + Laya fine-tuned on Jev labels (distillation): dropped, since Jev's terms forbid it (PLAN C6); a fine-tune on other labels is PLAN Phase 9
 - (e) leave one signal out
 - (f) Jev pack 1/5/10: measured, packing rejected (M12d)
 
@@ -453,8 +453,8 @@ Estimates assume a solo developer working full-time-equivalent. Double them if p
 | 5 | Frontend core | Canvas grid + SSE, counters, rating ticker, timeline strip, stage stepper | 4 d |
 | 6 | Drill-downs | Cluster drawer, review inspector (probability bars), results page with sliders, export | 4 d |
 | 7 | Evaluation | Attack injector, label 300 reviews, benchmark harness, pack-size test, adversarial set | 4 d |
-| 8 | ~~Laya distillation~~ | Dropped: Jev's terms forbid training on its output (PLAN C6). Now PLAN Phase 10, future exploration: fine-tune Laya on non-Jev labels to bring the per-run cost to $0 | 3 d |
-| 9 | Ship | Static bundle export, replay player (speed/scrub), static build flag, deploy, README with architecture + results, 90-second demo video | 3 d |
+| 8 | Ship | Static bundle export, replay player (speed/scrub), static build flag, deploy, README with architecture + results, 90-second demo video | 3 d |
+| 9 | ~~Laya distillation~~ | Dropped: Jev's terms forbid training on its output (PLAN C6). Now PLAN Phase 9, future exploration: fine-tune Laya on non-Jev labels to bring the per-run cost to $0 | 3 d |
 
 **Total: about 31 working days, roughly 6–7 weeks solo.** Tasks 0–6 (about 21 days) are already a demoable MVP.
 
@@ -471,7 +471,7 @@ Estimates assume a solo developer working full-time-equivalent. Double them if p
 
 ## 13. Resolved decisions (2026-09-29)
 
-1. **Compute:** CPU only. Local Laya is for the 200- and 300-review benchmark sets; a fine-tune and batch runs on Kaggle/Colab are future exploration (PLAN Phase 10).
+1. **Compute:** CPU only. Local Laya is for the 200- and 300-review benchmark sets; a fine-tune and batch runs on Kaggle/Colab are future exploration (PLAN Phase 9).
 2. **Language:** English only for v1. Use `language=english` on the Steam fetch and the `laya` English checkpoint (421M, 512 ctx). The Helldivers 2 bomb was heavily multilingual, so the methodology card must say *"English-language reviews only"* and show the English share of total reviews.
 3. **Control games:** Gollum (known-bad, small) and Cities: Skylines II (organic on-topic burst, large); Football Manager 26 added later.
 4. **Hosting:** replay-only static site, on Cloudflare Workers static assets since 2026-10-08. Live runs are local-only, behind a spend guard.

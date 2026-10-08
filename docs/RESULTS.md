@@ -45,7 +45,7 @@ On the attack benchmark, with 45% of the pull removed as the reference:
 | (a) heuristics only | 22% of the pull removed (§1) |
 | (b) + System One (Jev) | 45% |
 | (c) + System One (Laya zero-shot) | On the 300-review label set (the full benchmark would take ~20 h on CPU): Laya downweights 96% and calls 97% "not about the game". Cohen's κ against Jev ≈ 0 on every question (about_game −0.01, overall 0.00): chance level |
-| (d) + Laya fine-tuned on Jev labels | not run: Jev's terms forbid training on its output (PLAN C6). A fine-tune on other labels is Phase 10, future exploration |
+| (d) + Laya fine-tuned on Jev labels | not run: Jev's terms forbid training on its output (PLAN C6). A fine-tune on other labels is Phase 9, future exploration |
 | (e) leave one signal out | off-game 30% · contradiction 46% · spam weight 46% (spam still 90% excluded by the deterministic rule) · copied text 46% · low experience 45% · cluster penalty 44% (and **collateral 127 → 0**) · in-burst copy escalation 46% (astroturf excluded 77% → 66%) |
 | (f) Jev pack 1 / 5 / 10 | 45% / 42% / 43%. Decision agreement with pack 1: 98.8% (repeat noise) / 91.2% / 90.8%. Tokens ×1 / 0.888 / 0.87. **Packing stays rejected:** about 7× the noise in changed decisions, to save 11–13% |
 
