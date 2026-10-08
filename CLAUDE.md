@@ -8,12 +8,13 @@ Portfolio project. System One models (Jev hosted, Laya local) make typed judgmen
 ## Layout
 - `backend/` Python 3.12, uv, FastAPI. Pipeline stages: `ingest/` (S0) → `features/` (S1) → `systemone/` (S2) → `corpus/` (S3) → `decide/` (S4), orchestrated by `app/pipeline.py`.
 - `frontend/` React 19 + Vite + TS, Tailwind v4, shadcn/ui, Zustand, TanStack Query. `@/` = `frontend/src`.
-- `tools/` one-off scripts; `notebooks/` Kaggle/Colab work; `data/` gitignored.
+- `tools/` one-off scripts; `notebooks/` reserved for the future Laya fine-tune (PLAN Phase 10); `data/` gitignored.
 
 ## Commands
 - Backend (from `backend/`): `uv run uvicorn app.main:app --reload --port 8001` · `uv run pytest` · `uv run ruff check . && uv run ruff format .`
 - Laya server: `uv run laya-serve` (port 8000, same protocol as Jev)
 - Frontend (from `frontend/`): `npm run dev` · `npm test` · `npm run lint` · `npm run build` · `npm run build:static`
+- Public demo (live at https://rating-integrity-engine.vaibhavvs.workers.dev): `uv run python ../tools/export_bundle.py` (API on :8001), then from `frontend/` `npm run deploy:preview` or `npm run deploy` (Cloudflare Workers static assets; both run the leak check)
 - Smoke test System One: `uv run python ../tools/smoke_systemone.py --backend jev|laya [--packed N]`
 - Throughput benchmark: `uv run python ../tools/bench_throughput.py --backend jev|laya --n 200 --concurrency 8`
 - Steam pull (resumable): `uv run python -m app.ingest.steam_fetcher --appid N --from YYYY-MM-DD --to YYYY-MM-DD`
@@ -31,7 +32,7 @@ Portfolio project. System One models (Jev hosted, Laya local) make typed judgmen
 - `reviews.id` is the chronological position within its dataset, and equals the grid index.
 - DuckDB access goes through `Database.cursor()` (UTC-pinned, thread-safe); never share a raw connection.
 - **Accuracy over speed** (owner): prefer the more accurate option when a measurement shows a gain; report speed and cost, don't optimise them at accuracy's expense.
-- Later copies (>= `dup_min_tokens`) are DOWNWEIGHTed by default and still judged by System One; the copy rule is a floor. Jev is not deterministic, so by default every review gets its own call (`reuse_identical_inputs` is opt-in). Texts shorter than `dup_min_tokens` are never penalised as copies.
+- Later copies (>= `dup_min_tokens`) are DOWNWEIGHTed by default and still judged by System One; the copy rule is a floor. A later copy inside a suspicious burst or cluster is EXCLUDEd (`duplicate_in_burst_action`). Jev is not deterministic, so by default every review gets its own call (`reuse_identical_inputs` is opt-in). Texts shorter than `dup_min_tokens` are never penalised as copies.
 - Tests never touch the network or the real `.env`: build settings with `tests.conftest.make_settings`, fake Jev with `tests.fake_systemone.FakeSystemOne`.
 - Tests never load MiniLM: inject `tests.fakes.HashingEmbedder` via `create_app(..., embedder_factory=...)`.
 - CPU timings on the dev laptop vary about ±35% under sustained load; record ranges, not single numbers.

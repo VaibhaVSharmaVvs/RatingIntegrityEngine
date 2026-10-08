@@ -1,8 +1,18 @@
 # Rating Integrity Engine: Phased Delivery Plan
 
-*v1.0, 2026-09-29. Derived from `MVP_SPEC.md` v0.1 (§12 build plan) and `RESEARCH_FINDINGS.md`. Section refs like §6.3 point into `MVP_SPEC.md`.*
+*v1.0, 2026-09-29; status updated 2026-10-08. Derived from `MVP_SPEC.md` v0.1 (§12 build plan) and `RESEARCH_FINDINGS.md`. Section refs like §6.3 point into `MVP_SPEC.md`. Each phase's "Delivered" or "Status" block is dated and records the state on that date; later changes are listed under **Current state** below.*
 
-🎯 **Goal:** a public, replay-only portfolio demo. It judges 50K Steam reviews visibly, finds the Helldivers 2 review bomb, reports a benchmarked integrity-adjusted rating with a CI, and compares Jev with Laya on cost, latency and accuracy.
+🎯 **Goal (as it stands, 2026-10-08):** a public, replay-only portfolio demo, **live at https://rating-integrity-engine.vaibhavvs.workers.dev**. Every review of eight Steam games (five review bombs, three genuine-reception controls) is judged visibly, and three ratings are compared: raw, integrity-adjusted with a CI, and Steam's written policy applied to the same reviews, alongside what Steam itself shows. Jev is benchmarked against Laya; making Laya good enough to bring the per-run cost to $0 is the future-exploration phase (Phase 10).
+
+**How the goal changed:**
+
+| Date | Was | Now | Why |
+|---|---|---|---|
+| 2026-09-30 | judge 50K Helldivers 2 reviews live | 5K live subsets; 50K only on the $0 heuristic backend | 5K shows the bomb with the same shape at a tenth of the cost (C9, Phase 3) |
+| 2026-09-30 | Laya fine-tuned on Jev labels as a demo backend | Laya benchmark-only; fine-tune out of the MVP | Jev's terms forbid distillation (C6); Laya on CPU is too slow (C8) |
+| 2026-10-01 | one adjusted rating | three ratings: raw · integrity-adjusted · platform policy | Owner decision: show what the written platform rules would do |
+| 2026-10-01 → 10-02 | Helldivers 2 plus two controls | eight games: Helldivers 2, Borderlands 2, Metro 2033 Redux, Total War: ROME II, DOOM Eternal; controls Football Manager 26, Cities: Skylines II, Gollum | Bombs of different kinds, two of them flagged by Valve, so the emulation can be checked against Valve's actual decision |
+| 2026-10-08 | Phase 8, stretch fine-tune | Phase 10, future exploration: Laya trained on non-Jev labels to reach $0 per run | Owner decision |
 
 **How to read this plan.** Each phase has a **goal** (the outcome), **requirements** (what must exist), **process** (how to build it, in order), and **exit criteria** (a checkable gate). Don't start phase N+1 until phase N's gate passes, except where *Parallel* says otherwise.
 
@@ -22,7 +32,7 @@
 
 | # | Issue | Evidence | Action |
 |---|---|---|---|
-| C6 | **Jev → Laya distillation is prohibited.** MCA §2.3(b): customers may not "use the Services or any Output to perform model distillation, train a model to imitate the output of the Services…". | typesafe.ai/legal/mca | **Phase 8 re-scoped** (see below): fine-tune Laya on human labels + synthetic ground truth only. Confirm the reading with a lawyer before any Phase 8 work. |
+| C6 | **Jev → Laya distillation is prohibited.** MCA §2.3(b): customers may not "use the Services or any Output to perform model distillation, train a model to imitate the output of the Services…". | typesafe.ai/legal/mca | **Phase 8 re-scoped**, now **Phase 10, future exploration** (see below): fine-tune Laya on human labels + synthetic ground truth only. Confirm the reading with a lawyer before any Phase 8 work. |
 | C7 | **Jev limits changed:** 40 req/s and 100K tokens/s (spec: 1,200 rpm, 250K tok/s). **Measured:** 64 reviews/s at concurrency 32 with zero 429s → 50K in ≈ 13 min at pack=1. | models.md; MEASUREMENTS M4c | **Packing is not needed for throughput.** It is now a *cost* lever only: packing 5 reviews cut tokens by 41% (M4b). Phase 3 re-framed. |
 | C8 | **Laya on this CPU is unusable for bulk runs.** Measured 0.08 reviews/s (i7-1255U, 6 questions). | MEASUREMENTS.md | Local Laya is limited to the 200-review dev set. Every Laya bulk run (5K and 50K) moves to the Kaggle notebook. The "Laya" option in the live UI becomes replay-only. |
 | C9 | **50K costs more than the spec's $1.** **Measured on Jev:** 1,057 input tokens/review → **$2.22 per 50K**, just above the $2 spend guard ($0.22 per 5K). | MEASUREMENTS M4c | Phase 3: trim criteria text and/or pack (−41% tokens on 5 reviews, M4b) and re-measure agreement against the untrimmed pack=1 answers. Raise the guard only as a conscious decision. |
@@ -33,26 +43,43 @@
 
 **Principle (owner, 2026-09-30): accuracy over speed.** When a choice trades accuracy against runtime or modest API cost, choose accuracy, but only when a measurement shows an accuracy gain. Speed and cost stay *reported*, not optimised at accuracy's expense. Applied so far: embedding context 128 → 256, LSH candidate bar 0.4, 2,000 bootstrap resamples, duplicates judged instead of skipped (MEASUREMENTS M6).
 
-**Decision (owner, 2026-09-30): Laya stays as a benchmark backend only.** It is kept as a pluggable backend (same client, no extra code path) and one zero-shot benchmark row on the 200-review dev set. Reasons: vendor-risk hedge, an on-prem/privacy option, and a second point on the cost-accuracy chart. The fine-tune (Phase 8) moves out of the MVP to an optional stretch goal. "Laya (fine-tuned)" is dropped from the run-config UI, and local `laya-serve` becomes opt-in (`docker compose --profile laya up`).
+**Decision (owner, 2026-09-30): Laya stays as a benchmark backend only.** It is kept as a pluggable backend (same client, no extra code path) and one zero-shot benchmark row on the 200-review dev set. Reasons: vendor-risk hedge, an on-prem/privacy option, and a second point on the cost-accuracy chart. The fine-tune (Phase 8) moves out of the MVP to an optional stretch goal. *(2026-10-08: it is now the last phase, Phase 10, future exploration.)* "Laya (fine-tuned)" is dropped from the run-config UI, and local `laya-serve` becomes opt-in (`docker compose --profile laya up`).
 
 ---
 
 ## Phase overview
 
-| Phase | Name | Est. | Depends on | Milestone |
+| Phase | Name | Est. | Depends on | Status |
 |---|---|---|---|---|
-| 0 | Setup, access, data pull | 2 d | — | ✅ Setup done (this commit) |
-| 1 | Backend skeleton | 3 d | 0 | |
-| 2 | S1 deterministic features | 2 d | 1 | |
-| 3 | S2 System One judgments | 3 d | 1 (2 in parallel) | **Go/no-go on token cost & throughput** |
-| 4 | S3 corpus + S4 decisions | 3 d | 2, 3 | Backend end-to-end |
-| 5 | Frontend core (live grid) | 4 d | 1 (API contract); 4 for real data | |
-| 6 | Drill-downs + results | 4 d | 4, 5 | **M1: demoable MVP** (~21 d) |
-| 7 | Evaluation + benchmarks | 4 d | 6 | |
-| 8 | *(stretch, out of MVP)* Laya fine-tune | 3 d + labelling | 7 (labels) | |
-| 9 | Ship public demo | 3 d | 6, 7 | **M2: public launch** (~28 d) |
+| 0 | Setup, access, data pull | 2 d | — | ✅ 2026-09-30 |
+| 1 | Backend skeleton | 3 d | 0 | ✅ 2026-09-30 |
+| 2 | S1 deterministic features | 2 d | 1 | ✅ 2026-09-30 |
+| 3 | S2 System One judgments | 3 d | 1 (2 in parallel) | ✅ 2026-09-30 · go/no-go passed |
+| 4 | S3 corpus + S4 decisions | 3 d | 2, 3 | ✅ 2026-09-30 · backend end-to-end |
+| 5 | Frontend core (live grid) | 4 d | 1 (API contract); 4 for real data | ✅ 2026-10-01 |
+| 6 | Drill-downs + results | 4 d | 4, 5 | ✅ 2026-10-01 · **M1: demoable MVP** |
+| 7 | Evaluation + benchmarks | 4 d | 6 | ✅ 2026-10-02 · human labels open |
+| 8 | ~~Laya fine-tune (stretch)~~ | — | — | moved to Phase 10 (2026-10-08) |
+| 9 | Ship public demo | 3 d | 6, 7 | ✅ live 2026-10-08 · **M2: public launch** · demo video open |
+| 10 | Future exploration: fine-tune Laya to $0 per run | 3 d + labelling | 7 (labels) | not started |
+
+Estimated: ~21 working days to M1 and ~28 to M2. Actual: M1 on 2026-10-01 and M2 on 2026-10-08, nine days after the plan was written.
 
 **Critical path:** Steam pull (start day 1) → Phase 3 Jev token-cost and throughput measurement → Phase 4 → Phase 6. The frontend (Phase 5) can start against mocked SSE fixtures as soon as the Phase 1 API contract is frozen.
+
+---
+
+## Current state (2026-10-08)
+
+The phase blocks below are dated records. What changed after them:
+
+- **Question set v5 is the default** (v3 added `about_game`, v4 `verdict_basis`, v5 `influence_attempt`): nine questions. Informativeness and rating support are shown but carry no weight (option B, 2026-10-01, MEASUREMENTS M10).
+- **Weights:** not about the game 0.6, contradicts its verdict 0.5, spam 0.2, copied text 0.15, tries to sway the judge 0.6 (counted above 0.5 only). Downweight line 0.55; a DOWNWEIGHT counts 0.25; a FLAG counts as KEEP.
+- **Clusters (M13):** the new-accounts, off-topic and similarity suspicion factors at weight ½; semantic clusters penalise only inside bursts; the penalty applies above suspicion 0.5, to clusters of ≥ 10.
+- **Grey zone (M17, 2026-10-04):** a clustered review up to 0.1 *above* the line is FLAGged; one below it stays DOWNWEIGHT.
+- **Influence defence (M13):** text written to sway the judge is stripped before judging; a note addressed to the model is a deterministic EXCLUDE.
+- **Showcase:** eight games, re-recorded under these rules from their original Jev answers at $0 (docs/RUNS.md). The public demo replays them.
+- **Tests:** 201 backend, 84 frontend. CI runs both, plus a static build and a leak check.
 
 ---
 
@@ -295,11 +322,11 @@ Open items: the color-mode toggle (informativeness/topic/cluster) and the "Compa
 |---|---|---|---|
 | "What Valve actually did" | on the results page | on `/help` (Steam policy, emulated) | M11c is per game and all-language; it is not part of a run's data |
 | Sensitivity sliders | client-side sliders on the results page | **removed** (owner, 2026-10-01) | The thresholds and weights were chosen by measurement; visitors should not tune them. Policy experiments use `backend: "cached"` through the API ($0, exact) |
-| Home page | runs list + new-run drawer + CSV upload | **Product picker** (the six showcase games, `frontend/src/data/showcase.ts`) → replay the recorded run ($0) or start a live Jev run behind the pre-flight. The run list and the free backends are gone. **CSV or Excel upload** (`.xlsx`, first sheet, detected from the bytes; Excel date cells become UTC timestamps; capped at `MAX_UPLOAD_MB` 50, `MAX_UPLOAD_ROWS` 200,000 and, for XLSX, `MAX_UPLOAD_EXPANDED_MB` 200 decompressed, all HTTP 413) stays as a link on the picker; this browser's uploads join the list, labelled "your upload", and can be run live with Jev (owner, 2026-10-01). The picker says "Product", since products other than games may come later. Question set v4 stays game-worded for now (owner) | Visitors should see the curated runs, not dozens of test runs. Every run stays in the database and in `docs/RUNS.md`; the cached backend remains available through the API |
+| Home page | runs list + new-run drawer + CSV upload | **Product picker** (the six showcase games, eight since 2026-10-02, `frontend/src/data/showcase.ts`) → replay the recorded run ($0) or start a live Jev run behind the pre-flight. The run list and the free backends are gone. **CSV or Excel upload** (`.xlsx`, first sheet, detected from the bytes; Excel date cells become UTC timestamps; capped at `MAX_UPLOAD_MB` 50, `MAX_UPLOAD_ROWS` 200,000 and, for XLSX, `MAX_UPLOAD_EXPANDED_MB` 200 decompressed, all HTTP 413) stays as a link on the picker; this browser's uploads join the list, labelled "your upload", and can be run live with Jev (owner, 2026-10-01). The picker says "Product", since products other than games may come later. Question set v4 stays game-worded for now (owner) | Visitors should see the curated runs, not dozens of test runs. Every run stays in the database and in `docs/RUNS.md`; the cached backend remains available through the API |
 | Run header | dataset name, run id, backend, question set | tabs · stages · help + theme only (owner, 2026-10-01) | It had become crowded. The backend and question set are on the results page's method card |
 | Waterfall | per reason | per *primary* reason, applied in a fixed order | Each review sits in exactly one step, so the steps sum exactly to adjusted − raw |
 
-**Open finding (owner decision):** the low-confidence FLAG cannot fire under question sets v3/v4. It needs ≥ 2 *weighted* questions below 0.5 confidence. Noul answers carry no confidence, and option B set informativeness to 0, which leaves only `rating_support`. HD2 v4 has 0 `LOW_CONFIDENCE` decisions; its 159 FLAGs come from the grey zone and spam. Options: set `low_confidence_min_questions` to 1, count unweighted score questions too, or accept the current behaviour. Any of them can be tested at $0 with the cached backend. The help page states the current behaviour.
+**Open finding (owner decision):** the low-confidence FLAG cannot fire under question sets v3–v5. It needs ≥ 2 *weighted* questions below 0.5 confidence. Noul answers carry no confidence, and option B set informativeness to 0, which leaves only `rating_support`. The current HD2 showcase run has 0 `LOW_CONFIDENCE` decisions; its 40 FLAGs come from the grey zone (38) and spam (2). There were 159 before M17. Options: set `low_confidence_min_questions` to 1, count unweighted score questions too, or accept the current behaviour. Any of them can be tested at $0 with the cached backend. The help page states the current behaviour.
 
 ---
 
@@ -317,7 +344,7 @@ Open items: the color-mode toggle (informativeness/topic/cluster) and the "Compa
 
 **Exit criteria:** every §10 row has a number, including failures; FP rate on Cities: Skylines II on-topic negatives is reported; Gollum adjusted rating moves by < 5 pp (target, adjust after first measurement). Results in `docs/RESULTS.md`.
 
-**Status (2026-10-02): built and measured, two items open.**
+**Status (2026-10-02, updated 2026-10-08): built and measured; human labels open.**
 - **Results:** in `docs/RESULTS.md`; method notes in MEASUREMENTS M12. Jev spend $2.16; every policy experiment reused answers at $0.
 - **Tools:** `inject_attacks.py` + `bench_attacks.py` (exact ground truth); `make_adversarial.py` + `bench_adversarial.py`; `bench_controls.py`; `make_labelset.py` + `bench_agreement.py`; `sweep_cached.py` ($0 variants and ablations); `_api.py` (a client that retries GETs).
 - **API:** `benchmarks` table (migration 4) with `GET`/`POST /benchmarks`; blind labelling via `/labelsets`.
@@ -326,42 +353,23 @@ Open items: the color-mode toggle (informativeness/topic/cluster) and the "Compa
   - CS2 on-topic negative false-positive rate 0.3% ✅
   - Gollum −1.4 pp (< 5) ✅
   - every §10 row has a number or a stated reason, except two open items.
-- **Open:**
-  - **human labels:** two raters at `/label`, set `hd2-300`, then `tools/bench_agreement.py --record`;
-  - **Laya zero-shot κ:** run `run_9e290104478b` on the 300-review set.
+- **Open: human labels.** Two raters at `/label`, set `hd2-300`, then `tools/bench_agreement.py --record`. The owner is labelling; a second rater is still needed.
+- **Done since:** the Laya zero-shot κ against Jev on the 300-review set: ≈ 0 on every question (RESULTS §2, ablation c).
 
 | Deviation | Planned | Built | Why |
 |---|---|---|---|
 | Labelling | `tools/label_cli.py` | `/label` page in the app (local only) | A second rater need not be a developer; labels go to the existing `labels` table |
 | Laya ablation (c) | the full attack set | the 300-review label set | Laya runs at 0.06–0.08 reviews/s on CPU, about 20 h for 5,689 reviews |
-| Ablation (d) | Laya fine-tuned on Jev labels | not run | Out of the MVP (Phase 8, owner decision) |
+| Ablation (d) | Laya fine-tuned on Jev labels | not run | Jev labels can't be used for training (C6); a fine-tune on other labels is Phase 10 |
 | YelpZip | if access is granted | not run | No access |
 
-**Findings that need owner decisions** (RESULTS: recommendations):
-1. Halve the off-topic and similarity suspicion weights: +10 pp attack removal, controls unchanged.
-2. A deterministic detector for self-legitimising text: one sentence launders 30–39% of off-topic reviews.
-3. The cluster penalty on semantic clusters: little gain, all the collateral.
-4. Document that varied, on-topic coordinated campaigns are not discounted.
+**Owner decisions on the findings** (2026-10-02, MEASUREMENTS M13, RESULTS §8), now defaults:
+1. Suspicion weights halved: attack pull removed 45% → 55%, controls unchanged.
+2. Self-legitimising text: stripped before judging; a note to the model is excluded; question set v5 adds `influence_attempt` (weight 0.6, above 0.5). Laundering 30–39% → 0–7%.
+3. Semantic clusters penalise only inside bursts. In a normal period they had penalised 312 of 4,999 organic fan-meme reviews. Pull removed 55% → 51%.
+4. Varied, on-topic coordinated campaigns are not discounted; the help page says so.
 
----
-
-## Phase 8 (stretch, out of MVP): Laya fine-tune on non-Jev labels (re-scoped, C6)
-
-**Goal:** show whether a free, local System One model fine-tuned on **legally clean labels** closes the accuracy gap with Jev on this task.
-
-**Constraint:** Jev outputs must **never** enter the training set (MCA §2.3(b)). Jev appears only as an evaluation baseline. Keep a written data-lineage note for every training row.
-
-**Label sources (no Jev):**
-| Source | Covers questions | Volume | Licence |
-|---|---|---|---|
-| Synthetic-attack injector (Phase 7) | `templated`, `spam_promo`, `campaign_language` | exact labels, as many as needed | own data |
-| Deterministic weak labels (MinHash dup groups, promo regex) | `templated`, `spam_promo` | thousands | own data |
-| Expanded hand labels (`tools/label_cli.py`, ~1–2K reviews, 2 raters on a 300 overlap) | `informativeness`, `rating_support`, `topic` | ~6–12K questions | own data |
-| Salminen Fake Reviews (40K) / AiGen-FoodReview (20K) | `templated` (generated text) | large | CC BY 4.0 / MIT |
-
-**Requirements:** Kaggle T4 notebook `notebooks/03_finetune_laya.ipynb` (~30K questions, ~4–5 h per the Laya README); 50K batch inference in the same notebook with `predict_batch` (C8: CPU is too slow); `tools/import_judgments.py` loads results as a normal `laya-ft` run; benchmark row added.
-
-**Exit criteria:** the fine-tuned model has a benchmark row on the same held-out sets as Jev (never trained on the dev or eval sets); lineage note shows zero Jev-derived rows; checkpoint versioned. Hand-labelling time (~2–3 d) is the real cost here; if it doesn't fit, fine-tune only the three questions with synthetic/weak labels and say so.
+Later (2026-10-04, M17): the grey zone flags only above the line. Pull removed **52%**.
 
 ---
 
@@ -377,7 +385,7 @@ Open items: the color-mode toggle (informativeness/topic/cluster) and the "Compa
 
 **Exit criteria:** the static build contains **no API key and no backend URL** (grep the `dist/` output in CI); Lighthouse performance ≥ 90 on landing; bundle review text has been PII-scrubbed and author hashes only.
 
-**Status (2026-10-08): built; host chosen, Cloudflare Workers static assets (`frontend/wrangler.jsonc`, `npm run deploy`); review text published scrubbed (owner decision). Not yet deployed.**
+**Status (2026-10-08): live at https://rating-integrity-engine.vaibhavvs.workers.dev** on Cloudflare Workers static assets (`frontend/wrangler.jsonc`, `npm run deploy`). Review text is published scrubbed (owner decision). Checked on production: every route and data file returns 200 with the right type, and the replay, results, reviews and benchmarks pages load with no console errors. Open: the demo video.
 - **Bundle:** `tools/export_bundle.py` writes `frontend/public/bundle/` (gitignored). The 8 showcase runs come to 107 MB on disk, about 17 MB gzipped. There are 1,214 files, the largest 4.2 MB, and review details are split into 1,000-review chunks that load on demand. A bulk `GET /runs/{id}/review-details` makes the export take minutes instead of an hour.
 - **`StaticBundle`:** serves every page from those files, including table filtering and "Skip to end" from the recording. Runs, uploads, the pre-flight and labelling are refused.
 - **Static build:** shows a "pre-recorded" note on the home page.
@@ -393,8 +401,39 @@ Open items: the color-mode toggle (informativeness/topic/cluster) and the "Compa
 | Landing | auto-plays the 50K HD2 replay | the product picker; each game replays on demand | Owner decision (home page); the showcase runs are the reference runs |
 | Replay player | play/pause, 1×/4×/16×, scrub | 30 s / 10 s / real time, and Skip to end | The existing controls cover the demo; scrubbing is open |
 | Review text | ~3–5K sampled texts per bundle | all texts, scrubbed, or none (`--text none`) | Sampling would leave inspector and tooltip gaps. Publishing Steam review text is an owner decision (README "Responsible use") |
-| Demo video | 90 s | not made | Needs the final host |
+| Host | Vercel / Netlify / GitHub Pages | **Cloudflare Workers static assets** | Unlimited free static bandwidth and 20,000 files. Vercel Hobby caps uploads at 100 MB (the build is 112 MB), Netlify's free credits pause the site when spent, and GitHub Pages would need the bundle in git |
+| Demo video | 90 s | not made yet | The host is live; it is next |
 
+
+---
+
+## Phase 10 (future exploration): train and fine-tune Laya to bring the cost to $0
+
+*Formerly Phase 8, the out-of-MVP stretch goal re-scoped by C6. Owner decision, 2026-10-08: it is the last phase.*
+
+**Goal:** a free, local System One model good enough to replace Jev for this task, so a run costs $0 instead of about $0.07 per 1,000 reviews. Success means the fine-tuned Laya matches Jev on the same held-out benchmarks (attack pull removed, control false positives, laundering) within Jev's own repeat noise, or the gap is measured and published.
+
+**Starting point (measured):**
+- Laya zero-shot is at chance against Jev: κ ≈ 0 on every question of the 300-review label set. It downweights 96% and calls 97% "not about the game" (RESULTS §2).
+- The shipped checkpoint has uncalibrated confidences (C11).
+- On this laptop's CPU it runs at 0.06–0.08 reviews/s (C8), so inference at $0 needs free GPU time (Kaggle or Colab T4) or a smaller model.
+
+**Constraint:** Jev outputs must **never** enter the training set (MCA §2.3(b)). Jev appears only as an evaluation baseline. Keep a written data-lineage note for every training row.
+
+**Label sources (no Jev):**
+
+| Source | Covers questions | Volume | Licence |
+|---|---|---|---|
+| Synthetic-attack injector (Phase 7) | `templated`, `spam_promo`, `campaign_language` | exact labels, as many as needed | own data |
+| Deterministic weak labels (MinHash duplicate groups, promo regex, influence patterns) | `templated`, `spam_promo`, `influence_attempt` | thousands | own data |
+| Expanded hand labels (`/label`, ~1–2K reviews, 2 raters on a 300 overlap) | `about_game`, `verdict_basis`, `rating_support`, `informativeness` | ~6–12K questions | own data |
+| Salminen Fake Reviews (40K) / AiGen-FoodReview (20K) | `templated` (generated text) | large | CC BY 4.0 / MIT |
+
+**Requirements:** a Kaggle T4 notebook `notebooks/03_finetune_laya.ipynb` (~30K questions, ~4–5 h per the Laya README) with batch inference via `predict_batch`; `tools/import_judgments.py` loads the results as a normal `laya-ft` run, so every benchmark and the cached backend work unchanged; a $0 row on the cost-vs-accuracy chart.
+
+**Exit criteria:** the fine-tuned model has benchmark rows on the same held-out sets as Jev (never trained on the dev or eval sets); the lineage note shows zero Jev-derived rows; the checkpoint is versioned; cost per 1,000 reviews and reviews/s are measured. The real cost is hand-labelling time (~2–3 days). If it doesn't fit, fine-tune only the questions with synthetic or weak labels, and say so.
+
+**Before starting:** confirm the C6 reading of Jev's terms with someone qualified.
 
 ---
 

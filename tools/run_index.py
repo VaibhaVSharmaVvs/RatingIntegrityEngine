@@ -18,10 +18,10 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "backend"))
 from app.core.config import settings  # noqa: E402
 
-# Curated: the runs MEASUREMENTS M11 reports, and the earlier method versions for
-# comparison. label -> run id.
+# Curated: the runs the demo replays, the runs MEASUREMENTS M11 reports, and the earlier
+# method versions for comparison. label -> run id.
 SHOWCASE = {
-    # current rules (M13), v4 answers reused from the runs below: what the demo shows
+    # current rules (M17), original Jev answers reused at $0: what the demo shows
     "Helldivers 2 5K · current rules": "run_5e6bcccc073b",
     "Borderlands 2 Apr-Aug 2025 · current rules": "run_1b0a30615dba",
     "Metro 2033 Redux Dec 2018-Mar 2019 · current rules": "run_c43a4ef3961e",
@@ -93,6 +93,12 @@ def main() -> None:
         "delete them:** the Phase 9 public demo is built from these replays.",
         "",
         "## Showcase runs",
+        "",
+        'The eight runs marked "current rules" are what the public demo replays: each re-judges its',
+        "game's original Jev answers under the current policy at $0 (M17). The Q-set column is the",
+        "question set of those answers: v4 for the six games recorded before 2026-10-02, v5 for ROME II",
+        "and DOOM Eternal. The cost column is $0 for these re-records; the original runs are listed",
+        "further down with what they cost.",
         "",
         "| Run | Id | Q-set | Reviews | Raw | Adjusted (95% CI) | Platform policy (95% CI) | Cost | Replay |",
         "|---|---|---|---|---|---|---|---|---|",

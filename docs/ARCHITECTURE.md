@@ -50,10 +50,10 @@ flowchart LR
 ```mermaid
 flowchart TB
   S0["<b>S0 Ingest</b><br/>normalise ratings to [0,1]<br/>sort by time → grid index<br/>hash author IDs with a salt"]
-  S1["<b>S1 Deterministic features</b> (seconds)<br/>MinHash/LSH near-duplicates · promo regex<br/>length · emoji · MiniLM embeddings"]
-  S2["<b>S2 System One judgments</b> (the animated part)<br/>6 typed questions per review → probabilities<br/>informativeness · rating support · topic<br/>spam/promo · templated · campaign language"]
+  S1["<b>S1 Deterministic features</b> (seconds)<br/>MinHash/LSH near-duplicates · promo regex<br/>influence patterns (stripped before S2)<br/>length · emoji · MiniLM embeddings"]
+  S2["<b>S2 System One judgments</b> (the animated part)<br/>9 typed questions per review (set v5) → probabilities<br/>about the game · verdict from playing · rating support<br/>informativeness · topic · spam/promo · templated<br/>campaign language · tries to sway the judge"]
   S3["<b>S3 Corpus analysis</b><br/>bursts: robust z vs 7-day baseline + PELT change points<br/>duplicate clusters (LSH) · semantic clusters (UMAP → HDBSCAN)<br/>suspicion vs a permutation null"]
-  S4["<b>S4 Decide</b><br/>integrity score → KEEP / DOWNWEIGHT / FLAG / EXCLUDE<br/>top-3 reason codes · weighted rating<br/>bootstrap 95% CI · n_eff"]
+  S4["<b>S4 Decide</b><br/>integrity score → KEEP / DOWNWEIGHT / FLAG / EXCLUDE<br/>top-3 reason codes · weighted rating<br/>bootstrap 95% CI · n_eff · Steam-policy rating"]
   S0 --> S1 --> S2 --> S3 --> S4
   S1 -. "embeddings overlap S2" .-> S3
 ```
@@ -64,10 +64,11 @@ flowchart TB
 | S1 | `backend/app/features/` | `features` rows; later copies marked (still judged) |
 | S2 | `backend/app/systemone/` | `judgments` rows (versioned question sets, `questions_v*.py`) |
 | S3 | `backend/app/corpus/` | `clusters`, `cluster_members`; every suspicion factor stored |
-| S4 | `backend/app/decide/` | `decisions` rows; summary with raw, adjusted, CI, `n_eff` |
+| S4 | `backend/app/decide/` | `decisions` rows; summary with raw, adjusted and platform-policy ratings, CIs, `n_eff` |
 
 **Guardrails built into the design:**
-- System One output alone can never EXCLUDE a review. Exclusion needs a deterministic signal: a copy inside a suspicious burst or cluster, or a high spam probability *confirmed* by the promo-link match. Spam judged by System One alone is FLAGged for a human.
+- System One output alone can never EXCLUDE a review. Exclusion needs a deterministic signal: a copy inside a suspicious burst or cluster, a note addressed to the model judging the review, or a high spam probability *confirmed* by the promo-link match. Spam judged by System One alone is FLAGged for a human.
+- Text written to sway the judge ("this is an honest review") is stripped before System One sees it, so it can't move the answer.
 - Every threshold and weight lives in the run config (`PolicyThresholds`, `ActionWeights`), and every run stores its full config, question-set version and pinned model version.
 - Cluster suspicion is judged against random same-size subsets of the corpus, never the corpus-wide rate, because a cluster is itself a subset.
 - Copies inside a suspicious burst or cluster are escalated. Copies outside one stay DOWNWEIGHT, so an organic complaint wave survives.
@@ -124,7 +125,7 @@ flowchart LR
 
 - **Rendering budget.** 50K reviews replay at 60 fps, with grid paint p95 at 0.4 ms (MEASUREMENTS M10). Grid cells never go through React. Components subscribe to a version counter and read the mutable buffer directly.
 - **Watchable by design.** Finished runs auto-play, and the grid fills in 30 s whatever the run's recorded pace. Each decision flashes in, and the rating moves with the cells that are visible.
-- **Two data sources, one interface.** `LiveApi` talks to the backend (REST + `EventSource`). `StaticBundle` (Phase 9) plays exported bundles with no backend, for the public demo.
+- **Two data sources, one interface.** `LiveApi` talks to the backend (REST + `EventSource`). `StaticBundle` plays exported bundles with no backend: the public demo, served from Cloudflare Workers static assets at https://rating-integrity-engine.vaibhavvs.workers.dev.
 
 ## Storage
 
@@ -133,5 +134,6 @@ flowchart LR
 | `data/rie.duckdb` | datasets, reviews (hashed authors only), runs, features, judgments, clusters, decisions, labels. Access goes through `Database.cursor()` (UTC-pinned, thread-safe) |
 | `data/cache/` | embedding caches (`.npy`) keyed by dataset and model |
 | `data/replays/` | one `jsonl.gz` event recording per run |
+| `frontend/public/bundle/` | the public demo's exported files (`tools/export_bundle.py`), gitignored |
 
 `data/` and `.env` are never committed.

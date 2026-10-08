@@ -2,6 +2,8 @@
 
 *Researched 2026-09-29. Source: `idea.txt`. [V] means confirmed in a source; [U] means unverified, check before external use.*
 
+*A dated snapshot, kept as written. Where the build measured or decided otherwise (Jev's limits and cost, packing, Laya, the datasets and the hosting), `MVP_SPEC.md`, `PLAN.md` and `MEASUREMENTS.md` hold the current answer.*
+
 > ⚠️ Review datasets contain PII (reviewer names, user IDs, steamids). Anonymize them before sharing. The prices and vendor claims below are from research agents' web lookups. Re-verify them before relying on them.
 
 ---
@@ -12,7 +14,7 @@
 
 Three points in the idea's framing need correcting:
 
-1. **"System One Model" is a real product, and a very new one.** It is TypeSafe AI's **Jev**, launched 2026-09-15 and still waitlist-only. Its own docs say it is **sensitive to adversarial content** ("text that argues for its own classification can move the answer"). Spam and fake reviews are adversarial by definition. **Don't build the architecture around one 2-week-old vendor.** Build a vendor-neutral judgment layer and make Jev one backend in a bake-off.
+1. **"System One Model" is a real product, and a very new one.** It is TypeSafe AI's **Jev**, launched 2026-09-15 and waitlist-only at first (the waitlist was lifted on 2026-09-27). Its own docs say it is **sensitive to adversarial content** ("text that argues for its own classification can move the answer"). Spam and fake reviews are adversarial by definition. **Don't build the architecture around one 2-week-old vendor.** Build a vendor-neutral judgment layer and make Jev one backend in a bake-off.
 2. **Cost is not the differentiator.** Every non-frontier architecture costs **under ~$50 per 1M reviews**. The pitch should rest on throughput, calibrated structured judgments, explainability and auditability, not "cheaper than GPT".
 3. **A consumer product is a proven failure mode.** Fakespot (shut down by Mozilla, July 2025) and ReviewMeta (offline, early 2026) both died from scraping fragility and no revenue. The opening is **B2B: compliance and audit evidence on data the client owns**.
 
